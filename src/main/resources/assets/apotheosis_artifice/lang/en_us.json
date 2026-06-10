@@ -91,5 +91,7 @@
     "gui.apotheosis_artifice.attribute_search": "Search Attributes…",
     "attributeslib.gui.hide_unchanged": "Hide Unchanged",
     "attributeslib.gui.modifier_formula": "Modifier Formula",
-    "attributeslib.gui.hide_unchanged_attr": "Hide Unchanged Attributes"
+    "attributeslib.gui.hide_unchanged_attr": "Hide Unchanged Attributes",
+    "jei.apotheosis_artifice.affix_codex": "Affix Codex",
+    "jei.apotheosis_artifice.more": "+%s more…"
 }

@@ -90,5 +90,7 @@
     "gui.apotheosis_artifice.attribute_search": "搜索属性…",
     "attributeslib.gui.hide_unchanged": "隐藏未变化的属性",
     "attributeslib.gui.modifier_formula": "修饰符公式",
-    "attributeslib.gui.hide_unchanged_attr": "隐藏未变化的属性"
+    "attributeslib.gui.hide_unchanged_attr": "隐藏未变化的属性",
+    "jei.apotheosis_artifice.affix_codex": "词缀图鉴",
+    "jei.apotheosis_artifice.more": "还有 %s 个…"
 }

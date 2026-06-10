@@ -41,7 +41,7 @@ public class AttributesGuiLocalizeMixin {
      * 内类 HideUnchangedButton.<init>() 中的 Component.literal("Hide Unchanged Attributes")
      * 需要单独 target 内类。
      */
-    @Mixin(targets = "dev.shadowsoffire.attributeslib.client.AttributesGui$HideUnchangedButton")
+    @Mixin(value = dev.shadowsoffire.attributeslib.client.AttributesGui.HideUnchangedButton.class, remap = false)
     public static class HideUnchangedButtonMixin {
         @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;literal(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;"), remap = false)
         private MutableComponent localizeHideUnchangedAttr(String text) {

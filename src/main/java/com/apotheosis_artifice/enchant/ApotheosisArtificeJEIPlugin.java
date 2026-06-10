@@ -1,12 +1,19 @@
 package com.apotheosis_artifice.enchant;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.jetbrains.annotations.Nullable;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.ApotheosisNetwork;
+import com.apotheosis_artifice.jei.AffixCodexCategory;
+import com.apotheosis_artifice.jei.AffixCodexEntry;
 
+import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
+import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
+import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
 import dev.shadowsoffire.apotheosis.ench.compat.EnchantingCategory;
 import dev.shadowsoffire.apotheosis.ench.table.EnchantingRecipe;
 import mezz.jei.api.IModPlugin;
@@ -16,6 +23,8 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeCategoryRegistration;
+import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
@@ -33,8 +42,28 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     }
 
     @Override
+    public void registerCategories(IRecipeCategoryRegistration reg) {
+        reg.addRecipeCategories(new AffixCodexCategory());
+    }
+
+    @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration reg) {
         reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.RAVEN_ENCHANTING_TABLE_ITEM.get()), EnchantingCategory.TYPE);
+        reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.CURIOS_REFORGING_TABLE_ITEM.get()), AffixCodexCategory.TYPE);
+    }
+
+    @Override
+    public void registerRecipes(IRecipeRegistration reg) {
+        List<AffixCodexEntry> entries = new ArrayList<>();
+        for (LootCategory cat : LootCategory.VALUES) {
+            if (cat.isNone()) continue;
+            for (var holder : RarityRegistry.INSTANCE.getOrderedRarities()) {
+                if (!holder.isBound()) continue;
+                AffixCodexEntry entry = AffixCodexEntry.create(cat, holder.get());
+                if (entry != null) entries.add(entry);
+            }
+        }
+        reg.addRecipes(AffixCodexCategory.TYPE, entries);
     }
 
     @Override
