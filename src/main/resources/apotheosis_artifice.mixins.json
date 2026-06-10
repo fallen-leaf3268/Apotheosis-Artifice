@@ -1,0 +1,34 @@
+{
+    "required": true,
+    "minVersion": "0.8",
+    "package": "com.apotheosis_artifice.mixin",
+    "compatibilityLevel": "JAVA_17",
+    "refmap": "apotheosis_artifice.refmap.json",
+    "mixins": [
+        "ALCombatRulesMixin",
+        "ReforgingTileMixin",
+        "ReforgingTileValidatorMixin",
+        "AffixMixin",
+        "AttributeAffixAccessor",
+        "AttributeAffixCanApplyToMixin",
+        "DamageReductionAffixAccessor",
+        "DamageReductionAffixCanApplyToMixin",
+        "PotionAffixAccessor",
+        "PotionAffixCanApplyToMixin",
+        "EnchantmentHelperMixin",
+        "LootCategoryMixin",
+        "LootControllerMixin",
+        "SocketProtectionMixin",
+        "ReforgingMenuMixin"
+    ],
+    "client": [
+        "ContainerScreenMixin",
+        "EnchHwylaPluginMixin",
+        "GuiGraphicsMixin",
+        "ReforgingScreenMixin",
+        "client.AttributesGuiSearchMixin",
+        "client.AttributesGuiLocalizeMixin",
+        "client.InventoryScreenKeyForwardMixin"
+    ],
+    "server": []
+}

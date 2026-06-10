@@ -1,0 +1,15 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "group": "apotheosis_artifice",
+    "pattern": [
+        " S ",
+        "R  "
+    ],
+    "key": {
+        "S": { "item": "apotheosis:salvaging_table" },
+        "R": { "item": "minecraft:stick" }
+    },
+    "result": {
+        "item": "apotheosis_artifice:portable_salvaging_tool"
+    }
+}

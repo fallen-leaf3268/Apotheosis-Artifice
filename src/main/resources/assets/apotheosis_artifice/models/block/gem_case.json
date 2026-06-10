@@ -1,0 +1,27 @@
+{
+    "loader": "forge:composite",
+    "children": {
+        "bottom": {
+            "parent": "apotheosis_artifice:block/gem_case_bottom"
+        },
+        "rune": {
+            "parent": "apotheosis_artifice:block/gem_case_rune"
+        },
+        "glass": {
+            "parent": "apotheosis_artifice:block/gem_case_glass"
+        }
+    },
+    "textures": {
+        "particle": "block/dark_oak_planks"
+    },
+    "display": {
+        "gui": {"scale": [0.45, 0.45, 0.45]},
+        "ground": {"scale": [0.25, 0.25, 0.25]},
+        "fixed": {"scale": [0.25, 0.25, 0.25]},
+        "thirdperson_righthand": {"scale": [0.25, 0.25, 0.25]},
+        "thirdperson_lefthand": {"scale": [0.25, 0.25, 0.25]},
+        "firstperson_righthand": {"scale": [0.25, 0.25, 0.25]},
+        "firstperson_lefthand": {"scale": [0.25, 0.25, 0.25]},
+        "head": {"scale": [0.25, 0.25, 0.25]}
+    }
+}

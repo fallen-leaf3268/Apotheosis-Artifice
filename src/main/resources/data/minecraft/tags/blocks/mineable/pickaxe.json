@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "apotheosis_artifice:gem_case",
+    "apotheosis_artifice:ender_gem_case",
+    "apotheosis_artifice:raven_enchanting_table",
+    "apotheosis_artifice:curios_reforging_table"
+  ]
+}

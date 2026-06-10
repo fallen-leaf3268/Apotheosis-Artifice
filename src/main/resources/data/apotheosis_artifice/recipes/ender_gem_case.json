@@ -1,0 +1,19 @@
+{
+    "type": "apotheosis:keep_nbt_enchanting",
+    "input": {
+        "item": "apotheosis_artifice:gem_case"
+    },
+    "requirements": {
+        "eterna": 50,
+        "quanta": 25,
+        "arcana": 95
+    },
+    "max_requirements": {
+        "eterna": 50,
+        "quanta": 40,
+        "arcana": 100
+    },
+    "result": {
+        "item": "apotheosis_artifice:ender_gem_case"
+    }
+}
