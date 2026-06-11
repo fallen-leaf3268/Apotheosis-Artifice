@@ -37,7 +37,11 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
     public static final ResourceLocation NONE_RARITY = new ResourceLocation("apotheosis_artifice", "nonexistent");
 
     protected final Player player;
-    protected SimpleContainer ioInv = new SimpleContainer(2);
+    protected SimpleContainer ioInv = new SimpleContainer(2) {
+        @Override public int getMaxStackSize() {
+            return tile instanceof com.apotheosis_artifice.gemcase.GemCaseTile.AdvancedGemCaseTile ? Integer.MAX_VALUE : 64;
+        }
+    };
     public final SimpleContainer upgradeMatInv = new SimpleContainer(UPGRADE_MAT_COUNT) {
         @Override
         public int getMaxStackSize() { return tile.upgradeMatInv.getSlotLimit(0); }
@@ -79,7 +83,13 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
                 return GemItem.getGem(stack).isBound();
             }
             @Override
-            public int getMaxStackSize() { return 64; }
+            public int getMaxStackSize() {
+                return GemCaseMenu.this.tile instanceof com.apotheosis_artifice.gemcase.GemCaseTile.AdvancedGemCaseTile ? Integer.MAX_VALUE : 64;
+            }
+            @Override
+            public int getMaxStackSize(ItemStack stack) {
+                return getMaxStackSize();
+            }
             @Override
             public void setChanged() {
                 super.setChanged();
@@ -123,6 +133,26 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
                 }
                 @Override
                 public int getMaxStackSize() { return tile.upgradeMatInv.getSlotLimit(0); }
+                @Override
+                public int getMaxStackSize(ItemStack stack) { return getMaxStackSize(); }
+                @Override
+                public ItemStack safeInsert(ItemStack stack, int increment) {
+                    if (stack.isEmpty() || !this.mayPlace(stack)) return stack;
+                    if (!this.getItem().isEmpty() && !ItemStack.isSameItemSameTags(stack, this.getItem())) return stack;
+                    int max = Math.min(this.getMaxStackSize(stack), this.container.getMaxStackSize());
+                    int count = this.getItem().isEmpty() ? 0 : this.getItem().getCount();
+                    int space = max - count;
+                    if (space <= 0) return stack;
+                    int transfer = Math.min(Math.min(stack.getCount(), increment), space);
+                    if (count > 0) {
+                        this.getItem().grow(transfer);
+                        stack.shrink(transfer);
+                    } else {
+                        this.set(stack.split(transfer));
+                    }
+                    this.setChanged();
+                    return stack;
+                }
                 @Override
                 public void setChanged() {
                     super.setChanged();
