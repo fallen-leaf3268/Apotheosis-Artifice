@@ -81,11 +81,16 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
                 .addItemStack(matStack)
                 .addTooltipCallback((slotView, tooltip) -> {
                     tooltip.clear();
-                    tooltip.add(matStack.getDisplayName().copy());
-                    tooltip.add(Component.literal("§6" + afxName));
-                    String range = re.rangeTooltip().getString();
-                    if (!range.isBlank()) {
-                        tooltip.add(Component.literal(rangeColor + range.replace("§7", "")));
+                    // 材料名去括号，颜色来自稀有度
+                    int matColor = re.rarity().getColor().getValue();
+                    String matName = matStack.getDisplayName().getString()
+                        .replace("[", "").replace("]", "")
+                        .replace("(", "").replace(")", "");
+                    tooltip.add(Component.literal(matName).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(matColor)));
+                    tooltip.add(Component.literal("§6" + entry.affix().getName(true).getString()));
+                    Component range = re.rangeTooltip();
+                    if (range != null && !range.getString().isBlank()) {
+                        tooltip.add(range.copy());
                     }
                 });
         }

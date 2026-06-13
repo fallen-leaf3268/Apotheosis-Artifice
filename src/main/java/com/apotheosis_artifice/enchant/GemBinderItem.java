@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 
 import dev.shadowsoffire.apotheosis.adventure.Adventure;
+import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.socket.gem.GemItem;
 import dev.shadowsoffire.apotheosis.ench.library.EnchLibraryTile;
 import net.minecraft.ChatFormatting;
@@ -41,14 +42,58 @@ public class GemBinderItem extends Item {
     // ---- NBT 键前缀 ----
     private static final String PREFIX_GC = "gc_"; // 宝石柜
     private static final String PREFIX_LB = "lb_"; // 图书馆
-    private static final String TAG_SALVAGE = "salvage_mode";
+    private static final String TAG_MODE = "binder_mode";
+    private static final String TAG_SALVAGE_TYPE = "salvage_type";
+
+    // mode: 0=deposit, 1=salvage
+    // salvage_type: 0=gems, 1=equipment, 2=all
 
     public GemBinderItem(Properties props) {
         super(props);
     }
 
+    // ---- 模式 API ----
+
+    private static int getMode(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        return tag != null ? tag.getInt(TAG_MODE) : 0;
+    }
+
+    private static int getSalvageType(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        return tag != null ? tag.getInt(TAG_SALVAGE_TYPE) : 0;
+    }
+
     private static boolean isSalvageMode(ItemStack stack) {
-        return stack.getTag() != null && stack.getTag().getBoolean(TAG_SALVAGE);
+        return getMode(stack) == 1;
+    }
+
+    private static String getModeTranslationKey(ItemStack stack) {
+        if (getMode(stack) == 0) return "info.apotheosis_artifice.binder.mode.deposit";
+        int st = getSalvageType(stack);
+        return switch (st) {
+            case 0 -> "info.apotheosis_artifice.binder.salvage_gem";
+            case 1 -> "info.apotheosis_artifice.binder.salvage_equip";
+            case 2 -> "info.apotheosis_artifice.binder.salvage_all";
+            default -> "info.apotheosis_artifice.binder.mode.salvage";
+        };
+    }
+
+    /**
+     * 循环模式（由 ToggleBinderPacket 调用）
+     * deposit → salvage_gems → salvage_equip → salvage_all → 循环
+     */
+    public static void cycleMode(ItemStack stack, Player player) {
+        int mode = getMode(stack);
+        if (mode == 0) {
+            stack.getOrCreateTag().putInt(TAG_MODE, 1);
+            stack.getOrCreateTag().putInt(TAG_SALVAGE_TYPE, 0);
+        } else {
+            int st = (getSalvageType(stack) + 1) % 3;
+            stack.getOrCreateTag().putInt(TAG_SALVAGE_TYPE, st);
+        }
+        player.displayClientMessage(
+            Component.translatable(getModeTranslationKey(stack)).withStyle(ChatFormatting.YELLOW), true);
     }
 
     // ---- 独立绑定存取 ----
@@ -115,9 +160,9 @@ public class GemBinderItem extends Item {
     public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level, Player player, net.minecraft.world.InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (!level.isClientSide) {
-            boolean now = !isSalvageMode(stack);
-            stack.getOrCreateTag().putBoolean(TAG_SALVAGE, now);
-            player.displayClientMessage(Component.translatable("info.apotheosis_artifice.binder.mode." + (now ? "salvage" : "deposit")).withStyle(ChatFormatting.YELLOW), true);
+            int mode = getMode(stack);
+            stack.getOrCreateTag().putInt(TAG_MODE, mode == 0 ? 1 : 0);
+            player.displayClientMessage(Component.translatable(getModeTranslationKey(stack)).withStyle(ChatFormatting.YELLOW), true);
         }
         return net.minecraft.world.InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
@@ -156,16 +201,34 @@ public class GemBinderItem extends Item {
                         return;
                     }
 
-                    // 宝石柜独立绑定 → 按模式处理宝石
-                    BlockPos gcPos = getBoundPos(binder, PREFIX_GC);
-                    BlockEntity gcBe = gcPos != null ? getBoundTile(player, binder, gcPos, PREFIX_GC) : null;
-                    if (isGem(pickedUp) && gcBe instanceof com.apotheosis_artifice.gemcase.GemCaseTile tile) {
-                        if (isSalvageMode(binder)) {
+                    // 分解模式：根据子类型处理宝石/装备/全部
+                    if (isSalvageMode(binder)) {
+                        int st = getSalvageType(binder);
+                        boolean isGemItem = isGem(pickedUp);
+                        boolean isEquip = AffixHelper.hasAffixes(pickedUp);
+
+                        boolean shouldSalvage = switch (st) {
+                            case 0 -> isGemItem;
+                            case 1 -> isEquip && !isGemItem;
+                            case 2 -> isGemItem || isEquip;
+                            default -> false;
+                        };
+                        if (shouldSalvage) {
                             handleSalvage(player, pickedUp, event);
-                        } else {
+                        }
+                        // salvage 不 return，允许继续处理其他绑定
+                    }
+
+                    // 存入模式：宝石 → 宝石柜（每份 count=1）
+                    if (!isSalvageMode(binder)) {
+                        BlockPos gcPos = getBoundPos(binder, PREFIX_GC);
+                        BlockEntity gcBe = gcPos != null ? getBoundTile(player, binder, gcPos, PREFIX_GC) : null;
+                        if (isGem(pickedUp) && gcBe instanceof com.apotheosis_artifice.gemcase.GemCaseTile tile) {
                             int count = pickedUp.getCount();
                             for (int c = 0; c < count; c++) {
-                                tile.depositGem(pickedUp.copy());
+                                ItemStack single = pickedUp.copy();
+                                single.setCount(1);
+                                tile.depositGem(single);
                             }
                             pickedUp.setCount(0);
                             event.getItem().discard();
@@ -283,17 +346,26 @@ public class GemBinderItem extends Item {
         Component lbName = getBlockDisplayName(stack, PREFIX_LB);
 
         // 模式
+        list.add(Component.translatable(getModeTranslationKey(stack)).withStyle(ChatFormatting.GOLD));
         if (isSalvageMode(stack)) {
-            list.add(Component.translatable("info.apotheosis_artifice.binder.salvage_mode").withStyle(ChatFormatting.GOLD));
-            list.add(Component.translatable("info.apotheosis_artifice.binder.desc_salvage").withStyle(ChatFormatting.GOLD));
-        } else {
-            list.add(Component.translatable("info.apotheosis_artifice.binder.pickup_mode").withStyle(ChatFormatting.GOLD));
+            int st = getSalvageType(stack);
+            String descKey = switch (st) {
+                case 0 -> "info.apotheosis_artifice.binder.desc_salvage_gem";
+                case 1 -> "info.apotheosis_artifice.binder.desc_salvage_equip";
+                case 2 -> "info.apotheosis_artifice.binder.desc_salvage_all";
+                default -> "info.apotheosis_artifice.binder.desc_salvage";
+            };
+            list.add(Component.translatable(descKey).withStyle(ChatFormatting.GRAY));
+        }
+
+        // 宝石柜坐标（仅在不涉及宝石分解的模式下显示）
+        boolean showGcInfo = !isSalvageMode(stack) || getSalvageType(stack) == 1;
+        if (showGcInfo) {
             if (gcName != null && gcPos != null) {
                 list.add(Component.translatable("info.apotheosis_artifice.binder.gemcase_bound", gcName, gcPos.getX(), gcPos.getY(), gcPos.getZ(), gcDim != null ? gcDim.toString() : "?").withStyle(ChatFormatting.GREEN));
             } else {
                 list.add(Component.translatable("info.apotheosis_artifice.binder.gemcase_unbound").withStyle(ChatFormatting.RED));
             }
-            list.add(Component.translatable("info.apotheosis_artifice.binder.desc_gemcase").withStyle(ChatFormatting.GRAY));
         }
 
         // 图书馆（独立）

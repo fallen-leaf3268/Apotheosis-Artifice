@@ -22,9 +22,9 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
     private static final int HANDLE_V_ETERNA = 197, HANDLE_V_QUANTA = 204, HANDLE_V_ARCANA = 211;
 
     private final RavenEnchantMenu ravenMenu;
-    private float curE, curQ, curA;
+    protected float curE, curQ, curA;
     @Nullable private DragStat dragging;
-    private boolean dirty;
+    protected boolean dirty;
 
     public RavenEnchantScreen(EnchantmentMenu container, Inventory inv, Component title) {
         super(container, inv, title);
@@ -46,10 +46,17 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
         this.arcana = this.curA;
         this.lastArcana = this.arcana;
         if (this.dirty) {
-            ItemStack input = this.menu.getSlot(0).getItem();
+            ItemStack input = getInputItem();
             ApotheosisNetwork.CHANNEL.sendToServer(new SetRavenStatsPacket(this.curE, this.curQ, this.curA, input.isEmpty() ? ItemStack.EMPTY : input.copy()));
             this.dirty = false;
         }
+    }
+
+    /**
+     * 获取用于同步的输入物品。子类可覆写以使用不同的槽位索引。
+     */
+    protected ItemStack getInputItem() {
+        return this.menu.getSlot(0).getItem();
     }
 
     @Override

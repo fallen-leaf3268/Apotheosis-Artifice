@@ -19,11 +19,13 @@
         "LootCategoryMixin",
         "LootControllerMixin",
         "SocketProtectionMixin",
-        "ReforgingMenuMixin"
+        "ReforgingMenuMixin",
+        "ReforgingSlotPickupMixin"
     ],
     "client": [
         "ContainerScreenMixin",
         "EnchHwylaPluginMixin",
+        "client.EnchantmentBookMixin",
         "GuiGraphicsMixin",
         "ReforgingScreenMixin",
         "client.AttributesGuiSearchMixin",

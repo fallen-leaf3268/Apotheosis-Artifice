@@ -48,6 +48,10 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     private RandomSource random;
     @Shadow
     private int seed;
+    @Shadow
+    private int[] costs;
+    @Shadow
+    private net.minecraft.world.entity.player.Player player;
 
     @Unique
     private int curiosforge_selectedSlotIdx = 0;
@@ -181,6 +185,19 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
                 if (isCurio) com.apotheosis_artifice.CatOverride.set(null);
             }
             menu.broadcastChanges();
+        }
+        // 任何情况下 cost 为 0 时，取所有已加载配方的最高 cost
+        if (this.costs[0] == 0 && this.costs[1] == 0 && this.costs[2] == 0 && this.player != null && this.player.level() != null) {
+            var allRecipes = this.player.level().getRecipeManager().getAllRecipesFor(dev.shadowsoffire.apotheosis.Apoth.RecipeTypes.REFORGING);
+            int maxSigil = 0, maxMat = 0, maxLevel = 0;
+            for (var r : allRecipes) {
+                if (r.sigilCost() > maxSigil) maxSigil = r.sigilCost();
+                if (r.matCost() > maxMat) maxMat = r.matCost();
+                if (r.levelCost() > maxLevel) maxLevel = r.levelCost();
+            }
+            if (maxSigil > 0) this.costs[0] = maxSigil;
+            if (maxMat > 0) this.costs[1] = maxMat;
+            if (maxLevel > 0) this.costs[2] = maxLevel;
         }
         // 单栏位：不需写入 curio_cat，由 ApotheosisEvents 通过原生 LootCategory 判断绑定
     }

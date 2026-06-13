@@ -44,73 +44,47 @@ import net.minecraftforge.registries.ForgeRegistries;
 @JeiPlugin
 public class ApotheosisArtificeJEIPlugin implements IModPlugin {
 
-    // Level 2.1 — 后缀词条（属性词条 / STAT）
     public static final ResourceLocation SUFFIX_UID = new ResourceLocation(ApotheosisArtificeMod.MODID, "affix_suffix");
     public static final RecipeType<AffixDetailEntry> SUFFIX_TYPE = new RecipeType<>(SUFFIX_UID, AffixDetailEntry.class);
-
-    // Level 2.2 — 前缀词条（特殊词条 / ABILITY + POTION）
     public static final ResourceLocation PREFIX_UID = new ResourceLocation(ApotheosisArtificeMod.MODID, "affix_prefix");
     public static final RecipeType<AffixDetailEntry> PREFIX_TYPE = new RecipeType<>(PREFIX_UID, AffixDetailEntry.class);
 
     private AffixDetailCategory suffixCategory;
     private AffixDetailCategory prefixCategory;
 
-    @Override
-    public ResourceLocation getPluginUid() {
-        return new ResourceLocation(ApotheosisArtificeMod.MODID, "enchant");
-    }
+    @Override public ResourceLocation getPluginUid() { return new ResourceLocation(ApotheosisArtificeMod.MODID, "enchant"); }
 
-    @Override
-    public void registerCategories(IRecipeCategoryRegistration reg) {
-        suffixCategory = new AffixDetailCategory(SUFFIX_TYPE,
-            Component.translatable("jei.apotheosis_artifice.affix_suffix"));
-        prefixCategory = new AffixDetailCategory(PREFIX_TYPE,
-            Component.translatable("jei.apotheosis_artifice.affix_prefix"));
-
+    @Override public void registerCategories(IRecipeCategoryRegistration reg) {
+        suffixCategory = new AffixDetailCategory(SUFFIX_TYPE, Component.translatable("jei.apotheosis_artifice.affix_suffix"));
+        prefixCategory = new AffixDetailCategory(PREFIX_TYPE, Component.translatable("jei.apotheosis_artifice.affix_prefix"));
         reg.addRecipeCategories(new AffixCodexCategory());
         reg.addRecipeCategories(suffixCategory);
         reg.addRecipeCategories(prefixCategory);
         reg.addRecipeCategories(new AffixGemCategory());
     }
 
-    @Override
-    public void registerRecipeCatalysts(IRecipeCatalystRegistration reg) {
+    @Override public void registerRecipeCatalysts(IRecipeCatalystRegistration reg) {
         reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.RAVEN_ENCHANTING_TABLE_ITEM.get()), EnchantingCategory.TYPE);
-
-        // 优先注册本 Mod 的神化重铸台作为 JEI 图标
+        reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.MECHANICAL_RAVEN_TABLE_ITEM.get()), EnchantingCategory.TYPE);
         var ourTable = new ItemStack(ApotheosisArtificeMod.CURIOS_REFORGING_TABLE_ITEM.get());
-        for (var type : List.of(AffixCodexCategory.TYPE, SUFFIX_TYPE, PREFIX_TYPE)) {
-            reg.addRecipeCatalyst(ourTable, type);
-        }
-        // 可镶嵌宝石
+        for (var type : List.of(AffixCodexCategory.TYPE, SUFFIX_TYPE, PREFIX_TYPE)) reg.addRecipeCatalyst(ourTable, type);
         reg.addRecipeCatalyst(ourTable, AffixGemCategory.TYPE);
-
-        // 其他重铸台
         for (Block block : ForgeRegistries.BLOCKS) {
             if (block instanceof ReforgingTableBlock) {
                 ItemStack stack = new ItemStack(block);
                 if (!stack.isEmpty() && !ItemStack.matches(stack, ourTable)) {
-                    reg.addRecipeCatalyst(stack, AffixCodexCategory.TYPE);
-                    reg.addRecipeCatalyst(stack, SUFFIX_TYPE);
-                    reg.addRecipeCatalyst(stack, PREFIX_TYPE);
-                    reg.addRecipeCatalyst(stack, AffixGemCategory.TYPE);
+                    for (var type : List.of(AffixCodexCategory.TYPE, SUFFIX_TYPE, PREFIX_TYPE, AffixGemCategory.TYPE))
+                        reg.addRecipeCatalyst(stack, type);
                 }
             }
         }
     }
 
-    @Override
-    public void registerRecipes(IRecipeRegistration reg) {
-        // Level 1: 分类选择
+    @Override public void registerRecipes(IRecipeRegistration reg) {
         AffixCodexEntry codex = AffixCodexEntry.create();
-        if (codex != null) {
-            reg.addRecipes(AffixCodexCategory.TYPE, List.of(codex));
-        }
-
-        // Level 2.1 + 2.2: 按词缀类型拆分
+        if (codex != null) reg.addRecipes(AffixCodexCategory.TYPE, List.of(codex));
         List<AffixDetailEntry> suffixEntries = new ArrayList<>();
         List<AffixDetailEntry> prefixEntries = new ArrayList<>();
-
         for (LootCategory cat : LootCategory.VALUES) {
             if (cat.isNone() || "curio".equals(cat.getName())) continue;
             for (Affix affix : dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry.INSTANCE.getValues()) {
@@ -119,28 +93,20 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
                     if (!holder.isBound()) continue;
                     var rarity = holder.get();
                     try {
-                        if (affix.canApplyTo(ItemStack.EMPTY, cat, rarity)) {
+                        if (affix.canApplyTo(ItemStack.EMPTY, cat, rarity))
                             supported.add(new AffixDetailEntry.RarityEntry(rarity, AffixDetailEntry.buildDescription(affix, rarity)));
-                        }
                     } catch (Exception ignored) {}
                 }
                 if (supported.isEmpty()) continue;
-
                 AffixType type;
                 try { type = affix.getType(); } catch (Exception e) { type = null; }
-                List<AffixDetailEntry> target = (type == AffixType.STAT) ? suffixEntries : prefixEntries;
-                target.add(new AffixDetailEntry(cat, affix, supported));
+                (type == AffixType.STAT ? suffixEntries : prefixEntries).add(new AffixDetailEntry(cat, affix, supported));
             }
         }
-
-        // 排序
         suffixEntries.sort(java.util.Comparator.comparing(a -> a.affix().getName(true).getString()));
         prefixEntries.sort(java.util.Comparator.comparing(a -> a.affix().getName(true).getString()));
-
         reg.addRecipes(SUFFIX_TYPE, suffixEntries);
         reg.addRecipes(PREFIX_TYPE, prefixEntries);
-
-        // Level 2.3: 可镶嵌宝石
         List<AffixGemEntry> gemEntries = new ArrayList<>();
         for (LootCategory cat : LootCategory.VALUES) {
             if (cat.isNone() || "curio".equals(cat.getName())) continue;
@@ -149,27 +115,22 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         reg.addRecipes(AffixGemCategory.TYPE, gemEntries);
     }
 
-    @Override
-    public void registerRecipeTransferHandlers(IRecipeTransferRegistration reg) {
+    @Override public void registerRecipeTransferHandlers(IRecipeTransferRegistration reg) {
+        reg.addRecipeTransferHandler(new MechanicalRavenTransferHandler(), EnchantingCategory.TYPE);
         reg.addRecipeTransferHandler(new RavenTransferHandler(), EnchantingCategory.TYPE);
     }
 
     private static class RavenTransferHandler implements IRecipeTransferHandler<RavenEnchantMenu, EnchantingRecipe> {
-        @Override
-        public Class<? extends RavenEnchantMenu> getContainerClass() { return RavenEnchantMenu.class; }
-
-        @Override
-        public Optional<MenuType<RavenEnchantMenu>> getMenuType() {
+        @Override public Class<? extends RavenEnchantMenu> getContainerClass() { return RavenEnchantMenu.class; }
+        @Override public Optional<MenuType<RavenEnchantMenu>> getMenuType() {
             if (RavenEnchantMenu.TYPE != null) return Optional.of(RavenEnchantMenu.TYPE);
             return Optional.ofNullable(ApotheosisArtificeMod.RAVEN_ENCHANTING_TABLE_MENU.get());
         }
-
-        @Override
-        public RecipeType<EnchantingRecipe> getRecipeType() { return EnchantingCategory.TYPE; }
-
+        @Override public RecipeType<EnchantingRecipe> getRecipeType() { return EnchantingCategory.TYPE; }
         @Override @Nullable
         public IRecipeTransferError transferRecipe(RavenEnchantMenu container, EnchantingRecipe recipe,
             IRecipeSlotsView recipeSlots, Player player, boolean maxTransfer, boolean doTransfer) {
+            if (container instanceof MechanicalRavenEnchantMenu) return null;
             if (!doTransfer) return null;
             Inventory inv = player.getInventory();
             ItemStack inputItem = ItemStack.EMPTY;
@@ -191,6 +152,40 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
                     res.transferSetSliders(e, q, a);
             });
             ApotheosisNetwork.CHANNEL.sendToServer(new SetRavenStatsPacket(e, q, a, inputItem));
+            return null;
+        }
+    }
+
+    private static class MechanicalRavenTransferHandler implements IRecipeTransferHandler<MechanicalRavenEnchantMenu, EnchantingRecipe> {
+        @Override public Class<? extends MechanicalRavenEnchantMenu> getContainerClass() { return MechanicalRavenEnchantMenu.class; }
+        @Override public Optional<MenuType<MechanicalRavenEnchantMenu>> getMenuType() {
+            return Optional.ofNullable(ApotheosisArtificeMod.MECHANICAL_RAVEN_TABLE_MENU.get());
+        }
+        @Override public RecipeType<EnchantingRecipe> getRecipeType() { return EnchantingCategory.TYPE; }
+        @Override @Nullable
+        public IRecipeTransferError transferRecipe(MechanicalRavenEnchantMenu container, EnchantingRecipe recipe,
+            IRecipeSlotsView recipeSlots, Player player, boolean maxTransfer, boolean doTransfer) {
+            if (!doTransfer) return null;
+            Inventory inv = player.getInventory();
+            ItemStack inputItem = ItemStack.EMPTY;
+            for (int i = 0; i < inv.getContainerSize(); i++) {
+                ItemStack stack = inv.getItem(i);
+                if (!stack.isEmpty() && recipe.getInput().test(stack)) {
+                    inputItem = stack.copy();
+                    inputItem.setCount(maxTransfer ? Math.min(stack.getCount(), stack.getMaxStackSize()) : 1);
+                    break;
+                }
+            }
+            if (inputItem.isEmpty()) return null;
+            ItemStack sendItem = inputItem;
+            float e = recipe.getRequirements().eterna();
+            float q = recipe.getRequirements().quanta();
+            float a = recipe.getRequirements().arcana();
+            container.transferJEI(e, q, a);
+            if (Minecraft.getInstance().screen instanceof MechanicalRavenEnchantScreen res) {
+                res.transferSetSliders(e, q, a);
+            }
+            ApotheosisNetwork.CHANNEL.sendToServer(new SetRavenStatsPacket(e, q, a, sendItem));
             return null;
         }
     }

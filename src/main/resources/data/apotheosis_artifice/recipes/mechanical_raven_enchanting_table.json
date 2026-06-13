@@ -1,0 +1,23 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "group": "apotheosis_artifice",
+    "pattern": [
+        " B ",
+        "CDC",
+        "EFE"
+    ],
+    "key": {
+        "B": {
+            "type": "forge:nbt",
+            "item": "apotheosis:gem",
+            "nbt": "{affix_data:{rarity:\"apotheosis:ancient\"},gem:\"apotheosis:overworld/royalty\"}"
+        },
+        "C": { "item": "minecraft:hopper_minecart" },
+        "D": { "item": "apotheosis_artifice:raven_enchanting_table" },
+        "E": { "item": "minecraft:redstone_block" },
+        "F": { "item": "minecraft:dispenser" }
+    },
+    "result": {
+        "item": "apotheosis_artifice:mechanical_raven_enchanting_table"
+    }
+}

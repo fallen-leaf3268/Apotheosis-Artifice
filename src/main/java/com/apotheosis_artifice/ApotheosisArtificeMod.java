@@ -8,6 +8,10 @@ import org.apache.logging.log4j.Logger;
 
 import com.apotheosis_artifice.enchant.ApotheosisArtificeReforgingTableBlock;
 import com.apotheosis_artifice.enchant.GemBinderItem;
+import com.apotheosis_artifice.enchant.MechanicalRavenEnchantBlockItem;
+import com.apotheosis_artifice.enchant.MechanicalRavenEnchantMenu;
+import com.apotheosis_artifice.enchant.MechanicalRavenEnchantTile;
+import com.apotheosis_artifice.enchant.MechanicalRavenEnchantingTableBlock;
 import com.apotheosis_artifice.enchant.RavenEnchantingTableBlock;
 import com.apotheosis_artifice.enchant.RavenEnchantMenu;
 import com.apotheosis_artifice.enchant.RavenEnchantTile;
@@ -82,16 +86,34 @@ public class ApotheosisArtificeMod {
         () -> new RavenEnchantingTableBlock());
     public static final RegistryObject<Item> RAVEN_ENCHANTING_TABLE_ITEM = ITEMS.register("raven_enchanting_table",
         () -> new BlockItem(RAVEN_ENCHANTING_TABLE.get(), new Item.Properties()));
+    public static final RegistryObject<Block> MECHANICAL_RAVEN_TABLE = BLOCKS.register("mechanical_raven_enchanting_table",
+        () -> new MechanicalRavenEnchantingTableBlock());
+    public static final RegistryObject<Item> MECHANICAL_RAVEN_TABLE_ITEM = ITEMS.register("mechanical_raven_enchanting_table",
+        () -> new MechanicalRavenEnchantBlockItem(MECHANICAL_RAVEN_TABLE.get(), new Item.Properties()));
     public static final RegistryObject<MenuType<RavenEnchantMenu>> RAVEN_ENCHANTING_TABLE_MENU = MENU_TYPES.register("raven_enchanting_table",
         () -> {
             var type = IForgeMenuType.<RavenEnchantMenu>create(RavenEnchantMenu::fromBuf);
             RavenEnchantMenu.TYPE = type;
             return type;
         });
+    public static final RegistryObject<MenuType<MechanicalRavenEnchantMenu>> MECHANICAL_RAVEN_TABLE_MENU = MENU_TYPES.register("mechanical_raven_enchanting_table",
+        () -> {
+            var type = IForgeMenuType.<MechanicalRavenEnchantMenu>create(MechanicalRavenEnchantMenu::fromBuf);
+            MechanicalRavenEnchantMenu.TYPE = type;
+            return type;
+        });
     public static final RegistryObject<BlockEntityType<RavenEnchantTile>> RAVEN_ENCHANTING_TILE = TILE_TYPES.register("raven_enchanting_table",
         () -> {
-            var type = BlockEntityType.Builder.<RavenEnchantTile>of(RavenEnchantTile::new, RAVEN_ENCHANTING_TABLE.get()).build(null);
+            var type = BlockEntityType.Builder.<RavenEnchantTile>of(RavenEnchantTile::new,
+                RAVEN_ENCHANTING_TABLE.get()).build(null);
             RavenEnchantTile.TYPE = type;
+            return type;
+        });
+    public static final RegistryObject<BlockEntityType<MechanicalRavenEnchantTile>> MECHANICAL_RAVEN_TILE = TILE_TYPES.register("mechanical_raven_enchanting_table",
+        () -> {
+            var type = BlockEntityType.Builder.<MechanicalRavenEnchantTile>of(MechanicalRavenEnchantTile::new,
+                MECHANICAL_RAVEN_TABLE.get()).build(null);
+            MechanicalRavenEnchantTile.TYPE = type;
             return type;
         });
 
@@ -113,6 +135,7 @@ public class ApotheosisArtificeMod {
             .displayItems((params, output) -> {
                 output.accept(PORTABLE_SALVAGING_TOOL.get());
                 output.accept(RAVEN_ENCHANTING_TABLE_ITEM.get());
+                output.accept(MECHANICAL_RAVEN_TABLE_ITEM.get());
                 output.accept(GEM_BINDER.get());
                 output.accept(CURIOS_REFORGING_TABLE_ITEM.get());
                 output.accept(GEM_CASE_ITEM.get());

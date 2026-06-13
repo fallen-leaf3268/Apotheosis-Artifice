@@ -59,9 +59,17 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
         this.access.evaluate((world, bp) -> {
             int ench = this.enchantSlots.getItem(0).getEnchantmentValue();
             var blockStats = ApothEnchantmentMenu.gatherStats(world, bp, ench);
+            ApotheosisArtificeMod.LOGGER.info("[Stats] tile_ravenStats: e={} q={} a={}",
+                this.ravenStats.eterna(), this.ravenStats.quanta(), this.ravenStats.arcana());
+            ApotheosisArtificeMod.LOGGER.info("[Stats] blockStats: e={} q={} a={} r={} clues={}",
+                blockStats.eterna(), blockStats.quanta(), blockStats.arcana(),
+                blockStats.rectification(), blockStats.clues());
             this.stats = new TableStats(
                 this.ravenStats.eterna(), this.ravenStats.quanta(), this.ravenStats.arcana(),
                 blockStats.rectification(), blockStats.clues(), blockStats.blacklist(), blockStats.treasure());
+            ApotheosisArtificeMod.LOGGER.info("[Stats] final=e={} q={} a={} r={} clues={}",
+                this.stats.eterna(), this.stats.quanta(), this.stats.arcana(),
+                this.stats.rectification(), this.stats.clues());
             PacketDistro.sendTo(Apotheosis.CHANNEL, new dev.shadowsoffire.apotheosis.ench.table.StatsMessage(this.stats), this.player);
             return this;
         }).orElse(this);

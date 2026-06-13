@@ -52,7 +52,7 @@ public record AffixDetailEntry(LootCategory category, Affix affix, List<RarityEn
         try {
             Component desc = affix.getAugmentingText(stack, rarity, 0.5f);
             if (desc != null && !desc.getString().isBlank())
-                return Component.literal("§7" + desc.getString());
+                return Component.literal("").withStyle(net.minecraft.ChatFormatting.YELLOW).append(desc.copy());
         } catch (Exception ignored) {}
         return Component.literal("");
     }

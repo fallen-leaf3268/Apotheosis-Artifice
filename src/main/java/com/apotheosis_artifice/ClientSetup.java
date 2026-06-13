@@ -1,5 +1,6 @@
 package com.apotheosis_artifice;
 
+import com.apotheosis_artifice.enchant.MechanicalRavenEnchantScreen;
 import com.apotheosis_artifice.enchant.RavenEnchantScreen;
 import com.apotheosis_artifice.gemcase.GemCaseScreen;
 import com.apotheosis_artifice.gemcase.GemCaseTileRenderer;
@@ -20,7 +21,9 @@ public class ClientSetup {
             MenuScreens.register(ApotheosisArtificeMod.PORTABLE_SALVAGING_MENU.get(), PortableSalvagingScreen::new);
             MenuScreens.register(ApotheosisArtificeMod.GEM_CASE_MENU.get(), GemCaseScreen::new);
             MenuScreens.register(ApotheosisArtificeMod.RAVEN_ENCHANTING_TABLE_MENU.get(), RavenEnchantScreen::new);
+            MenuScreens.register(ApotheosisArtificeMod.MECHANICAL_RAVEN_TABLE_MENU.get(), MechanicalRavenEnchantScreen::new);
             BlockEntityRenderers.register(ApotheosisArtificeMod.RAVEN_ENCHANTING_TILE.get(), net.minecraft.client.renderer.blockentity.EnchantTableRenderer::new);
+            BlockEntityRenderers.register(ApotheosisArtificeMod.MECHANICAL_RAVEN_TILE.get(), net.minecraft.client.renderer.blockentity.EnchantTableRenderer::new);
             BlockEntityRenderers.register(ApotheosisArtificeMod.GEM_CASE_TILE.get(), GemCaseTileRenderer::new);
             BlockEntityRenderers.register(ApotheosisArtificeMod.ENDER_GEM_CASE_TILE.get(), GemCaseTileRenderer::new);
         });

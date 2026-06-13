@@ -1,14 +1,27 @@
 package com.apotheosis_artifice;
 
+import com.apotheosis_artifice.gemcase.GemCaseMenu;
+
 import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingMenu;
+import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
+
 import com.apotheosis_artifice.ISlotSelectMenu;
 import com.apotheosis_artifice.gemcase.GemCaseMenu;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
 
 public class ApotheosisNetwork {
 
@@ -101,6 +114,77 @@ public class ApotheosisNetwork {
             ToggleBinderPacket::encode,
             ToggleBinderPacket::decode,
             ToggleBinderPacket::handle);
+
+        CHANNEL.registerMessage(id++, ForceSlot0Packet.class,
+            ForceSlot0Packet::encode,
+            ForceSlot0Packet::decode,
+            ForceSlot0Packet::handle);
+
+        CHANNEL.registerMessage(id++, SyncCluesPacket.class,
+            SyncCluesPacket::encode,
+            SyncCluesPacket::decode,
+            SyncCluesPacket::handle);
+    }
+
+    public static void sendClues(ServerPlayer player, int slot, List<EnchantmentInstance> clues) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncCluesPacket(slot, clues));
+    }
+
+    public static void sendForceSlot0(ServerPlayer player, ItemStack stack) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ForceSlot0Packet(stack));
+    }
+
+    public static record ForceSlot0Packet(ItemStack stack) {
+        public static void encode(ForceSlot0Packet pkt, FriendlyByteBuf buf) {
+            buf.writeItem(pkt.stack);
+        }
+        public static ForceSlot0Packet decode(FriendlyByteBuf buf) {
+            return new ForceSlot0Packet(buf.readItem());
+        }
+        public static void handle(ForceSlot0Packet pkt, Supplier<NetworkEvent.Context> ctx) {
+            ctx.get().enqueueWork(() -> {
+                var player = Minecraft.getInstance().player;
+                if (player == null) return;
+                if (player.containerMenu instanceof net.minecraft.world.inventory.EnchantmentMenu em) {
+                    em.enchantSlots.setItem(0, pkt.stack.copy());
+                    em.enchantSlots.setChanged();
+                    ApotheosisArtificeMod.LOGGER.info("[ForceSlot0] set slot0={}x{}",
+                        pkt.stack.getHoverName().getString(), pkt.stack.getCount());
+                }
+            });
+            ctx.get().setPacketHandled(true);
+        }
+    }
+
+    public static record SyncCluesPacket(int slot, List<EnchantmentInstance> clues) {
+        public static void encode(SyncCluesPacket pkt, FriendlyByteBuf buf) {
+            buf.writeByte(pkt.slot);
+            buf.writeByte(pkt.clues.size());
+            for (var e : pkt.clues) {
+                buf.writeShort(BuiltInRegistries.ENCHANTMENT.getId(e.enchantment));
+                buf.writeByte(e.level);
+            }
+        }
+        public static SyncCluesPacket decode(FriendlyByteBuf buf) {
+            int slot = buf.readByte();
+            int size = buf.readByte();
+            List<EnchantmentInstance> clues = new ArrayList<>(size);
+            for (int i = 0; i < size; i++) {
+                var ench = BuiltInRegistries.ENCHANTMENT.byId(buf.readShort());
+                clues.add(new EnchantmentInstance(ench, buf.readByte()));
+            }
+            return new SyncCluesPacket(slot, clues);
+        }
+        public static void handle(SyncCluesPacket pkt, Supplier<NetworkEvent.Context> ctx) {
+            ctx.get().enqueueWork(() -> {
+                ApotheosisArtificeMod.LOGGER.info("[SyncCluesPacket] slot={} clues={} screen={}", pkt.slot, pkt.clues.size(),
+                    Minecraft.getInstance().screen != null ? Minecraft.getInstance().screen.getClass().getSimpleName() : "null");
+                if (Minecraft.getInstance().screen instanceof ApothEnchantScreen es) {
+                    es.acceptClues(pkt.slot, pkt.clues, true);
+                }
+            });
+            ctx.get().setPacketHandled(true);
+        }
     }
 
     public static void sendToggleBinder(int slotIndex) {
@@ -114,25 +198,41 @@ public class ApotheosisNetwork {
         public static ToggleBinderPacket decode(FriendlyByteBuf buf) {
             return new ToggleBinderPacket(buf.readInt());
         }
-        public static void handle(ToggleBinderPacket pkt, java.util.function.Supplier<NetworkEvent.Context> ctx) {
+        public static void handle(ToggleBinderPacket pkt, Supplier<NetworkEvent.Context> ctx) {
             ctx.get().enqueueWork(() -> {
                 var player = ctx.get().getSender();
                 if (player == null) return;
+
+                ItemStack found = ItemStack.EMPTY;
+
                 if (player.containerMenu != null && pkt.slotIndex >= 0 && pkt.slotIndex < player.containerMenu.slots.size()) {
-                    var stack = player.containerMenu.getSlot(pkt.slotIndex).getItem();
-                    if (stack.getItem() instanceof com.apotheosis_artifice.enchant.GemBinderItem) {
-                        var tag = stack.getOrCreateTag();
-                        tag.putBoolean("salvage_mode", !tag.getBoolean("salvage_mode"));
-                        return;
+                    found = player.containerMenu.getSlot(pkt.slotIndex).getItem();
+                }
+
+                if (!(found.getItem() instanceof com.apotheosis_artifice.enchant.GemBinderItem)) {
+                    for (var slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+                        found = player.getItemBySlot(slot);
+                        if (found.getItem() instanceof com.apotheosis_artifice.enchant.GemBinderItem) break;
                     }
                 }
-                for (var slot : net.minecraft.world.entity.EquipmentSlot.values()) {
-                    var stack = player.getItemBySlot(slot);
-                    if (stack.getItem() instanceof com.apotheosis_artifice.enchant.GemBinderItem) {
-                        var tag = stack.getOrCreateTag();
-                        tag.putBoolean("salvage_mode", !tag.getBoolean("salvage_mode"));
-                        return;
+
+                if (!(found.getItem() instanceof com.apotheosis_artifice.enchant.GemBinderItem)) {
+                    var cap = player.getCapability(top.theillusivec4.curios.api.CuriosCapability.INVENTORY).resolve();
+                    if (cap.isPresent()) {
+                        var curios = cap.get();
+                        outer:
+                        for (var entry : curios.getCurios().entrySet()) {
+                            var stacks = entry.getValue().getStacks();
+                            for (int i = 0; i < stacks.getSlots(); i++) {
+                                found = stacks.getStackInSlot(i);
+                                if (found.getItem() instanceof com.apotheosis_artifice.enchant.GemBinderItem) break outer;
+                            }
+                        }
                     }
+                }
+
+                if (found.getItem() instanceof com.apotheosis_artifice.enchant.GemBinderItem) {
+                    com.apotheosis_artifice.enchant.GemBinderItem.cycleMode(found, player);
                 }
             });
             ctx.get().setPacketHandled(true);
