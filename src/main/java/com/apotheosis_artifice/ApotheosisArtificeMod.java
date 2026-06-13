@@ -50,6 +50,7 @@ public class ApotheosisArtificeMod {
 
     public static final String MODID = "apotheosis_artifice";
     public static final Logger LOGGER = LogManager.getLogger("ApotheosisArtifice");
+    public static com.apotheosis_artifice.proxy.IProxy PROXY;
 
     public static LootCategory CURIO;
 
@@ -145,6 +146,9 @@ public class ApotheosisArtificeMod {
 
     @SuppressWarnings("deprecation")
     public ApotheosisArtificeMod() {
+        PROXY = net.minecraftforge.fml.DistExecutor.safeRunForDist(
+            () -> com.apotheosis_artifice.proxy.ClientProxy::new,
+            () -> com.apotheosis_artifice.proxy.ServerProxy::new);
         var modBus = FMLJavaModLoadingContext.get().getModEventBus();
         ApotheosisConfig.init();
         ApotheosisNetwork.init();

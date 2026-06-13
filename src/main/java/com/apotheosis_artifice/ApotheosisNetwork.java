@@ -3,8 +3,6 @@ package com.apotheosis_artifice;
 import com.apotheosis_artifice.gemcase.GemCaseMenu;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingMenu;
-import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantScreen;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -143,14 +141,7 @@ public class ApotheosisNetwork {
         }
         public static void handle(ForceSlot0Packet pkt, Supplier<NetworkEvent.Context> ctx) {
             ctx.get().enqueueWork(() -> {
-                var player = Minecraft.getInstance().player;
-                if (player == null) return;
-                if (player.containerMenu instanceof net.minecraft.world.inventory.EnchantmentMenu em) {
-                    em.enchantSlots.setItem(0, pkt.stack.copy());
-                    em.enchantSlots.setChanged();
-                    ApotheosisArtificeMod.LOGGER.info("[ForceSlot0] set slot0={}x{}",
-                        pkt.stack.getHoverName().getString(), pkt.stack.getCount());
-                }
+                ApotheosisArtificeMod.PROXY.handleForceSlot0(pkt.stack);
             });
             ctx.get().setPacketHandled(true);
         }
@@ -177,11 +168,7 @@ public class ApotheosisNetwork {
         }
         public static void handle(SyncCluesPacket pkt, Supplier<NetworkEvent.Context> ctx) {
             ctx.get().enqueueWork(() -> {
-                ApotheosisArtificeMod.LOGGER.info("[SyncCluesPacket] slot={} clues={} screen={}", pkt.slot, pkt.clues.size(),
-                    Minecraft.getInstance().screen != null ? Minecraft.getInstance().screen.getClass().getSimpleName() : "null");
-                if (Minecraft.getInstance().screen instanceof ApothEnchantScreen es) {
-                    es.acceptClues(pkt.slot, pkt.clues, true);
-                }
+                ApotheosisArtificeMod.PROXY.handleSyncClues(pkt.slot, pkt.clues);
             });
             ctx.get().setPacketHandled(true);
         }

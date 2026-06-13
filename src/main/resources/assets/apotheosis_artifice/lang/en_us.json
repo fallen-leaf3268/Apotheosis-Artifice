@@ -80,6 +80,7 @@
 
     "item.apotheosis_artifice.gem_binder": "Gem Binder",
     "info.apotheosis_artifice.binder.bound": "§aBound to %s %s, %s, %s",
+    "info.apotheosis_artifice.binder.unbound": "§cBound cleared",
     "info.apotheosis_artifice.binder.pickup_mode": "Pickup Mode",
     "info.apotheosis_artifice.binder.gemcase_unbound": "§cGem Case unbound",
     "info.apotheosis_artifice.binder.gemcase_bound": "§a%s: %s, %s, %s [%s]",

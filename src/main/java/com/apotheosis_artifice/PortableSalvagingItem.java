@@ -52,6 +52,6 @@ public class PortableSalvagingItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.curiosforge.portable_salvaging_tool.desc").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("item.apotheosis_artifice.portable_salvaging_tool.desc").withStyle(ChatFormatting.GRAY));
     }
 }
