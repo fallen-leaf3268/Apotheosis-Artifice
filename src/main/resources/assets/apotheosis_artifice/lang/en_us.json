@@ -1,5 +1,7 @@
 {
     "affix.apotheosis_artifice.damage_immunity": "Immune to %s",
     "affix.apotheosis_artifice.damage_resistance": "%s%% Resistance to %s",
-    "affix.apotheosis_artifice.effect_immunity": "Immune to %s"
+    "affix.apotheosis_artifice.effect_immunity": "Immune to %s",
+    "item.apotheosis_artifice.apotheosis_charm": "Apotheosis Charm",
+    "info.apotheosis_artifice.binder.gemcase_bind_hint": "Hold Shift + Right-click to bind to a Gem Case"
 }

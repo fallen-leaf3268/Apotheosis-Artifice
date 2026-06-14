@@ -20,7 +20,5 @@
             "amplifier": { "min": 1, "steps": 2, "step": 0 }
         }
     },
-    "types": [
-        "curio:hostility_curse"
-    ]
+    "types": ["curio"]
 }

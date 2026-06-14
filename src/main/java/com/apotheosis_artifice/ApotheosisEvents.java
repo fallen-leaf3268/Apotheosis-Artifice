@@ -35,30 +35,41 @@ public class ApotheosisEvents {
         ItemStack stack = event.getItemStack();
         if (stack.isEmpty()) return;
 
-        LootCategory cat = LootCategory.forItem(stack);
-
         var afxData = stack.getTagElement(AffixHelper.AFFIX_DATA);
         boolean hasCurioCat = afxData != null && afxData.contains("curio_artifice");
 
         if (hasCurioCat) {
-            String curioCat = afxData.getString("curio_artifice");
-            String expectedSlot = curioCat.startsWith("curio:") ? curioCat.substring(6) : null;
-            if (expectedSlot != null && !expectedSlot.equals(event.getSlotContext().identifier())) {
+            String cc = afxData.getString("curio_artifice");
+            ApotheosisArtificeMod.LOGGER.info("[curioAttr] hasTag={} slot={} curio_artifice={}", event.getSlotContext().identifier(), cc);
+            if (!cc.startsWith("curio")) {
+                ApotheosisArtificeMod.LOGGER.info("[curioAttr] REJECT: curio_artifice={} not curio category", cc);
                 return;
             }
-        } else if (!cat.isNone() && !cat.getName().startsWith("curio")) {
-            return;
+            if (cc.startsWith("curio:") && !cc.substring(6).equals(event.getSlotContext().identifier())) {
+                ApotheosisArtificeMod.LOGGER.info("[curioAttr] REJECT: slot mismatch, expected={} actual={}", cc.substring(6), event.getSlotContext().identifier());
+                return;
+            }
+            ApotheosisArtificeMod.LOGGER.info("[curioAttr] ACCEPT: curio_artifice={} slot={}", cc, event.getSlotContext().identifier());
+        } else {
+            LootCategory cat = LootCategory.forItem(stack);
+            ApotheosisArtificeMod.LOGGER.info("[curioAttr] noTag forItem={} slot={}", cat.getName(), event.getSlotContext().identifier());
+            if (cat.isNone() || !cat.getName().startsWith("curio")) {
+                ApotheosisArtificeMod.LOGGER.info("[curioAttr] REJECT: forItem={} not curio", cat.getName());
+                return;
+            }
+            ApotheosisArtificeMod.LOGGER.info("[curioAttr] ACCEPT: forItem={} slot={}", cat.getName(), event.getSlotContext().identifier());
         }
 
         if (AffixHelper.hasAffixes(stack)) {
-            var affixes = AffixHelper.getAffixes(stack);
-            affixes.forEach((afx, inst) -> {
-                inst.addModifiers(EquipmentSlot.CHEST, event::addModifier);
-            });
+            AffixHelper.getAffixes(stack).values().forEach(inst -> inst.addModifiers(EquipmentSlot.CHEST, event::addModifier));
         }
 
-        if (!cat.isNone()) {
-            SocketHelper.getGems(stack).addModifiers(cat, EquipmentSlot.CHEST, event::addModifier);
+        LootCategory gemCat = hasCurioCat
+            ? LootCategory.byId(afxData.getString("curio_artifice"))
+            : LootCategory.forItem(stack);
+        ApotheosisArtificeMod.LOGGER.info("[curioAttr] gemCat={} hasAffixes={}", gemCat != null ? gemCat.getName() : "null", AffixHelper.hasAffixes(stack));
+        if (gemCat != null && !gemCat.isNone()) {
+            SocketHelper.getGems(stack).addModifiers(gemCat, EquipmentSlot.CHEST, event::addModifier);
         }
     }
 
@@ -68,10 +79,9 @@ public class ApotheosisEvents {
         boolean hasCurioCat = afxData != null && afxData.contains("curio_artifice");
 
         if (hasCurioCat) {
-            String expectedSlot = afxData.getString("curio_artifice");
-            if (expectedSlot.startsWith("curio:") && !expectedSlot.substring(6).equals(slotId)) {
-                return false;
-            }
+            String cc = afxData.getString("curio_artifice");
+            if (!cc.startsWith("curio")) return false;
+            if (cc.startsWith("curio:") && !cc.substring(6).equals(slotId)) return false;
         } else if (afxData != null) {
             LootCategory nativeCat = LootCategory.forItem(stack);
             if (!nativeCat.isNone() && !nativeCat.getName().startsWith("curio")) {

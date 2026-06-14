@@ -362,9 +362,11 @@ public class GemBinderItem extends Item {
         boolean showGcInfo = !isSalvageMode(stack) || getSalvageType(stack) == 1;
         if (showGcInfo) {
             if (gcName != null && gcPos != null) {
-                list.add(Component.translatable("info.apotheosis_artifice.binder.gemcase_bound", gcName, gcPos.getX(), gcPos.getY(), gcPos.getZ(), gcDim != null ? gcDim.toString() : "?").withStyle(ChatFormatting.GREEN));
+                list.add(Component.translatable("info.apotheosis_artifice.binder.gemcase_bound", gcName, gcPos.getX(), gcPos.getY(), gcPos.getZ(), gcDim != null ? gcDim.toString() : "?").withStyle(ChatFormatting.GOLD));
+                list.add(Component.translatable("info.apotheosis_artifice.binder.desc_gemcase").withStyle(ChatFormatting.GRAY));
             } else {
-                list.add(Component.translatable("info.apotheosis_artifice.binder.gemcase_unbound").withStyle(ChatFormatting.RED));
+                list.add(Component.translatable("info.apotheosis_artifice.binder.gemcase_bind_hint").withStyle(ChatFormatting.RED));
+                list.add(Component.translatable("info.apotheosis_artifice.binder.desc_gemcase").withStyle(ChatFormatting.GRAY));
             }
         }
 

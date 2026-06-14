@@ -41,15 +41,20 @@ public class ApotheosisNetwork {
                     ServerPlayer player = ctx.get().getSender();
                     if (player == null) return;
                     if (!(player.containerMenu instanceof ReforgingMenu menu)) {
-                        ApotheosisArtificeMod.LOGGER.warn("[APOTH] Server packet: menu is not ReforgingMenu, it's {}",
+                        ApotheosisArtificeMod.LOGGER.warn("[Network] Server packet: menu is {}, not ReforgingMenu",
                             player.containerMenu.getClass().getName());
                         return;
                     }
-                    ApotheosisArtificeMod.LOGGER.info("[APOTH] Server packet received: slotIdx={}", pkt.slotIndex);
+                    ApotheosisArtificeMod.LOGGER.info("[Network] SlotSelectPacket idx={} player={}", pkt.slotIndex, player.getName().getString());
                     ((ISlotSelectMenu) menu).curiosforge_selectSlot(pkt.slotIndex);
+                    ApotheosisArtificeMod.LOGGER.info("[Network] calling menu.slotsChanged");
                     menu.slotsChanged(null);
-                    menu.broadcastChanges();
-                    ApotheosisArtificeMod.LOGGER.info("[APOTH] Server: slotsChanged + broadcast done");
+                    ApotheosisArtificeMod.LOGGER.info("[Network] sending SyncReforgeChoices");
+                    CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncReforgeChoicesPacket(
+                        menu.getSlot(2).getItem(),
+                        menu.getSlot(3).getItem(),
+                        menu.getSlot(4).getItem()));
+                    ApotheosisArtificeMod.LOGGER.info("[Network] SlotSelectPacket done");
                 });
                 ctx.get().setPacketHandled(true);
             });
@@ -122,6 +127,11 @@ public class ApotheosisNetwork {
             SyncCluesPacket::encode,
             SyncCluesPacket::decode,
             SyncCluesPacket::handle);
+
+        CHANNEL.registerMessage(id++, SyncReforgeChoicesPacket.class,
+            SyncReforgeChoicesPacket::encode,
+            SyncReforgeChoicesPacket::decode,
+            SyncReforgeChoicesPacket::handle);
     }
 
     public static void sendClues(ServerPlayer player, int slot, List<EnchantmentInstance> clues) {
@@ -227,6 +237,32 @@ public class ApotheosisNetwork {
     }
 
     public static record SlotSelectPacket(int slotIndex) {}
+
+    public static record SyncReforgeChoicesPacket(ItemStack slot0, ItemStack slot1, ItemStack slot2) {
+        public static void encode(SyncReforgeChoicesPacket pkt, FriendlyByteBuf buf) {
+            buf.writeItem(pkt.slot0);
+            buf.writeItem(pkt.slot1);
+            buf.writeItem(pkt.slot2);
+        }
+        public static SyncReforgeChoicesPacket decode(FriendlyByteBuf buf) {
+            return new SyncReforgeChoicesPacket(buf.readItem(), buf.readItem(), buf.readItem());
+        }
+        public static void handle(SyncReforgeChoicesPacket pkt, Supplier<NetworkEvent.Context> ctx) {
+            ctx.get().enqueueWork(() -> {
+                var player = net.minecraft.client.Minecraft.getInstance().player;
+                if (player == null || !(player.containerMenu instanceof ReforgingMenu menu)) {
+                    ApotheosisArtificeMod.LOGGER.info("[SyncReforge] FAIL: player={} menu={}", player, player != null ? player.containerMenu.getClass().getName() : "null");
+                    return;
+                }
+                ApotheosisArtificeMod.LOGGER.info("[SyncReforge] setting slots 2-4");
+                menu.getSlot(2).set(pkt.slot0);
+                menu.getSlot(3).set(pkt.slot1);
+                menu.getSlot(4).set(pkt.slot2);
+                ApotheosisArtificeMod.LOGGER.info("[SyncReforge] done");
+            });
+            ctx.get().setPacketHandled(true);
+        }
+    }
     public static record GemCaseUpgradePacket(int rarityOrdinal, int page, boolean shift) {}
     public static record GemCaseSelectPacket(String gemId) {}
     public static record GemCasePagePacket(int page) {}

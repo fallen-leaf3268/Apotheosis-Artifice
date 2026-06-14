@@ -19,7 +19,6 @@ import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.ISlotSelectMenu;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
-
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry;
 import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingMenu;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
@@ -56,11 +55,9 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     @Unique
     private int curiosforge_selectedSlotIdx = 0;
 
-    /** 完整类别 ID 列表：原生 LootCategory 名称（如 "chestplate"）+ "curio:槽位名" */
     @Unique
     private List<String> curiosforge_availableSlots = List.of();
 
-    /** 缓存最高重铸消耗，启动时计算一次 */
     @Unique
     private static int[] curiosforge_maxCosts = null;
     @Unique
@@ -85,22 +82,24 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         return this.curiosforge_availableSlots;
     }
 
-    /**
-     * 检测物品可用的所有重铸类别：
-     * 1. 原生 LootCategory（如 chestplate、leggings）
-     * 2. Curios 专属槽位（如 curio:charm、curio:back）
-     */
     @Unique
     private void curiosforge_detectSlots(ItemStack input) {
         List<String> cats = new ArrayList<>();
 
-        // 原生 LootCategory（绕过 curio_cat 干扰，取真实类别如 chestplate）
         LootCategory trueNative = curiosforge_getTrueNative(input);
+        ApotheosisArtificeMod.LOGGER.info("[Detect] item={} trueNative={}", input.getHoverName().getString(), trueNative.getName());
         if (!trueNative.isNone() && !trueNative.getName().startsWith("curio")) {
             cats.add(trueNative.getName());
+            ApotheosisArtificeMod.LOGGER.info("[Detect] + native cat={}", trueNative.getName());
         }
 
-        // Curios 专属槽位（仅添加有对应词缀的）
+        LootRarity rarity = null;
+        var matSlot = ((ReforgingMenu)(Object)this).getSlot(1).getItem();
+        if (!matSlot.isEmpty()) {
+            var dh = RarityRegistry.getMaterialRarity(matSlot.getItem());
+            if (dh.isBound()) rarity = dh.get();
+        }
+
         var curiosSlots = CuriosApi.getSlots().keySet().stream()
             .filter(sid -> input.is(ItemTags.create(new ResourceLocation("curios:" + sid))))
             .sorted()
@@ -109,19 +108,27 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         if (curiosSlots.isEmpty() && input.getCapability(CuriosCapability.ITEM).isPresent()) {
             curiosSlots = List.of("curio");
         }
+        ApotheosisArtificeMod.LOGGER.info("[Detect] curiosSlots={} rarity={}", curiosSlots, rarity != null ? RarityRegistry.INSTANCE.getKey(rarity) : "null");
         for (String slot : curiosSlots) {
             LootCategory cat = getOrCreateCurioCategory(slot);
-            if (!cat.isNone() && hasAffixFor(input, cat)) {
+            boolean has = rarity == null ? hasAffixFor(input, cat) : curiosforge_hasAffixForRarity(input, cat, rarity);
+            ApotheosisArtificeMod.LOGGER.info("[Detect] curio:{} cat={} hasAffix={}", slot, cat != null ? cat.getName() : "null", has);
+            if (!cat.isNone() && has) {
                 cats.add("curio:" + slot);
             }
         }
 
         this.curiosforge_availableSlots = List.copyOf(cats);
+        ApotheosisArtificeMod.LOGGER.info("[Detect] availableSlots={} selectedIdx={}", cats, this.curiosforge_selectedSlotIdx);
         if (this.curiosforge_selectedSlotIdx >= cats.size())
             this.curiosforge_selectedSlotIdx = 0;
+        // 单槽位：立即更新输入物品的 curio_artifice，避免原版处理读到旧的标签
+        if (cats.size() == 1) {
+            input.getOrCreateTagElement("affix_data").putString("curio_artifice", cats.get(0));
+            ApotheosisArtificeMod.LOGGER.info("[Detect] single slot: set curio_artifice={} on input", cats.get(0));
+        }
     }
 
-    /** 获取物品的真实原生 LootCategory（忽略 curio_cat 覆盖） */
     @Unique
     private static LootCategory curiosforge_getTrueNative(ItemStack stack) {
         ItemStack copy = stack.copy();
@@ -133,7 +140,6 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         return LootCategory.forItem(copy);
     }
 
-    /** 获取或创建 "curio:{slotName}" 对应的 LootCategory */
     @Unique
     private static LootCategory getOrCreateCurioCategory(String slotOrCatName) {
         String slotId = slotOrCatName.startsWith("curio:") ? slotOrCatName.substring(6) : slotOrCatName;
@@ -151,16 +157,12 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         this.curiosforge_selectedSlotIdx = idx;
     }
 
-    // ===== 输入槽验证：确保有词缀可用 =====
-
     @ModifyArg(method = "<init>", at = @At(value = "INVOKE", target = "Ldev/shadowsoffire/placebo/menu/PlaceboContainerMenu$UpdatingSlot;<init>(Lnet/minecraftforge/items/IItemHandler;IIILjava/util/function/Predicate;)V", remap = false), index = 4)
     private Predicate<ItemStack> enhanceSlotValidator(Predicate<ItemStack> original, IItemHandler handler) {
         if (handler == this.itemInv)
             return s -> original.test(s) && hasAffixFor(s);
         return original;
     }
-
-    // ===== slotsChanged HEAD: 检测可用的所有类别 =====
 
     @Inject(method = "slotsChanged", at = @At("HEAD"), remap = true)
     private void curiosforge_updateSlots(net.minecraft.world.Container container, CallbackInfo ci) {
@@ -169,16 +171,19 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         curiosforge_detectSlots(input);
     }
 
-    // ===== slotsChanged TAIL: 按选中类别重造 =====
-
     @Inject(method = "slotsChanged", at = @At("TAIL"), remap = true)
     private void curiosforge_regenerate(net.minecraft.world.Container container, CallbackInfo ci) {
         ReforgingMenu menu = (ReforgingMenu)(Object)this;
         ItemStack input = menu.getSlot(0).getItem();
-        if (input.isEmpty()) return;
+        if (input.isEmpty()) {
+            ApotheosisArtificeMod.LOGGER.info("[Regen] input empty, skip");
+            return;
+        }
+        ApotheosisArtificeMod.LOGGER.info("[Regen] input={} available={} selectedIdx={} selectedCat={}",
+            input.getHoverName().getString(), this.curiosforge_availableSlots, this.curiosforge_selectedSlotIdx,
+            this.curiosforge_selectedSlotIdx < this.curiosforge_availableSlots.size() ? this.curiosforge_availableSlots.get(this.curiosforge_selectedSlotIdx) : "N/A");
 
         if (this.curiosforge_availableSlots.size() > 1) {
-            // ===== 多栏位：TAIL 按选中类别重造 =====
             ItemStack mat = menu.getSlot(1).getItem();
             if (mat.isEmpty()) return;
 
@@ -187,37 +192,42 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
 
             String catName = this.curiosforge_availableSlots.get(this.curiosforge_selectedSlotIdx);
 
-            LootCategory cat = getOrCreateCurioCategory(catName);
+            LootCategory cat;
+            if (catName.startsWith("curio:")) {
+                cat = getOrCreateCurioCategory(catName);
+            } else {
+                cat = LootCategory.byId(catName);
+            }
             if (cat == null || cat.isNone()) return;
 
-            boolean isCurio = catName.startsWith("curio:");
-            if (isCurio) com.apotheosis_artifice.CatOverride.set(cat);
+            ApotheosisArtificeMod.LOGGER.info("[Regen] Reforging as cat={} rarityKey={}", cat.getName(), RarityRegistry.INSTANCE.getKey(rarity));
+            com.apotheosis_artifice.CatOverride.set(cat);
             try {
                 for (int s = 0; s < 3; s++) {
                     RandomSource r = this.random;
                     r.setSeed(this.seed ^ ForgeRegistries.ITEMS.getKey(input.getItem()).hashCode() + s);
-                    ItemStack result = LootController.createLootItem(input.copy(), cat, rarity, r);
-                    if (isCurio) {
-                        result.getOrCreateTagElement("affix_data").putString("curio_artifice", cat.getName());
-                    }
+                    ItemStack copy = input.copy();
+                    copy.getOrCreateTagElement("affix_data").putString("curio_artifice", cat.getName());
+                    ApotheosisArtificeMod.LOGGER.info("[Regen] pre-set curio_artifice={}", cat.getName());
+                    ItemStack result = LootController.createLootItem(copy, cat, rarity, r);
+                    String cc = cat.getName();
+                    result.getOrCreateTagElement("affix_data").putString("curio_artifice", cc);
+                    ApotheosisArtificeMod.LOGGER.info("[Regen] slot={} curio_artifice set={}", s, cc);
                     this.choicesInv.setStackInSlot(s, result);
                 }
             } finally {
-                if (isCurio) com.apotheosis_artifice.CatOverride.set(null);
+                com.apotheosis_artifice.CatOverride.set(null);
             }
-            menu.broadcastChanges();
         }
-        // 任何情况下 cost 为 0 时，取缓存中所有配方的最高 cost
         if (this.costs[0] == 0 && this.costs[1] == 0 && this.costs[2] == 0 && this.player != null && this.player.level() != null) {
             int[] max = curiosforge_getMaxCosts(this.player);
             if (max[0] > 0) this.costs[0] = max[0];
             if (max[1] > 0) this.costs[1] = max[1];
             if (max[2] > 0) this.costs[2] = max[2];
         }
-        // 单栏位：不需写入 curio_cat，由 ApotheosisEvents 通过原生 LootCategory 判断绑定
+        ApotheosisArtificeMod.LOGGER.info("[Regen] done (single slot case: size={})", this.curiosforge_availableSlots.size());
     }
 
-    /** 检查某物品在指定类别下是否有至少一个可用的词缀 */
     private static boolean hasAffixFor(ItemStack stack, LootCategory cat) {
         if (cat == null || cat.isNone()) return false;
         return AffixRegistry.INSTANCE.getValues().stream()
@@ -227,7 +237,16 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             });
     }
 
-    /** 检查某物品是否有至少一个可用的词缀（使用物品默认的 LootCategory） */
+    @Unique
+    private static boolean curiosforge_hasAffixForRarity(ItemStack stack, LootCategory cat, LootRarity rarity) {
+        for (var a : AffixRegistry.INSTANCE.getValues()) {
+            Set<LootCategory> types = ((AffixTypes) a).curiosforge_getTypes();
+            if (!types.contains(cat) && !AffixTypes.curiosforge_typeMatches(types, cat)) continue;
+            if (((dev.shadowsoffire.apotheosis.adventure.affix.Affix) a).canApplyTo(stack, cat, rarity)) return true;
+        }
+        return false;
+    }
+
     private static boolean hasAffixFor(ItemStack stack) {
         return hasAffixFor(stack, LootCategory.forItem(stack));
     }

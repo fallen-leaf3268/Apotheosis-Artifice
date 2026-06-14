@@ -119,7 +119,7 @@ public class ApotheosisArtificeMod {
         });
 
     // === 宝石绑定器 ===
-    public static final RegistryObject<Item> GEM_BINDER = ITEMS.register("gem_binder",
+    public static final RegistryObject<Item> APOTHEOSIS_CHARM = ITEMS.register("apotheosis_charm",
         () -> new GemBinderItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
     // === 高级重铸台 ===
@@ -137,7 +137,7 @@ public class ApotheosisArtificeMod {
                 output.accept(PORTABLE_SALVAGING_TOOL.get());
                 output.accept(RAVEN_ENCHANTING_TABLE_ITEM.get());
                 output.accept(MECHANICAL_RAVEN_TABLE_ITEM.get());
-                output.accept(GEM_BINDER.get());
+                output.accept(APOTHEOSIS_CHARM.get());
                 output.accept(CURIOS_REFORGING_TABLE_ITEM.get());
                 output.accept(GEM_CASE_ITEM.get());
                 output.accept(ENDER_GEM_CASE_ITEM.get());

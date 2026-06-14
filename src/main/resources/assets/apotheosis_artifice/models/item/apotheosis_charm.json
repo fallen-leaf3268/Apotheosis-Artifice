@@ -1,6 +1,6 @@
 {
     "parent": "minecraft:item/generated",
     "textures": {
-        "layer0": "apotheosis_artifice:item/gem_binder"
+        "layer0": "apotheosis_artifice:item/apotheosis_charm"
     }
 }

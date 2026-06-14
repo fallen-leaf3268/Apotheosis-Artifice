@@ -69,9 +69,8 @@ public abstract class ReforgingScreenMixin extends AbstractContainerScreen<Refor
             }
 
             Button btn = Button.builder(label, b -> {
-                ApotheosisArtificeMod.LOGGER.info("[APOTH] Button pressed: idx={} cat={}", fIdx, catId);
+                ApotheosisArtificeMod.LOGGER.info("[Screen] Button clicked: idx={} cat={}", fIdx, catId);
                 ((ISlotSelectMenu) ReforgingScreenMixin.this.menu).curiosforge_selectSlot(fIdx);
-                ReforgingScreenMixin.this.menu.slotsChanged(null);
                 ApotheosisNetwork.CHANNEL.sendToServer(new ApotheosisNetwork.SlotSelectPacket(fIdx));
             })
                 .bounds(btnX, y, 60, 14)

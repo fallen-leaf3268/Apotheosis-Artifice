@@ -17,6 +17,8 @@
         "PotionAffixCanApplyToMixin",
         "EnchantmentHelperMixin",
         "AffixRegistryMixin",
+        "AdventureEventsMixin",
+        "AugmentingMenuMixin",
         "LootCategoryMixin",
         "LootControllerMixin",
         "SocketProtectionMixin",

@@ -20,7 +20,5 @@
             "amplifier": 1
         }
     },
-    "types": [
-        "curio:belt"
-    ]
+    "types": ["curio"]
 }
