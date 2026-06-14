@@ -2,10 +2,12 @@ package com.apotheosis_artifice;
 
 import java.util.Map;
 
+import com.apotheosis_artifice.affix.EffectImmunityAffix;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixInstance;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
 import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.living.ShieldBlockEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -176,6 +179,32 @@ public class ApotheosisEvents {
                         inst.onBlockBreak(player, event.getLevel(), event.getPos(), event.getState());
                     }
                     SocketHelper.getGems(stack).onBlockBreak(player, event.getLevel(), event.getPos(), event.getState());
+                }
+            }
+        });
+    }
+
+    @SubscribeEvent
+    public void onMobEffect(MobEffectEvent.Applicable event) {
+        LivingEntity entity = event.getEntity();
+        if (entity.level().isClientSide) return;
+
+        MobEffect effect = event.getEffectInstance().getEffect();
+
+        LazyOptional<ICuriosItemHandler> curiosInv = entity.getCapability(CuriosCapability.INVENTORY);
+        curiosInv.ifPresent(handler -> {
+            for (Map.Entry<String, ICurioStacksHandler> entry : handler.getCurios().entrySet()) {
+                IDynamicStackHandler stackHandler = entry.getValue().getStacks();
+                for (int i = 0; i < stackHandler.getSlots(); i++) {
+                    ItemStack stack = stackHandler.getStackInSlot(i);
+                    if (stack.isEmpty()) continue;
+                    if (!curiosforge_matchesSlot(stack, entry.getKey())) continue;
+                    for (AffixInstance inst : AffixHelper.getAffixes(stack).values()) {
+                        if (inst.affix().get() instanceof EffectImmunityAffix eia && eia.hasEffect(effect)) {
+                            event.setCanceled(true);
+                            return;
+                        }
+                    }
                 }
             }
         });
