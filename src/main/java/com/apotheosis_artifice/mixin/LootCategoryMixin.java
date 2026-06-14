@@ -23,8 +23,8 @@ public class LootCategoryMixin {
         }
 
         var afxData = item.getTagElement(AffixHelper.AFFIX_DATA);
-        if (afxData != null && afxData.contains("curio_cat")) {
-            LootCategory cat = LootCategory.byId(afxData.getString("curio_cat"));
+        if (afxData != null && afxData.contains("curio_artifice")) {
+            LootCategory cat = LootCategory.byId(afxData.getString("curio_artifice"));
             if (cat != null && !cat.isNone()) {
                 cir.setReturnValue(cat);
             }

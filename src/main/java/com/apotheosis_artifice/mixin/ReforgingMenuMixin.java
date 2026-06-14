@@ -60,6 +60,27 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     @Unique
     private List<String> curiosforge_availableSlots = List.of();
 
+    /** 缓存最高重铸消耗，启动时计算一次 */
+    @Unique
+    private static int[] curiosforge_maxCosts = null;
+    @Unique
+    private static boolean curiosforge_costsInit = false;
+
+    @Unique
+    private static int[] curiosforge_getMaxCosts(net.minecraft.world.entity.player.Player player) {
+        if (curiosforge_costsInit) return curiosforge_maxCosts;
+        int maxS = 0, maxM = 0, maxL = 0;
+        var all = player.level().getRecipeManager().getAllRecipesFor(dev.shadowsoffire.apotheosis.Apoth.RecipeTypes.REFORGING);
+        for (var r : all) {
+            if (r.sigilCost() > maxS) maxS = r.sigilCost();
+            if (r.matCost() > maxM) maxM = r.matCost();
+            if (r.levelCost() > maxL) maxL = r.levelCost();
+        }
+        curiosforge_maxCosts = new int[] { maxS, maxM, maxL };
+        curiosforge_costsInit = true;
+        return curiosforge_maxCosts;
+    }
+
     public List<String> curiosforge_getAvailableSlots() {
         return this.curiosforge_availableSlots;
     }
@@ -105,8 +126,8 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     private static LootCategory curiosforge_getTrueNative(ItemStack stack) {
         ItemStack copy = stack.copy();
         var tag = copy.getTagElement(AffixHelper.AFFIX_DATA);
-        if (tag != null && tag.contains("curio_cat")) {
-            tag.remove("curio_cat");
+        if (tag != null && tag.contains("curio_artifice")) {
+            tag.remove("curio_artifice");
             if (tag.isEmpty()) copy.removeTagKey(AffixHelper.AFFIX_DATA);
         }
         return LootCategory.forItem(copy);
@@ -177,7 +198,7 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
                     r.setSeed(this.seed ^ ForgeRegistries.ITEMS.getKey(input.getItem()).hashCode() + s);
                     ItemStack result = LootController.createLootItem(input.copy(), cat, rarity, r);
                     if (isCurio) {
-                        result.getOrCreateTagElement("affix_data").putString("curio_cat", cat.getName());
+                        result.getOrCreateTagElement("affix_data").putString("curio_artifice", cat.getName());
                     }
                     this.choicesInv.setStackInSlot(s, result);
                 }
@@ -186,18 +207,12 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             }
             menu.broadcastChanges();
         }
-        // 任何情况下 cost 为 0 时，取所有已加载配方的最高 cost
+        // 任何情况下 cost 为 0 时，取缓存中所有配方的最高 cost
         if (this.costs[0] == 0 && this.costs[1] == 0 && this.costs[2] == 0 && this.player != null && this.player.level() != null) {
-            var allRecipes = this.player.level().getRecipeManager().getAllRecipesFor(dev.shadowsoffire.apotheosis.Apoth.RecipeTypes.REFORGING);
-            int maxSigil = 0, maxMat = 0, maxLevel = 0;
-            for (var r : allRecipes) {
-                if (r.sigilCost() > maxSigil) maxSigil = r.sigilCost();
-                if (r.matCost() > maxMat) maxMat = r.matCost();
-                if (r.levelCost() > maxLevel) maxLevel = r.levelCost();
-            }
-            if (maxSigil > 0) this.costs[0] = maxSigil;
-            if (maxMat > 0) this.costs[1] = maxMat;
-            if (maxLevel > 0) this.costs[2] = maxLevel;
+            int[] max = curiosforge_getMaxCosts(this.player);
+            if (max[0] > 0) this.costs[0] = max[0];
+            if (max[1] > 0) this.costs[1] = max[1];
+            if (max[2] > 0) this.costs[2] = max[2];
         }
         // 单栏位：不需写入 curio_cat，由 ApotheosisEvents 通过原生 LootCategory 判断绑定
     }
