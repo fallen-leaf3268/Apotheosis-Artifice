@@ -38,13 +38,19 @@ public record AffixCodexEntry(List<LootCategory> categories) {
 
         var cats = LootCategory.VALUES.stream()
             .filter(c -> !c.isNone())
-            .filter(c -> !"curio".equals(c.getName())) // 通用 curio 不单独显示，词缀自动归入各子槽位
             .filter(c -> {
                 for (Affix a : registry.getValues()) {
                     for (DynamicHolder<LootRarity> holder : orderedRarities) {
                         if (!holder.isBound()) continue;
                         try {
                             if (a.canApplyTo(ItemStack.EMPTY, c, holder.get())) return true;
+                            // 通用 curio 页面也显示所有 curio:xxx 子槽位的词缀
+                            if ("curio".equals(c.getName())) {
+                                for (LootCategory sub : LootCategory.VALUES) {
+                                    if (!sub.isNone() && sub.getName().startsWith("curio:")
+                                        && a.canApplyTo(ItemStack.EMPTY, sub, holder.get())) return true;
+                                }
+                            }
                         } catch (Exception e) { /* skip */ }
                     }
                 }
@@ -60,28 +66,47 @@ public record AffixCodexEntry(List<LootCategory> categories) {
     private static final Map<String, List<ItemStack>> CATEGORY_ITEMS = new HashMap<>();
 
     static {
-        // 第一遍：LootCategory.forItem 自动归类（通用 curio 会拦截多槽位物品）
-        for (Item item : ForgeRegistries.ITEMS) {
-            ItemStack stack = new ItemStack(item);
-            if (stack.isEmpty()) continue;
-            LootCategory cat = LootCategory.forItem(stack);
-            if (cat != null && !cat.isNone()) {
-                CATEGORY_ITEMS.computeIfAbsent(cat.getName(), k -> new ArrayList<>()).add(stack);
+        // 为所有已注册的 Curios 槽位创建 LootCategory（确保法术书等能独立显示）
+        for (String slotId : top.theillusivec4.curios.api.CuriosApi.getSlotHelper().getSlotTypeIds()) {
+            String catName = "curio:" + slotId;
+            if (LootCategory.byId(catName) == null || LootCategory.byId(catName).isNone()) {
+                LootCategory.register(null, catName,
+                    s -> !s.isEmpty() && s.is(net.minecraft.tags.ItemTags.create(new ResourceLocation("curios:" + slotId))),
+                    new net.minecraft.world.entity.EquipmentSlot[]{net.minecraft.world.entity.EquipmentSlot.CHEST});
             }
         }
-        // 第二遍：按 curios 标签直接匹配槽位（解决多槽位被通用 curio 拦截的问题）
+
+        // 遍历所有物品，统计每个物品的饰品槽位数量
         for (Item item : ForgeRegistries.ITEMS) {
             ItemStack stack = new ItemStack(item);
             if (stack.isEmpty()) continue;
-            for (LootCategory cat : LootCategory.VALUES) {
-                if (cat.isNone()) continue;
-                String name = cat.getName();
-                if (!name.startsWith("curio:") || CATEGORY_ITEMS.getOrDefault(name, List.of()).contains(stack)) continue;
-                String slotId = name.substring(6);
+
+            LootCategory nativeCat = LootCategory.forItem(stack);
+
+            // 收集该物品匹配的所有 curio 槽位
+            List<String> matchedCurioSlots = new ArrayList<>();
+            for (String slotId : top.theillusivec4.curios.api.CuriosApi.getSlotHelper().getSlotTypeIds()) {
+                String catName = "curio:" + slotId;
+                LootCategory lc = LootCategory.byId(catName);
+                if (lc == null || lc.isNone()) continue;
                 var tag = net.minecraft.tags.ItemTags.create(new ResourceLocation("curios:" + slotId));
                 if (stack.is(tag)) {
-                    CATEGORY_ITEMS.computeIfAbsent(name, k -> new ArrayList<>()).add(stack);
+                    matchedCurioSlots.add(catName);
                 }
+            }
+
+            if (!matchedCurioSlots.isEmpty()) {
+                if (matchedCurioSlots.size() == 1) {
+                    CATEGORY_ITEMS.computeIfAbsent(matchedCurioSlots.get(0), k -> new ArrayList<>()).add(stack);
+                } else {
+                    CATEGORY_ITEMS.computeIfAbsent("curio", k -> new ArrayList<>()).add(stack);
+                }
+                // 双类别物品（如胸甲+背饰）：也加入原生非 curio 类别
+                if (nativeCat != null && !nativeCat.isNone() && !nativeCat.getName().startsWith("curio")) {
+                    CATEGORY_ITEMS.computeIfAbsent(nativeCat.getName(), k -> new ArrayList<>()).add(stack);
+                }
+            } else if (nativeCat != null && !nativeCat.isNone()) {
+                CATEGORY_ITEMS.computeIfAbsent(nativeCat.getName(), k -> new ArrayList<>()).add(stack);
             }
         }
         // 扫描结果日志 + 空分类兜底
@@ -90,13 +115,8 @@ public record AffixCodexEntry(List<LootCategory> categories) {
             String name = cat.getName();
             List<ItemStack> list = CATEGORY_ITEMS.get(name);
             if (list == null || list.isEmpty()) {
-                if (name.startsWith("curio:") && CATEGORY_ITEMS.containsKey("curio")) {
-                    CATEGORY_ITEMS.put(name, CATEGORY_ITEMS.get("curio"));
-                    LOGGER.warn("[{}] empty, borrowed {} from [curio]", name, CATEGORY_ITEMS.get("curio").size());
-                } else {
-                    LOGGER.warn("[{}] empty, using BARRIER", name);
-                    CATEGORY_ITEMS.put(name, List.of(new ItemStack(Items.BARRIER)));
-                }
+                LOGGER.warn("[{}] empty, using BARRIER", name);
+                CATEGORY_ITEMS.put(name, List.of(new ItemStack(Items.BARRIER)));
             } else {
                 LOGGER.info("[{}] {} items", name, list.size());
             }

@@ -19,7 +19,6 @@ public class LootCategoryMixin {
     private static void curiosforge_checkOverride(ItemStack item, CallbackInfoReturnable<LootCategory> cir) {
         LootCategory override = CatOverride.get();
         if (override != null) {
-            ApotheosisArtificeMod.LOGGER.info("[LootCat] CatOverride={} for {}", override.getName(), item.getHoverName().getString());
             cir.setReturnValue(override);
             return;
         }
@@ -27,15 +26,12 @@ public class LootCategoryMixin {
         var afxData = item.getTagElement(AffixHelper.AFFIX_DATA);
         if (afxData != null && afxData.contains("curio_artifice")) {
             String val = afxData.getString("curio_artifice");
-            ApotheosisArtificeMod.LOGGER.info("[LootCat] curio_artifice={} for {}", val, item.getHoverName().getString());
             if (val.startsWith("curio")) {
-                ApotheosisArtificeMod.LOGGER.info("[LootCat] -> return NONE (curio tag, skip vanilla)");
                 cir.setReturnValue(LootCategory.NONE);
                 return;
             }
             LootCategory cat = LootCategory.byId(val);
             if (cat != null && !cat.isNone()) {
-                ApotheosisArtificeMod.LOGGER.info("[LootCat] -> return {}", cat.getName());
                 cir.setReturnValue(cat);
             }
         }

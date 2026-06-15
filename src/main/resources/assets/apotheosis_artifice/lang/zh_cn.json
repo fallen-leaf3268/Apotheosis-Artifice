@@ -106,5 +106,10 @@
     "jei.apotheosis_artifice.affix_suffix": "后缀词条",
     "jei.apotheosis_artifice.affix_prefix": "前缀词条",
     "jei.apotheosis_artifice.affix_gem": "可镶嵌宝石",
-    "jei.apotheosis_artifice.click_for_detail": "§e右击查看词缀"
+    "jei.apotheosis_artifice.click_for_detail": "§e右击查看词缀",
+    "affix.apotheosis_artifice:attribute/charm_spirit": "生灵",
+    "affix.apotheosis_artifice:attribute/charm_spirit.suffix": "生机庇护",
+    "affix.apotheosis_artifice:attribute/hands_swiftness": "风灵",
+    "affix.apotheosis_artifice:attribute/hands_swiftness.suffix": "疾风之力",
+    "text.apotheosis.category.curio": "任意饰品栏位"
 }

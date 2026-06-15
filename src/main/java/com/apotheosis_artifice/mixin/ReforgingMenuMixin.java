@@ -87,10 +87,8 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         List<String> cats = new ArrayList<>();
 
         LootCategory trueNative = curiosforge_getTrueNative(input);
-        ApotheosisArtificeMod.LOGGER.info("[Detect] item={} trueNative={}", input.getHoverName().getString(), trueNative.getName());
         if (!trueNative.isNone() && !trueNative.getName().startsWith("curio")) {
             cats.add(trueNative.getName());
-            ApotheosisArtificeMod.LOGGER.info("[Detect] + native cat={}", trueNative.getName());
         }
 
         LootRarity rarity = null;
@@ -108,24 +106,20 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         if (curiosSlots.isEmpty() && input.getCapability(CuriosCapability.ITEM).isPresent()) {
             curiosSlots = List.of("curio");
         }
-        ApotheosisArtificeMod.LOGGER.info("[Detect] curiosSlots={} rarity={}", curiosSlots, rarity != null ? RarityRegistry.INSTANCE.getKey(rarity) : "null");
         for (String slot : curiosSlots) {
             LootCategory cat = getOrCreateCurioCategory(slot);
             boolean has = rarity == null ? hasAffixFor(input, cat) : curiosforge_hasAffixForRarity(input, cat, rarity);
-            ApotheosisArtificeMod.LOGGER.info("[Detect] curio:{} cat={} hasAffix={}", slot, cat != null ? cat.getName() : "null", has);
             if (!cat.isNone() && has) {
                 cats.add("curio:" + slot);
             }
         }
 
         this.curiosforge_availableSlots = List.copyOf(cats);
-        ApotheosisArtificeMod.LOGGER.info("[Detect] availableSlots={} selectedIdx={}", cats, this.curiosforge_selectedSlotIdx);
         if (this.curiosforge_selectedSlotIdx >= cats.size())
             this.curiosforge_selectedSlotIdx = 0;
         // 单槽位：立即更新输入物品的 curio_artifice，避免原版处理读到旧的标签
         if (cats.size() == 1) {
             input.getOrCreateTagElement("affix_data").putString("curio_artifice", cats.get(0));
-            ApotheosisArtificeMod.LOGGER.info("[Detect] single slot: set curio_artifice={} on input", cats.get(0));
         }
     }
 
@@ -176,12 +170,8 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         ReforgingMenu menu = (ReforgingMenu)(Object)this;
         ItemStack input = menu.getSlot(0).getItem();
         if (input.isEmpty()) {
-            ApotheosisArtificeMod.LOGGER.info("[Regen] input empty, skip");
             return;
         }
-        ApotheosisArtificeMod.LOGGER.info("[Regen] input={} available={} selectedIdx={} selectedCat={}",
-            input.getHoverName().getString(), this.curiosforge_availableSlots, this.curiosforge_selectedSlotIdx,
-            this.curiosforge_selectedSlotIdx < this.curiosforge_availableSlots.size() ? this.curiosforge_availableSlots.get(this.curiosforge_selectedSlotIdx) : "N/A");
 
         if (this.curiosforge_availableSlots.size() > 1) {
             ItemStack mat = menu.getSlot(1).getItem();
@@ -200,7 +190,6 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             }
             if (cat == null || cat.isNone()) return;
 
-            ApotheosisArtificeMod.LOGGER.info("[Regen] Reforging as cat={} rarityKey={}", cat.getName(), RarityRegistry.INSTANCE.getKey(rarity));
             com.apotheosis_artifice.CatOverride.set(cat);
             try {
                 for (int s = 0; s < 3; s++) {
@@ -208,11 +197,9 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
                     r.setSeed(this.seed ^ ForgeRegistries.ITEMS.getKey(input.getItem()).hashCode() + s);
                     ItemStack copy = input.copy();
                     copy.getOrCreateTagElement("affix_data").putString("curio_artifice", cat.getName());
-                    ApotheosisArtificeMod.LOGGER.info("[Regen] pre-set curio_artifice={}", cat.getName());
                     ItemStack result = LootController.createLootItem(copy, cat, rarity, r);
                     String cc = cat.getName();
                     result.getOrCreateTagElement("affix_data").putString("curio_artifice", cc);
-                    ApotheosisArtificeMod.LOGGER.info("[Regen] slot={} curio_artifice set={}", s, cc);
                     this.choicesInv.setStackInSlot(s, result);
                 }
             } finally {
@@ -225,7 +212,6 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             if (max[1] > 0) this.costs[1] = max[1];
             if (max[2] > 0) this.costs[2] = max[2];
         }
-        ApotheosisArtificeMod.LOGGER.info("[Regen] done (single slot case: size={})", this.curiosforge_availableSlots.size());
     }
 
     private static boolean hasAffixFor(ItemStack stack, LootCategory cat) {

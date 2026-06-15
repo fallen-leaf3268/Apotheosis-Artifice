@@ -5,8 +5,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import com.apotheosis_artifice.ApotheosisArtificeMod;
-
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.AdventureEvents;
 import net.minecraft.world.item.ItemStack;
@@ -23,7 +21,6 @@ public class AdventureEventsMixin {
         if (afxData != null && afxData.contains("curio_artifice")) {
             String val = afxData.getString("curio_artifice");
             if (val.startsWith("curio")) {
-                ApotheosisArtificeMod.LOGGER.info("[Vanilla] affixModifiers SKIP: curio_artifice={}", val);
                 ci.cancel();
             }
         }

@@ -45,16 +45,12 @@ public class ApotheosisNetwork {
                             player.containerMenu.getClass().getName());
                         return;
                     }
-                    ApotheosisArtificeMod.LOGGER.info("[Network] SlotSelectPacket idx={} player={}", pkt.slotIndex, player.getName().getString());
                     ((ISlotSelectMenu) menu).curiosforge_selectSlot(pkt.slotIndex);
-                    ApotheosisArtificeMod.LOGGER.info("[Network] calling menu.slotsChanged");
                     menu.slotsChanged(null);
-                    ApotheosisArtificeMod.LOGGER.info("[Network] sending SyncReforgeChoices");
                     CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncReforgeChoicesPacket(
                         menu.getSlot(2).getItem(),
                         menu.getSlot(3).getItem(),
                         menu.getSlot(4).getItem()));
-                    ApotheosisArtificeMod.LOGGER.info("[Network] SlotSelectPacket done");
                 });
                 ctx.get().setPacketHandled(true);
             });
@@ -251,14 +247,11 @@ public class ApotheosisNetwork {
             ctx.get().enqueueWork(() -> {
                 var player = net.minecraft.client.Minecraft.getInstance().player;
                 if (player == null || !(player.containerMenu instanceof ReforgingMenu menu)) {
-                    ApotheosisArtificeMod.LOGGER.info("[SyncReforge] FAIL: player={} menu={}", player, player != null ? player.containerMenu.getClass().getName() : "null");
                     return;
                 }
-                ApotheosisArtificeMod.LOGGER.info("[SyncReforge] setting slots 2-4");
                 menu.getSlot(2).set(pkt.slot0);
                 menu.getSlot(3).set(pkt.slot1);
                 menu.getSlot(4).set(pkt.slot2);
-                ApotheosisArtificeMod.LOGGER.info("[SyncReforge] done");
             });
             ctx.get().setPacketHandled(true);
         }

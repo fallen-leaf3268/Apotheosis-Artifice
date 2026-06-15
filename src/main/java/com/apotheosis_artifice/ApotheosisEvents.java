@@ -40,24 +40,17 @@ public class ApotheosisEvents {
 
         if (hasCurioCat) {
             String cc = afxData.getString("curio_artifice");
-            ApotheosisArtificeMod.LOGGER.info("[curioAttr] hasTag={} slot={} curio_artifice={}", event.getSlotContext().identifier(), cc);
             if (!cc.startsWith("curio")) {
-                ApotheosisArtificeMod.LOGGER.info("[curioAttr] REJECT: curio_artifice={} not curio category", cc);
                 return;
             }
             if (cc.startsWith("curio:") && !cc.substring(6).equals(event.getSlotContext().identifier())) {
-                ApotheosisArtificeMod.LOGGER.info("[curioAttr] REJECT: slot mismatch, expected={} actual={}", cc.substring(6), event.getSlotContext().identifier());
                 return;
             }
-            ApotheosisArtificeMod.LOGGER.info("[curioAttr] ACCEPT: curio_artifice={} slot={}", cc, event.getSlotContext().identifier());
         } else {
             LootCategory cat = LootCategory.forItem(stack);
-            ApotheosisArtificeMod.LOGGER.info("[curioAttr] noTag forItem={} slot={}", cat.getName(), event.getSlotContext().identifier());
             if (cat.isNone() || !cat.getName().startsWith("curio")) {
-                ApotheosisArtificeMod.LOGGER.info("[curioAttr] REJECT: forItem={} not curio", cat.getName());
                 return;
             }
-            ApotheosisArtificeMod.LOGGER.info("[curioAttr] ACCEPT: forItem={} slot={}", cat.getName(), event.getSlotContext().identifier());
         }
 
         if (AffixHelper.hasAffixes(stack)) {
@@ -67,7 +60,6 @@ public class ApotheosisEvents {
         LootCategory gemCat = hasCurioCat
             ? LootCategory.byId(afxData.getString("curio_artifice"))
             : LootCategory.forItem(stack);
-        ApotheosisArtificeMod.LOGGER.info("[curioAttr] gemCat={} hasAffixes={}", gemCat != null ? gemCat.getName() : "null", AffixHelper.hasAffixes(stack));
         if (gemCat != null && !gemCat.isNone()) {
             SocketHelper.getGems(stack).addModifiers(gemCat, EquipmentSlot.CHEST, event::addModifier);
         }

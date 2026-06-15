@@ -86,15 +86,26 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         List<AffixDetailEntry> suffixEntries = new ArrayList<>();
         List<AffixDetailEntry> prefixEntries = new ArrayList<>();
         for (LootCategory cat : LootCategory.VALUES) {
-            if (cat.isNone() || "curio".equals(cat.getName())) continue;
+            if (cat.isNone()) continue;
             for (Affix affix : dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry.INSTANCE.getValues()) {
                 List<AffixDetailEntry.RarityEntry> supported = new ArrayList<>();
+                boolean isCurio = "curio".equals(cat.getName());
                 for (var holder : dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry.INSTANCE.getOrderedRarities()) {
                     if (!holder.isBound()) continue;
                     var rarity = holder.get();
                     try {
-                        if (affix.canApplyTo(ItemStack.EMPTY, cat, rarity))
-                            supported.add(new AffixDetailEntry.RarityEntry(rarity, AffixDetailEntry.buildDescription(affix, rarity)));
+                        boolean match = false;
+                        if (affix.canApplyTo(ItemStack.EMPTY, cat, rarity)) {
+                            match = true;
+                        } else if (isCurio) {
+                            for (LootCategory sub : LootCategory.VALUES) {
+                                if (!sub.isNone() && sub.getName().startsWith("curio:")
+                                    && affix.canApplyTo(ItemStack.EMPTY, sub, rarity)) {
+                                    match = true; break;
+                                }
+                            }
+                        }
+                        if (match) supported.add(new AffixDetailEntry.RarityEntry(rarity, AffixDetailEntry.buildDescription(affix, rarity)));
                     } catch (Exception ignored) {}
                 }
                 if (supported.isEmpty()) continue;
@@ -109,7 +120,7 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         reg.addRecipes(PREFIX_TYPE, prefixEntries);
         List<AffixGemEntry> gemEntries = new ArrayList<>();
         for (LootCategory cat : LootCategory.VALUES) {
-            if (cat.isNone() || "curio".equals(cat.getName())) continue;
+            if (cat.isNone()) continue;
             gemEntries.addAll(AffixGemEntry.createAll(cat));
         }
         reg.addRecipes(AffixGemCategory.TYPE, gemEntries);

@@ -66,7 +66,7 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
         try { tmp = entry.affix().getName(true).getString(); }
         catch (Exception e) { tmp = "???"; }
         final String afxName = tmp;
-        final String rangeColor = entry.affix().getType() == dev.shadowsoffire.apotheosis.adventure.affix.AffixType.STAT ? "§9" : "§6";
+        final String rangeColor = entry.affix().getType() == dev.shadowsoffire.apotheosis.adventure.affix.AffixType.STAT ? "§9" : "§e";
 
         // 材料图标行靠左
         List<AffixDetailEntry.RarityEntry> rarities = entry.rarities();
@@ -87,7 +87,7 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
                         .replace("[", "").replace("]", "")
                         .replace("(", "").replace(")", "");
                     tooltip.add(Component.literal(matName).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(matColor)));
-                    tooltip.add(Component.literal("§6" + entry.affix().getName(true).getString()));
+                    tooltip.add(Component.literal("§e" + entry.affix().getName(true).getString()));
                     Component range = re.rangeTooltip();
                     if (range != null && !range.getString().isBlank()) {
                         tooltip.add(range.copy());
@@ -114,6 +114,6 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
         String name;
         try { name = entry.affix().getName(true).getString(); }
         catch (Exception e) { name = "???"; }
-        gfx.drawString(font, name, 2, NAME_Y, 0xFFFFAA00, false);
+        gfx.drawString(font, name, 2, NAME_Y, 0xFFFF55, false);
     }
 }

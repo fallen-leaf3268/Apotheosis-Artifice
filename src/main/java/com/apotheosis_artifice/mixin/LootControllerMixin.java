@@ -22,7 +22,7 @@ public class LootControllerMixin {
         at = @At(value = "INVOKE", target = "Ljava/lang/RuntimeException;<init>(Ljava/lang/String;)V"),
         cancellable = true)
     private static void curiosforge_preventCrashOnNoAffixes(ItemStack stack, LootCategory cat, LootRarity rarity, RandomSource rand, CallbackInfoReturnable<ItemStack> cir) {
-        cir.setReturnValue(stack);
+        cir.setReturnValue(ItemStack.EMPTY);
     }
 
     @Redirect(method = "getAvailableAffixes",
@@ -34,7 +34,6 @@ public class LootControllerMixin {
             String val = afxData.getString("curio_artifice");
             LootCategory cat = LootCategory.byId(val);
             if (cat != null && !cat.isNone()) {
-                ApotheosisArtificeMod.LOGGER.info("[LootCtrl] forItem redirect: curio_artifice={} -> {}", val, cat.getName());
                 return cat;
             }
         }
@@ -42,7 +41,6 @@ public class LootControllerMixin {
         if (cat != null && !cat.isNone() && cat.getName().startsWith("curio")) {
             for (LootCategory c : LootCategory.VALUES) {
                 if (!c.isNone() && !c.getName().startsWith("curio") && c.isValid(stack)) {
-                    ApotheosisArtificeMod.LOGGER.info("[LootCtrl] forItem fallback: {} -> prefer native {}", cat.getName(), c.getName());
                     return c;
                 }
             }

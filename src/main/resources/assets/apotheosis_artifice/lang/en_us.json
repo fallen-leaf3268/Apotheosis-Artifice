@@ -3,5 +3,9 @@
     "affix.apotheosis_artifice.damage_resistance": "%s%% Resistance to %s",
     "affix.apotheosis_artifice.effect_immunity": "Immune to %s",
     "item.apotheosis_artifice.apotheosis_charm": "Apotheosis Charm",
+    "affix.apotheosis_artifice:attribute/charm_spirit": "Spirit",
+    "affix.apotheosis_artifice:attribute/charm_spirit.suffix": "of Spirit",
+    "affix.apotheosis_artifice:attribute/hands_swiftness": "Swiftness",
+    "affix.apotheosis_artifice:attribute/hands_swiftness.suffix": "of Swiftness",
     "info.apotheosis_artifice.binder.gemcase_bind_hint": "Hold Shift + Right-click to bind to a Gem Case"
 }

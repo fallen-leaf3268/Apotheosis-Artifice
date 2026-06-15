@@ -69,7 +69,10 @@ public class AffixCodexCategory implements IRecipeCategory<AffixCodexEntry> {
             builder.addSlot(RecipeIngredientRole.OUTPUT, sx, sy)
                 .addItemStacks(stacks)
                 .addTooltipCallback((slotView, tooltip) -> {
-                    tooltip.add(Component.literal("§7" + cat.getName()));
+                    String key = cat.getName().startsWith("curio:")
+                        ? "curios.identifier." + cat.getName().substring(6)
+                        : "text.apotheosis.category." + cat.getName();
+                    tooltip.add(Component.translatable(key).withStyle(net.minecraft.ChatFormatting.GRAY));
                     tooltip.add(Component.translatable("jei.apotheosis_artifice.click_for_detail"));
                 });
         }
