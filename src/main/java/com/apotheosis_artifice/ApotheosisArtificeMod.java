@@ -132,7 +132,7 @@ public class ApotheosisArtificeMod {
     public static final RegistryObject<CreativeModeTab> TAB_APOTHEOSIS_ARTIFICE = CREATIVE_TABS.register("tab",
         () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.apotheosis_artifice"))
-            .icon(() -> new ItemStack(PORTABLE_SALVAGING_TOOL.get()))
+            .icon(() -> new ItemStack(MECHANICAL_RAVEN_TABLE_ITEM.get()))
             .displayItems((params, output) -> {
                 output.accept(PORTABLE_SALVAGING_TOOL.get());
                 output.accept(RAVEN_ENCHANTING_TABLE_ITEM.get());
