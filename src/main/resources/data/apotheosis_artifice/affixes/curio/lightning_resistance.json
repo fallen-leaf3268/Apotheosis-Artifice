@@ -1,6 +1,6 @@
 {
-    "type": "apotheosis:damage_reduction",
-    "damage_type": "MAGIC",
+    "type": "apotheosis_artifice:damage_resistance",
+    "damage_types": ["minecraft:lightning_bolt"],
     "values": {
         "common": {
             "min": 0.03,

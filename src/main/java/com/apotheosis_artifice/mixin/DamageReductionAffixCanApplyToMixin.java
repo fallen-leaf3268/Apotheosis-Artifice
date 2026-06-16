@@ -3,6 +3,7 @@ package com.apotheosis_artifice.mixin;
 import java.util.Set;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -18,14 +19,27 @@ import net.minecraft.world.item.ItemStack;
 @Mixin(value = DamageReductionAffix.class, remap = false)
 public abstract class DamageReductionAffixCanApplyToMixin implements AffixTypes {
 
+    @Shadow
+    protected Set<LootCategory> types;
+
+    @Override
+    public Set<LootCategory> curiosforge_getTypes() {
+        return this.types;
+    }
+
     @Inject(method = "canApplyTo", at = @At("RETURN"), cancellable = true, remap = false)
     private void cf_prefixMatch(ItemStack stack, LootCategory cat, LootRarity rarity, CallbackInfoReturnable<Boolean> cir) {
         if (!cir.getReturnValueZ()) {
             Set<LootCategory> types = this.curiosforge_getTypes();
             if (types.isEmpty()) return;
             boolean catMatch = AffixTypes.curiosforge_typeMatches(types, cat) || tagMatches(types, stack);
-            if (catMatch && ((DamageReductionAffixAccessor) (Object) this).curiosforge_getValues().containsKey(rarity)) {
-                cir.setReturnValue(true);
+            if (catMatch) {
+                for (LootRarity key : ((DamageReductionAffixAccessor) (Object) this).curiosforge_getValues().keySet()) {
+                    if (key.ordinal() == rarity.ordinal()) {
+                        cir.setReturnValue(true);
+                        break;
+                    }
+                }
             }
         }
     }
@@ -34,7 +48,10 @@ public abstract class DamageReductionAffixCanApplyToMixin implements AffixTypes 
         var afxData = stack.getTagElement(AffixHelper.AFFIX_DATA);
         if (afxData != null && afxData.contains("curio_artifice")) {
             String val = afxData.getString("curio_artifice");
-            return types.stream().anyMatch(t -> val.startsWith(t.getName()));
+            return types.stream().anyMatch(t -> {
+                String tName = t.getName();
+                return val.equals(tName) || val.startsWith(tName + ":");
+            });
         }
         return false;
     }

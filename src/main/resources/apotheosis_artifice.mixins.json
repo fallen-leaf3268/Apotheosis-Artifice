@@ -8,7 +8,6 @@
         "ALCombatRulesMixin",
         "ReforgingTileMixin",
         "ReforgingTileValidatorMixin",
-        "AffixMixin",
         "AttributeAffixAccessor",
         "AttributeAffixCanApplyToMixin",
         "DamageReductionAffixAccessor",
@@ -22,7 +21,13 @@
         "LootControllerMixin",
         "SocketProtectionMixin",
         "ReforgingMenuMixin",
-        "ReforgingSlotPickupMixin"
+        "ReforgingSlotPickupMixin",
+        "GemAccessor",
+        "SocketingRecipeMixin",
+        "GemMixin",
+        "GemInstanceMixin",
+        "GemGetBonusMixin",
+        "LivingEntityMixin"
     ],
     "client": [
         "ContainerScreenMixin",

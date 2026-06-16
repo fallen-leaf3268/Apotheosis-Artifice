@@ -81,7 +81,12 @@ public record AffixCodexEntry(List<LootCategory> categories) {
             ItemStack stack = new ItemStack(item);
             if (stack.isEmpty()) continue;
 
-            LootCategory nativeCat = LootCategory.forItem(stack);
+            // 手动找原生非 curio 分类（绕过注册顺序影响）
+            LootCategory nativeCat = LootCategory.NONE;
+            for (LootCategory c : LootCategory.VALUES) {
+                if (c.isNone() || c.getName().startsWith("curio")) continue;
+                if (c.isValid(stack)) { nativeCat = c; break; }
+            }
 
             // 收集该物品匹配的所有 curio 槽位
             List<String> matchedCurioSlots = new ArrayList<>();

@@ -86,8 +86,12 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     private void curiosforge_detectSlots(ItemStack input) {
         List<String> cats = new ArrayList<>();
 
-        LootCategory trueNative = curiosforge_getTrueNative(input);
-        if (!trueNative.isNone() && !trueNative.getName().startsWith("curio")) {
+        LootCategory trueNative = LootCategory.NONE;
+        for (LootCategory c : LootCategory.VALUES) {
+            if (c.isNone() || c.getName().startsWith("curio")) continue;
+            if (c.isValid(input)) { trueNative = c; break; }
+        }
+        if (!trueNative.isNone()) {
             cats.add(trueNative.getName());
         }
 
@@ -123,16 +127,6 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         }
     }
 
-    @Unique
-    private static LootCategory curiosforge_getTrueNative(ItemStack stack) {
-        ItemStack copy = stack.copy();
-        var tag = copy.getTagElement(AffixHelper.AFFIX_DATA);
-        if (tag != null && tag.contains("curio_artifice")) {
-            tag.remove("curio_artifice");
-            if (tag.isEmpty()) copy.removeTagKey(AffixHelper.AFFIX_DATA);
-        }
-        return LootCategory.forItem(copy);
-    }
 
     @Unique
     private static LootCategory getOrCreateCurioCategory(String slotOrCatName) {
@@ -218,7 +212,8 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         if (cat == null || cat.isNone()) return false;
         return AffixRegistry.INSTANCE.getValues().stream()
             .anyMatch(a -> {
-                Set<LootCategory> types = ((AffixTypes) a).curiosforge_getTypes();
+                if (!(a instanceof AffixTypes af)) return false;
+                Set<LootCategory> types = af.curiosforge_getTypes();
                 return types.contains(cat) || AffixTypes.curiosforge_typeMatches(types, cat);
             });
     }
@@ -226,7 +221,8 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     @Unique
     private static boolean curiosforge_hasAffixForRarity(ItemStack stack, LootCategory cat, LootRarity rarity) {
         for (var a : AffixRegistry.INSTANCE.getValues()) {
-            Set<LootCategory> types = ((AffixTypes) a).curiosforge_getTypes();
+            if (!(a instanceof AffixTypes af)) continue;
+            Set<LootCategory> types = af.curiosforge_getTypes();
             if (!types.contains(cat) && !AffixTypes.curiosforge_typeMatches(types, cat)) continue;
             if (((dev.shadowsoffire.apotheosis.adventure.affix.Affix) a).canApplyTo(stack, cat, rarity)) return true;
         }

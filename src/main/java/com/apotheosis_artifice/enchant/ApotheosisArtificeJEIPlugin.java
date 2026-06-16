@@ -89,20 +89,15 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
             if (cat.isNone()) continue;
             for (Affix affix : dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry.INSTANCE.getValues()) {
                 List<AffixDetailEntry.RarityEntry> supported = new ArrayList<>();
-                boolean isCurio = "curio".equals(cat.getName());
                 for (var holder : dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry.INSTANCE.getOrderedRarities()) {
                     if (!holder.isBound()) continue;
                     var rarity = holder.get();
                     try {
-                        boolean match = false;
-                        if (affix.canApplyTo(ItemStack.EMPTY, cat, rarity)) {
-                            match = true;
-                        } else if (isCurio) {
-                            for (LootCategory sub : LootCategory.VALUES) {
-                                if (!sub.isNone() && sub.getName().startsWith("curio:")
-                                    && affix.canApplyTo(ItemStack.EMPTY, sub, rarity)) {
-                                    match = true; break;
-                                }
+                        boolean match = affix.canApplyTo(ItemStack.EMPTY, cat, rarity);
+                        if (!match && cat.getName().startsWith("curio:") && !"curio".equals(cat.getName())) {
+                            LootCategory genericCurio = LootCategory.byId("curio");
+                            if (genericCurio != null && affix.canApplyTo(ItemStack.EMPTY, genericCurio, rarity)) {
+                                match = true;
                             }
                         }
                         if (match) supported.add(new AffixDetailEntry.RarityEntry(rarity, AffixDetailEntry.buildDescription(affix, rarity)));

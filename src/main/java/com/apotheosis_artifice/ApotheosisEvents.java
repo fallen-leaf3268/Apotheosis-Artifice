@@ -1,23 +1,27 @@
 package com.apotheosis_artifice;
 
 import java.util.Map;
+import java.util.UUID;
 
-import com.apotheosis_artifice.affix.EffectImmunityAffix;
+import com.apotheosis_artifice.mixin.AttributeAffixAccessor;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixInstance;
+import dev.shadowsoffire.apotheosis.adventure.affix.AttributeAffix;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
+import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
+import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
 import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
-import net.minecraft.world.effect.MobEffect;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.living.ShieldBlockEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -30,7 +34,7 @@ import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
 public class ApotheosisEvents {
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public void curioAttributes(CurioAttributeModifierEvent event) {
         ItemStack stack = event.getItemStack();
         if (stack.isEmpty()) return;
@@ -43,18 +47,32 @@ public class ApotheosisEvents {
             if (!cc.startsWith("curio")) {
                 return;
             }
-            if (cc.startsWith("curio:") && !cc.substring(6).equals(event.getSlotContext().identifier())) {
+            if (cc.length() > 6 && !cc.substring(6).equals(event.getSlotContext().identifier())) {
                 return;
             }
-        } else {
-            LootCategory cat = LootCategory.forItem(stack);
-            if (cat.isNone() || !cat.getName().startsWith("curio")) {
-                return;
-            }
+        } else if (!AffixHelper.hasAffixes(stack) && SocketHelper.getGems(stack).gems().isEmpty()) {
+            return;
         }
 
         if (AffixHelper.hasAffixes(stack)) {
-            AffixHelper.getAffixes(stack).values().forEach(inst -> inst.addModifiers(EquipmentSlot.CHEST, event::addModifier));
+            for (var inst : AffixHelper.getAffixes(stack).values()) {
+                if (inst.affix().get() instanceof AttributeAffix attrAfx) {
+                    AttributeAffixAccessor acc = (AttributeAffixAccessor) (Object) attrAfx;
+                    LootRarity rarity = inst.rarity().get();
+                    if (rarity == null) continue;
+                    ResourceLocation rid = RarityRegistry.INSTANCE.getKey(rarity);
+                    if (rid == null) continue;
+                    for (var e : acc.getValues().entrySet()) {
+                        ResourceLocation eid = RarityRegistry.INSTANCE.getKey(e.getKey());
+                        if (rid.equals(eid)) {
+                            double v = e.getValue().get(inst.level());
+                            UUID uuid = affixUUID(stack, inst.affix().getId());
+                            event.addModifier(acc.getAttribute(), new AttributeModifier(uuid, "affix:" + inst.affix().getId(), v, acc.getOperation()));
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         LootCategory gemCat = hasCurioCat
@@ -62,10 +80,19 @@ public class ApotheosisEvents {
             : LootCategory.forItem(stack);
         if (gemCat != null && !gemCat.isNone()) {
             SocketHelper.getGems(stack).addModifiers(gemCat, EquipmentSlot.CHEST, event::addModifier);
+            if (!"curio".equals(gemCat.getName())) {
+                LootCategory genericCurio = LootCategory.byId("curio");
+                if (genericCurio != null && !genericCurio.isNone()) {
+                    SocketHelper.getGems(stack).addModifiers(genericCurio, EquipmentSlot.CHEST, event::addModifier);
+                }
+            }
         }
     }
 
-    /** 检查某物品是否允许在当前 Curios 槽位生效 */
+    private static UUID affixUUID(ItemStack stack, ResourceLocation affixId) {
+        return UUID.nameUUIDFromBytes(("apoth_art:" + affixId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     public static boolean curiosforge_matchesSlot(ItemStack stack, String slotId) {
         var afxData = stack.getTagElement(AffixHelper.AFFIX_DATA);
         boolean hasCurioCat = afxData != null && afxData.contains("curio_artifice");
@@ -73,7 +100,7 @@ public class ApotheosisEvents {
         if (hasCurioCat) {
             String cc = afxData.getString("curio_artifice");
             if (!cc.startsWith("curio")) return false;
-            if (cc.startsWith("curio:") && !cc.substring(6).equals(slotId)) return false;
+            if (cc.length() > 6 && !cc.substring(6).equals(slotId)) return false;
         } else if (afxData != null) {
             LootCategory nativeCat = LootCategory.forItem(stack);
             if (!nativeCat.isNone() && !nativeCat.getName().startsWith("curio")) {
@@ -101,13 +128,11 @@ public class ApotheosisEvents {
 
                     if (!curiosforge_matchesSlot(stack, slotId)) continue;
 
-                    // 词缀伤害减免
                     var affixes = AffixHelper.getAffixes(stack);
                     for (AffixInstance affixInst : affixes.values()) {
                         dmg = affixInst.onHurt(event.getSource(), entity, dmg);
                     }
 
-                    // 宝石伤害减免
                     dmg = SocketHelper.getGems(stack).onHurt(event.getSource(), entity, dmg);
                 }
             }
@@ -181,32 +206,6 @@ public class ApotheosisEvents {
                         inst.onBlockBreak(player, event.getLevel(), event.getPos(), event.getState());
                     }
                     SocketHelper.getGems(stack).onBlockBreak(player, event.getLevel(), event.getPos(), event.getState());
-                }
-            }
-        });
-    }
-
-    @SubscribeEvent
-    public void onMobEffect(MobEffectEvent.Applicable event) {
-        LivingEntity entity = event.getEntity();
-        if (entity.level().isClientSide) return;
-
-        MobEffect effect = event.getEffectInstance().getEffect();
-
-        LazyOptional<ICuriosItemHandler> curiosInv = entity.getCapability(CuriosCapability.INVENTORY);
-        curiosInv.ifPresent(handler -> {
-            for (Map.Entry<String, ICurioStacksHandler> entry : handler.getCurios().entrySet()) {
-                IDynamicStackHandler stackHandler = entry.getValue().getStacks();
-                for (int i = 0; i < stackHandler.getSlots(); i++) {
-                    ItemStack stack = stackHandler.getStackInSlot(i);
-                    if (stack.isEmpty()) continue;
-                    if (!curiosforge_matchesSlot(stack, entry.getKey())) continue;
-                    for (AffixInstance inst : AffixHelper.getAffixes(stack).values()) {
-                        if (inst.affix().get() instanceof EffectImmunityAffix eia && eia.hasEffect(effect)) {
-                            event.setCanceled(true);
-                            return;
-                        }
-                    }
                 }
             }
         });

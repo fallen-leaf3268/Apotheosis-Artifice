@@ -5,13 +5,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingMenu;
 import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingRecipe;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
 import dev.shadowsoffire.placebo.menu.BlockEntityMenu;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-@Mixin(targets = "dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingMenu$ReforgingResultSlot")
+@Mixin(value = ReforgingMenu.ReforgingResultSlot.class)
 public class ReforgingSlotPickupMixin {
 
     @Inject(method = "mayPickup", at = @At("HEAD"), cancellable = true, remap = true)

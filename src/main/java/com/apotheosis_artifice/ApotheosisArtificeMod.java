@@ -173,7 +173,7 @@ public class ApotheosisArtificeMod {
 
             for (String slot : DEFAULT_SLOTS) {
                 TagKey<Item> tag = ItemTags.create(new ResourceLocation("curios:" + slot));
-                LootCategory.register(null, "curio:" + slot,
+                LootCategory.register(LootCategory.HELMET, "curio:" + slot,
                     s -> !s.isEmpty() && s.is(tag),
                     new EquipmentSlot[] { EquipmentSlot.CHEST });
             }

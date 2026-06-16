@@ -11,6 +11,9 @@ public interface AffixTypes {
 
     static boolean curiosforge_typeMatches(Set<LootCategory> types, LootCategory cat) {
         String catName = cat.getName();
-        return types.stream().anyMatch(t -> catName.startsWith(t.getName()));
+        return types.stream().anyMatch(t -> {
+            String tName = t.getName();
+            return catName.equals(tName) || catName.startsWith(tName + ":");
+        });
     }
 }
