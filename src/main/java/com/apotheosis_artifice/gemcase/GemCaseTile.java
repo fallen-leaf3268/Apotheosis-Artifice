@@ -18,6 +18,7 @@ import dev.shadowsoffire.apotheosis.adventure.socket.gem.GemItem;
 import dev.shadowsoffire.apotheosis.adventure.socket.gem.GemRegistry;
 import dev.shadowsoffire.placebo.reload.DynamicHolder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -29,6 +30,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -121,6 +126,74 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
             this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
             this.activeContainers.forEach(GemCaseMenu::onChanged);
         }
+    }
+
+    // ---- 漏斗输入：四面八方接受宝石、只进不出 ----
+
+    /** 该物品能否被宝石柜接收（必须是已绑定的宝石且带稀有度）。 */
+    public boolean canAcceptGem(ItemStack stack) {
+        return !stack.isEmpty()
+            && GemItem.getGem(stack).isBound()
+            && AffixHelper.getRarity(stack).isBound();
+    }
+
+    /** 不改状态地计算该宝石栈还能存入多少（受 maxCount 限制，long 防溢出）。 */
+    public int getStorableAmount(ItemStack stack) {
+        if (!canAcceptGem(stack)) return 0;
+        ResourceLocation gemId = GemItem.getGem(stack).getId();
+        ResourceLocation rarityId = RarityRegistry.INSTANCE.getKey(AffixHelper.getRarity(stack).get());
+        Map<ResourceLocation, Integer> rarities = this.gems.get(gemId);
+        int stored = rarities == null ? 0 : rarities.getOrDefault(rarityId, 0);
+        long space = (long) this.maxCount - stored;
+        if (space <= 0) return 0;
+        return (int) Math.min(space, stack.getCount());
+    }
+
+    // 只进不出的虚拟输入口：插入即存进柜子，不能抽取。
+    private final IItemHandler hopperInput = new IItemHandler() {
+        @Override public int getSlots() { return 1; }
+        @Override public ItemStack getStackInSlot(int slot) { return ItemStack.EMPTY; }
+        @Override public int getSlotLimit(int slot) { return Integer.MAX_VALUE; }
+        @Override public boolean isItemValid(int slot, ItemStack stack) { return GemCaseTile.this.canAcceptGem(stack); }
+        @Override public ItemStack extractItem(int slot, int amount, boolean simulate) { return ItemStack.EMPTY; }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (stack.isEmpty() || !GemCaseTile.this.canAcceptGem(stack)) return stack;
+            int storable = GemCaseTile.this.getStorableAmount(stack);
+            if (storable <= 0) return stack; // 满了，原样退回
+            if (!simulate) {
+                ItemStack toDeposit = stack.copy();
+                GemCaseTile.this.depositGem(toDeposit); // 原地 shrink，存入能放下的部分
+                return toDeposit.isEmpty() ? ItemStack.EMPTY : toDeposit;
+            }
+            if (storable >= stack.getCount()) return ItemStack.EMPTY;
+            ItemStack remainder = stack.copy();
+            remainder.shrink(storable);
+            return remainder;
+        }
+    };
+
+    private LazyOptional<IItemHandler> hopperInputCap = LazyOptional.of(() -> this.hopperInput);
+
+    @Override
+    public <T> LazyOptional<T> getCapability(Capability<T> cap, @Nullable Direction side) {
+        if (cap == ForgeCapabilities.ITEM_HANDLER) {
+            return this.hopperInputCap.cast(); // 任意方向都接受输入
+        }
+        return super.getCapability(cap, side);
+    }
+
+    @Override
+    public void invalidateCaps() {
+        super.invalidateCaps();
+        this.hopperInputCap.invalidate();
+    }
+
+    @Override
+    public void reviveCaps() {
+        super.reviveCaps();
+        this.hopperInputCap = LazyOptional.of(() -> this.hopperInput);
     }
 
     private static Map<ResourceLocation, Integer> autoFillRarities() {
