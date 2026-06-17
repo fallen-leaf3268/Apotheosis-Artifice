@@ -1,0 +1,41 @@
+{
+    "weight": 10,
+    "quality": 0,
+    "dimensions": [],
+    "bonuses": [
+        {
+            "type": "apotheosis:multi_attribute",
+            "gem_class": {
+                "key": "curio_necklace",
+                "types": ["curio:necklace"]
+            },
+            "modifiers": [
+                {
+                    "attribute": "minecraft:generic.movement_speed",
+                    "operation": "MULTIPLY_BASE",
+                    "values": {
+                        "common": 0.02,
+                        "uncommon": 0.03,
+                        "rare": 0.05,
+                        "epic": 0.07,
+                        "mythic": 0.09,
+                        "ancient": 0.12
+                    }
+                },
+                {
+                    "attribute": "minecraft:generic.luck",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 1,
+                        "uncommon": 2,
+                        "rare": 3,
+                        "epic": 4,
+                        "mythic": 5,
+                        "ancient": 7
+                    }
+                }
+            ],
+            "desc": "desc.curio_necklace"
+        }
+    ]
+}

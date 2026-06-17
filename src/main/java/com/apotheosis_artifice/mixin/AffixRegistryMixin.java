@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.affix.DamageResistanceAffix;
 import com.apotheosis_artifice.affix.EffectImmunityAffix;
+import com.apotheosis_artifice.affix.RadianceAffix;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
@@ -29,6 +30,7 @@ public class AffixRegistryMixin {
             m.setAccessible(true);
             m.invoke(this, new ResourceLocation("apotheosis_artifice", "damage_resistance"), DamageResistanceAffix.CODEC);
             m.invoke(this, new ResourceLocation("apotheosis_artifice", "effect_immunity"), EffectImmunityAffix.CODEC);
+            m.invoke(this, new ResourceLocation("apotheosis_artifice", "radiance"), RadianceAffix.CODEC);
         } catch (Exception e) {
             ApotheosisArtificeMod.LOGGER.error("Failed to register custom affix codecs", e);
         }

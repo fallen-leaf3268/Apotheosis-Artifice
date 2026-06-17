@@ -1,8 +1,10 @@
 package com.apotheosis_artifice;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.apotheosis_artifice.affix.RadianceAffix;
 import com.apotheosis_artifice.mixin.AttributeAffixAccessor;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixInstance;
@@ -11,7 +13,11 @@ import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
 import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
 import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -19,10 +25,17 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LightBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.ShieldBlockEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -91,6 +104,116 @@ public class ApotheosisEvents {
 
     private static UUID affixUUID(ItemStack stack, ResourceLocation affixId) {
         return UUID.nameUUIDFromBytes(("apoth_art:" + affixId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    // ───────────────────────────── 光辉词缀：可移动光源 ─────────────────────────────
+    // 记录每名玩家当前放置的隐形光块位置（含维度），用于移动时清除旧光源。
+    private static final Map<UUID, GlobalPos> RADIANCE_LIGHTS = new HashMap<>();
+
+    @SubscribeEvent
+    public void radianceTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Player player = event.player;
+        if (!(player.level() instanceof ServerLevel level)) return; // 仅服务端处理
+
+        int light = getMaxRadianceLight(player);
+        UUID id = player.getUUID();
+        GlobalPos prev = RADIANCE_LIGHTS.get(id);
+
+        // 无光辉 / 玩家死亡 → 清除并退出
+        if (light <= 0 || !player.isAlive()) {
+            if (prev != null) {
+                removeRadianceLight(player.getServer(), prev);
+                RADIANCE_LIGHTS.remove(id);
+            }
+            return;
+        }
+
+        BlockPos desired = BlockPos.containing(player.getX(), player.getEyeY(), player.getZ());
+        GlobalPos desiredGp = GlobalPos.of(level.dimension(), desired);
+
+        // 位置或维度变化 → 先清除旧光源
+        if (prev != null && !prev.equals(desiredGp)) {
+            removeRadianceLight(player.getServer(), prev);
+            RADIANCE_LIGHTS.remove(id);
+            prev = null;
+        }
+
+        BlockState cur = level.getBlockState(desired);
+        if (prev == null) {
+            // 仅在空气处放置，绝不覆盖玩家放置的方块
+            if (cur.isAir()) {
+                level.setBlock(desired, radianceLightState(light), Block.UPDATE_ALL);
+                RADIANCE_LIGHTS.put(id, desiredGp);
+            }
+        } else if (cur.is(Blocks.LIGHT)) {
+            // 同一格：亮度变化时更新
+            if (cur.getValue(LightBlock.LEVEL) != light) {
+                level.setBlock(desired, radianceLightState(light), Block.UPDATE_ALL);
+            }
+        } else if (cur.isAir()) {
+            // 我们的光块被外部清除了，重新放置
+            level.setBlock(desired, radianceLightState(light), Block.UPDATE_ALL);
+        }
+    }
+
+    @SubscribeEvent
+    public void radianceCleanupLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        clearRadiance(event.getEntity().getUUID(), event.getEntity().getServer());
+    }
+
+    @SubscribeEvent
+    public void radianceCleanupDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof Player p) {
+            clearRadiance(p.getUUID(), p.getServer());
+        }
+    }
+
+    private static void clearRadiance(UUID id, MinecraftServer server) {
+        GlobalPos gp = RADIANCE_LIGHTS.remove(id);
+        if (gp != null) removeRadianceLight(server, gp);
+    }
+
+    private static BlockState radianceLightState(int light) {
+        return Blocks.LIGHT.defaultBlockState()
+            .setValue(LightBlock.LEVEL, light)
+            .setValue(LightBlock.WATERLOGGED, false);
+    }
+
+    private static void removeRadianceLight(MinecraftServer server, GlobalPos gp) {
+        if (server == null) return;
+        ServerLevel lvl = server.getLevel(gp.dimension());
+        if (lvl == null) return;
+        if (lvl.getBlockState(gp.pos()).is(Blocks.LIGHT)) {
+            lvl.setBlock(gp.pos(), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        }
+    }
+
+    /** 扫描玩家所有匹配槽位的饰品，取“光辉”词缀的最大光照强度。 */
+    private int getMaxRadianceLight(Player player) {
+        LazyOptional<ICuriosItemHandler> curiosInv = player.getCapability(CuriosCapability.INVENTORY);
+        ICuriosItemHandler handler = curiosInv.orElse(null);
+        if (handler == null) return 0;
+
+        int max = 0;
+        for (Map.Entry<String, ICurioStacksHandler> entry : handler.getCurios().entrySet()) {
+            String slotId = entry.getKey();
+            IDynamicStackHandler stacks = entry.getValue().getStacks();
+            for (int i = 0; i < stacks.getSlots(); i++) {
+                ItemStack stack = stacks.getStackInSlot(i);
+                if (stack.isEmpty()) continue;
+                if (!curiosforge_matchesSlot(stack, slotId)) continue;
+                for (AffixInstance inst : AffixHelper.getAffixes(stack).values()) {
+                    if (!inst.isValid()) continue;
+                    if (inst.affix().get() instanceof RadianceAffix rad) {
+                        LootRarity rarity = inst.rarity().get();
+                        if (rarity == null) continue;
+                        max = Math.max(max, rad.getLight(rarity, inst.level()));
+                    }
+                }
+            }
+        }
+        return max;
     }
 
     public static boolean curiosforge_matchesSlot(ItemStack stack, String slotId) {
