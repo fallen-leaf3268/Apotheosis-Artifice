@@ -42,6 +42,9 @@ public class ReforgingSlotPickupMixin {
             }
 
             cir.setReturnValue(true);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            // 失败时回退到原版 mayPickup；用 debug 日志而非完全吞掉，便于排查。
+            com.apotheosis_artifice.ApotheosisArtificeMod.LOGGER.debug("ReforgingResultSlot mayPickup hook failed", e);
+        }
     }
 }

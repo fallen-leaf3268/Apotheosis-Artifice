@@ -33,6 +33,7 @@ public record AffixCodexEntry(List<LootCategory> categories) {
 
     @Nullable
     public static AffixCodexEntry create() {
+        ensureInit();
         var orderedRarities = RarityRegistry.INSTANCE.getOrderedRarities();
         var registry = AffixRegistry.INSTANCE;
 
@@ -65,9 +66,21 @@ public record AffixCodexEntry(List<LootCategory> categories) {
     /** 全物品自动扫描结果 */
     private static final Map<String, List<ItemStack>> CATEGORY_ITEMS = new HashMap<>();
 
-    static {
+    private static volatile boolean initialized = false;
+
+    /**
+     * 惰性、幂等的一次性初始化。原先在 static 块里执行：类加载期就调用
+     * {@code CuriosApi.getSlotHelper()}（可能为 null）并修改全局 LootCategory 注册表，
+     * 一旦 NPE 就用 ExceptionInInitializerError 污染整个类、后续 JEI 全挂。
+     * 改为由 registerRecipes / getCategoryItems 触发，并对 null 做守卫、未就绪则下次再试。
+     */
+    private static synchronized void ensureInit() {
+        if (initialized) return;
+        var slotHelper = top.theillusivec4.curios.api.CuriosApi.getSlotHelper();
+        if (slotHelper == null) return;
+        initialized = true;
         // 为所有已注册的 Curios 槽位创建 LootCategory（确保法术书等能独立显示）
-        for (String slotId : top.theillusivec4.curios.api.CuriosApi.getSlotHelper().getSlotTypeIds()) {
+        for (String slotId : slotHelper.getSlotTypeIds()) {
             String catName = "curio:" + slotId;
             if (LootCategory.byId(catName) == null || LootCategory.byId(catName).isNone()) {
                 LootCategory.register(null, catName,
@@ -90,7 +103,7 @@ public record AffixCodexEntry(List<LootCategory> categories) {
 
             // 收集该物品匹配的所有 curio 槽位
             List<String> matchedCurioSlots = new ArrayList<>();
-            for (String slotId : top.theillusivec4.curios.api.CuriosApi.getSlotHelper().getSlotTypeIds()) {
+            for (String slotId : slotHelper.getSlotTypeIds()) {
                 String catName = "curio:" + slotId;
                 LootCategory lc = LootCategory.byId(catName);
                 if (lc == null || lc.isNone()) continue;
@@ -129,6 +142,7 @@ public record AffixCodexEntry(List<LootCategory> categories) {
     }
 
     public static List<ItemStack> getCategoryItems(LootCategory cat) {
+        ensureInit();
         return CATEGORY_ITEMS.getOrDefault(cat.getName(), List.of(new ItemStack(Items.BARRIER)));
     }
 }

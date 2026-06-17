@@ -38,10 +38,33 @@ public record SetRavenStatsPacket(float eterna, float quanta, float arcana, Item
         return stack;
     }
 
+    /** 从玩家背包真实移除最多 amount 个与 match 可堆叠的物品，返回实际取出的栈（数量 ≤ amount）。 */
+    private static ItemStack extractFromInventory(ServerPlayer player, ItemStack match, int amount) {
+        ItemStack result = ItemStack.EMPTY;
+        int need = amount;
+        var inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize() && need > 0; i++) {
+            ItemStack invStack = inv.getItem(i);
+            if (invStack.isEmpty()
+                || !net.minecraftforge.items.ItemHandlerHelper.canItemStacksStack(invStack, match)) continue;
+            int take = Math.min(need, invStack.getCount());
+            if (result.isEmpty()) {
+                result = invStack.copy();
+                result.setCount(take);
+            } else {
+                result.grow(take);
+            }
+            invStack.shrink(take);
+            need -= take;
+        }
+        return result;
+    }
+
     public static void handle(SetRavenStatsPacket pkt, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null || !(player.containerMenu instanceof RavenEnchantMenu menu)) return;
+            if (!menu.stillValid(player)) return; // 复检：菜单仍打开且在有效距离/方块上
             if (!pkt.inputItem.isEmpty()) {
                 if (menu instanceof MechanicalRavenEnchantMenu mech && mech.getTile() != null) {
                     var ioInv = mech.getTile().getIOInv();
@@ -58,40 +81,25 @@ public record SetRavenStatsPacket(float eterna, float quanta, float arcana, Item
                     if (!oldEnch.isEmpty()) returnToPlayer(player, oldEnch);
                     mech.getTile().setSavedEnchantSlot(ItemStack.EMPTY);
 
-                    // 3 插入 JEI 到缓冲
-                    ItemStack leftover = ioInv.insertItem(0, pkt.inputItem.copy(), false);
-                    int inserted = pkt.inputItem.getCount() - leftover.getCount();
-                    if (inserted <= 0) return;
+                    // 3 从玩家背包「真实提取」要放入的物品（不信任 pkt.inputItem，避免凭空造物）
+                    ItemStack taken = extractFromInventory(player, pkt.inputItem, pkt.inputItem.getCount());
+                    if (taken.isEmpty()) return;
 
-                    // 4 从缓冲取 1 个到附魔槽（不是额外复制，缓冲已包含 JEI 物品）
+                    // 4 放入缓冲，再取 1 个到附魔槽；缓冲放不下的退回玩家
+                    ItemStack leftover = ioInv.insertItem(0, taken, false);
+                    if (!leftover.isEmpty()) returnToPlayer(player, leftover);
                     ItemStack enchItem = ioInv.extractItem(0, 1, false);
                     if (!enchItem.isEmpty()) {
                         menu.enchantSlots.setItem(0, enchItem);
                     }
-
-                    // 5 扣背包
-                    int toShrink = inserted;
-                    for (int i = 0; i < player.getInventory().getContainerSize() && toShrink > 0; i++) {
-                        var invStack = player.getInventory().getItem(i);
-                        if (!invStack.isEmpty() && net.minecraftforge.items.ItemHandlerHelper.canItemStacksStack(invStack, pkt.inputItem)) {
-                            int s = Math.min(toShrink, invStack.getCount());
-                            invStack.shrink(s);
-                            toShrink -= s;
-                        }
-                    }
                 } else {
-                    // 普通 RavenEnchantMenu: 先返回原物品到背包，再设置新物品
+                    // 普通 RavenEnchantMenu: 旧物回背包，再从背包真实提取 1 个放入
                     ItemStack old = menu.getSlot(0).getItem();
                     if (!old.isEmpty()) returnToPlayer(player, old);
-                    menu.getSlot(0).set(pkt.inputItem);
+                    ItemStack taken = extractFromInventory(player, pkt.inputItem, 1);
+                    if (taken.isEmpty()) return;
+                    menu.getSlot(0).set(taken);
                     menu.slotsChanged(menu.enchantSlots);
-                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                        var invStack = player.getInventory().getItem(i);
-                        if (!invStack.isEmpty() && net.minecraftforge.items.ItemHandlerHelper.canItemStacksStack(invStack, pkt.inputItem)) {
-                            invStack.shrink(pkt.inputItem.getCount());
-                            break;
-                        }
-                    }
                 }
             }
             if (pkt.eterna != 0 || pkt.quanta != 0 || pkt.arcana != 0) {

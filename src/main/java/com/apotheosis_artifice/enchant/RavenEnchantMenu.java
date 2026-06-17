@@ -59,17 +59,9 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
         this.access.evaluate((world, bp) -> {
             int ench = this.enchantSlots.getItem(0).getEnchantmentValue();
             var blockStats = ApothEnchantmentMenu.gatherStats(world, bp, ench);
-            ApotheosisArtificeMod.LOGGER.info("[Stats] tile_ravenStats: e={} q={} a={}",
-                this.ravenStats.eterna(), this.ravenStats.quanta(), this.ravenStats.arcana());
-            ApotheosisArtificeMod.LOGGER.info("[Stats] blockStats: e={} q={} a={} r={} clues={}",
-                blockStats.eterna(), blockStats.quanta(), blockStats.arcana(),
-                blockStats.rectification(), blockStats.clues());
             this.stats = new TableStats(
                 this.ravenStats.eterna(), this.ravenStats.quanta(), this.ravenStats.arcana(),
                 blockStats.rectification(), blockStats.clues(), blockStats.blacklist(), blockStats.treasure());
-            ApotheosisArtificeMod.LOGGER.info("[Stats] final=e={} q={} a={} r={} clues={}",
-                this.stats.eterna(), this.stats.quanta(), this.stats.arcana(),
-                this.stats.rectification(), this.stats.clues());
             PacketDistro.sendTo(Apotheosis.CHANNEL, new dev.shadowsoffire.apotheosis.ench.table.StatsMessage(this.stats), this.player);
             return this;
         }).orElse(this);
@@ -85,14 +77,14 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
 
     public void transferJEI(float e, float q, float a) {
         float maxE = EnchantingStatRegistry.getAbsoluteMaxEterna();
-        ApotheosisArtificeMod.LOGGER.info("transferJEI called: e={} q={} a={} maxE={}", e, q, a, maxE);
         JEI_SLIDERS = new float[]{e, q, a};
         this.stats = new TableStats(Mth.clamp(e, 0, maxE), Mth.clamp(q, 0, 100), Mth.clamp(a, 0, 100),
             this.stats.rectification(), this.stats.clues(), this.stats.blacklist(), this.stats.treasure());
-        ApotheosisArtificeMod.LOGGER.info("transferJEI done: stats.eterna={} JEI_SLIDERS=[{}, {}, {}]", this.stats.eterna(), e, q, a);
     }
 
     public void setPlayerStats(float eterna, float quanta, float arcana) {
+        // 设计上是"滑条自由选"：玩家可在 [0, 绝对上限] / [0,100] 范围内自由设定 e/q/a。
+        // 钳到绝对上限即可——既保留自由选玩法，又防止伪造包发送超出滑条范围的离谱值。
         float maxEterna = EnchantingStatRegistry.getAbsoluteMaxEterna();
         this.ravenStats.set(
             Mth.clamp(eterna, 0, maxEterna),

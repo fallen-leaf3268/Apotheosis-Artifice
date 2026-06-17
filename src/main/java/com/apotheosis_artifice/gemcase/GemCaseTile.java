@@ -109,7 +109,12 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
 
         Map<ResourceLocation, Integer> rarities = this.gems.computeIfAbsent(gemId, k -> autoFillRarities());
         int stored = rarities.getOrDefault(rarityId, 0);
-        rarities.put(rarityId, Math.min(this.maxCount, stored + stack.getCount()));
+        // 用 long 防 int 溢出；只存放得下的部分，余量留在输入栈里（原地 shrink），避免吞宝石。
+        long space = (long) this.maxCount - stored;
+        if (space <= 0) return;
+        int toStore = (int) Math.min(space, stack.getCount());
+        rarities.put(rarityId, stored + toStore);
+        stack.shrink(toStore);
 
         this.setChanged();
         if (!this.level.isClientSide) {
@@ -351,18 +356,12 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
     public void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         this.saveGemData(tag);
-        ApotheosisArtificeMod.LOGGER.info("[TileSave] upgrade_mats tag present: {}", tag.contains("upgrade_mats"));
     }
 
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
         this.loadGemData(tag);
-        if (tag.contains("upgrade_mats")) {
-            ApotheosisArtificeMod.LOGGER.info("[TileLoad] upgrade_mats loaded");
-        } else {
-            ApotheosisArtificeMod.LOGGER.warn("[TileLoad] No upgrade_mats in tag!");
-        }
     }
 
     @Override

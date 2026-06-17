@@ -25,7 +25,7 @@ public class GemGetBonusMixin {
         if (cir.getReturnValue().isPresent()) return;
 
         String catName = cat.getName();
-        if (!catName.startsWith("curio:") || catName.equals("curio")) return;
+        if (!catName.startsWith("curio:")) return;
 
         LootCategory genericCurio = LootCategory.byId("curio");
         if (genericCurio == null || genericCurio.isNone()) return;

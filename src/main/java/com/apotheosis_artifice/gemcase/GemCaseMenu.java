@@ -93,11 +93,17 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
             @Override
             public void setChanged() {
                 super.setChanged();
-                if (!this.getItem().isEmpty()) {
-                    GemCaseMenu.this.tile.depositGem(this.getItem());
-                    GemCaseMenu.this.player.level().playSound(GemCaseMenu.this.player, GemCaseMenu.this.pos,
-                        SoundEvents.AMETHYST_BLOCK_BREAK, SoundSource.NEUTRAL, 0.5F, 0.7F);
-                    GemCaseMenu.this.ioInv.setItem(0, ItemStack.EMPTY);
+                ItemStack inSlot = this.getItem();
+                if (!inSlot.isEmpty()) {
+                    int before = inSlot.getCount();
+                    GemCaseMenu.this.tile.depositGem(inSlot); // 原地 shrink，超容部分保留
+                    if (inSlot.getCount() != before) {
+                        GemCaseMenu.this.player.level().playSound(GemCaseMenu.this.player, GemCaseMenu.this.pos,
+                            SoundEvents.AMETHYST_BLOCK_BREAK, SoundSource.NEUTRAL, 0.5F, 0.7F);
+                    }
+                    if (inSlot.isEmpty()) {
+                        GemCaseMenu.this.ioInv.setItem(0, ItemStack.EMPTY);
+                    }
                 }
             }
         });
@@ -201,12 +207,15 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
 
     public void setPage(int page) {
         List<ResourceLocation> order = this.rarityOrder;
+        // page 来自网络包，必须钳制下界与上界，否则负 page → order.get(负) 服务端越界崩溃。
+        int maxPage = order.isEmpty() ? 0 : (order.size() - 1) / 5;
+        page = Math.max(0, Math.min(page, maxPage));
         int offset = page * 5;
         for (int i = 0; i < 6; i++) {
             Slot s = this.slots.get(FIRST_GEM_SLOT + i);
             if (s instanceof GemCaseSlot gs) {
                 int idx = offset + i;
-                gs.rarityId = idx < order.size() ? order.get(idx) : NONE_RARITY;
+                gs.rarityId = (idx >= 0 && idx < order.size()) ? order.get(idx) : NONE_RARITY;
             }
         }
     }

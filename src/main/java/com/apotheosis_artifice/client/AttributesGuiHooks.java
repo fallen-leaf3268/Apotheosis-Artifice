@@ -31,6 +31,14 @@ public class AttributesGuiHooks {
                     event.setCanceled(true);
                 }
             }
+
+            // 关闭界面时取消聚焦，避免残留的搜索框在别的界面里继续吞按键/ESC。
+            @net.minecraftforge.eventbus.api.SubscribeEvent
+            public void onScreenClose(ScreenEvent.Closing event) {
+                if (AttributesGuiHooks.nameBox != null) {
+                    AttributesGuiHooks.nameBox.setFocused(false);
+                }
+            }
         });
     }
 

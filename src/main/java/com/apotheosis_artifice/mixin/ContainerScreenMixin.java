@@ -26,6 +26,8 @@ public class ContainerScreenMixin {
         if (button != 1) return;
 
         AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+        // 手上拿着物品时不拦截右键，避免影响放置/分堆等原版交互。
+        if (!screen.getMenu().getCarried().isEmpty()) return;
         var slot = screen.getSlotUnderMouse();
         if (slot == null || !slot.hasItem()) return;
 

@@ -79,7 +79,7 @@ public class ApotheosisEvents {
                         ResourceLocation eid = RarityRegistry.INSTANCE.getKey(e.getKey());
                         if (rid.equals(eid)) {
                             double v = e.getValue().get(inst.level());
-                            UUID uuid = affixUUID(stack, inst.affix().getId());
+                            UUID uuid = affixUUID(event.getSlotContext(), inst.affix().getId());
                             event.addModifier(acc.getAttribute(), new AttributeModifier(uuid, "affix:" + inst.affix().getId(), v, acc.getOperation()));
                             break;
                         }
@@ -102,8 +102,12 @@ public class ApotheosisEvents {
         }
     }
 
-    private static UUID affixUUID(ItemStack stack, ResourceLocation affixId) {
-        return UUID.nameUUIDFromBytes(("apoth_art:" + affixId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    // UUID 必须与「物品/槽位」绑定，否则两件相同词缀的饰品会用同一 UUID，
+    // Curios 给第二件应用属性时会抛 "Modifier is already applied" 并丢失修饰符。
+    private static UUID affixUUID(top.theillusivec4.curios.api.SlotContext ctx, ResourceLocation affixId) {
+        return UUID.nameUUIDFromBytes(
+            ("apoth_art:" + ctx.identifier() + ":" + ctx.index() + ":" + affixId)
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     // ───────────────────────────── 光辉词缀：可移动光源 ─────────────────────────────
@@ -287,6 +291,8 @@ public class ApotheosisEvents {
 
         LazyOptional<ICuriosItemHandler> curiosInv = living.getCapability(CuriosCapability.INVENTORY);
         curiosInv.ifPresent(handler -> {
+            // copyFrom 是整体覆盖箭的 affix_data（非合并），多件饰品会互相覆盖；只复制第一件有词缀的。
+            boolean[] copied = { false };
             for (Map.Entry<String, ICurioStacksHandler> entry : handler.getCurios().entrySet()) {
                 IDynamicStackHandler stackHandler = entry.getValue().getStacks();
                 for (int i = 0; i < stackHandler.getSlots(); i++) {
@@ -295,7 +301,10 @@ public class ApotheosisEvents {
                     if (!curiosforge_matchesSlot(stack, entry.getKey())) continue;
                     AffixHelper.getAffixes(stack).values().forEach(inst -> inst.onArrowFired(living, arrow));
                     SocketHelper.getGems(stack).onArrowFired(living, arrow);
-                    AffixHelper.copyFrom(stack, arrow);
+                    if (!copied[0] && AffixHelper.hasAffixes(stack)) {
+                        AffixHelper.copyFrom(stack, arrow);
+                        copied[0] = true;
+                    }
                 }
             }
         });

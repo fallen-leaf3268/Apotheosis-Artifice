@@ -58,13 +58,14 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     @Unique
     private List<String> curiosforge_availableSlots = List.of();
 
+    // 改为「每个菜单实例」缓存，避免 static 一次性缓存把 A 世界的重铸成本泄漏到 B 世界/数据包重载后。
     @Unique
-    private static int[] curiosforge_maxCosts = null;
+    private int[] curiosforge_maxCosts = null;
     @Unique
-    private static boolean curiosforge_costsInit = false;
+    private boolean curiosforge_costsInit = false;
 
     @Unique
-    private static int[] curiosforge_getMaxCosts(net.minecraft.world.entity.player.Player player) {
+    private int[] curiosforge_getMaxCosts(net.minecraft.world.entity.player.Player player) {
         if (curiosforge_costsInit) return curiosforge_maxCosts;
         int maxS = 0, maxM = 0, maxL = 0;
         var all = player.level().getRecipeManager().getAllRecipesFor(dev.shadowsoffire.apotheosis.Apoth.RecipeTypes.REFORGING);
@@ -142,14 +143,21 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     }
 
     public void curiosforge_selectSlot(int idx) {
-        this.curiosforge_selectedSlotIdx = idx;
+        // 来自网络包，必须校验下界（上界在 detect/regenerate 里再钳）。
+        this.curiosforge_selectedSlotIdx = Math.max(0, idx);
     }
 
-    @ModifyArg(method = "<init>", at = @At(value = "INVOKE", target = "Ldev/shadowsoffire/placebo/menu/PlaceboContainerMenu$UpdatingSlot;<init>(Lnet/minecraftforge/items/IItemHandler;IIILjava/util/function/Predicate;)V", remap = false), index = 4)
-    private Predicate<ItemStack> enhanceSlotValidator(Predicate<ItemStack> original, IItemHandler handler) {
-        if (handler == this.itemInv)
-            return s -> original.test(s) && hasAffixFor(s);
-        return original;
+    // 重铸输入槽用的是 ReforgingMenu$1（UpdatingSlot 的匿名子类，构造时传入 itemInv），
+    // 而材料槽用的是 PlaceboContainerMenu$UpdatingSlot（传入 ReforgingTableTile.inv）。
+    // 因此只需 hook 匿名类的构造器、改它的 Predicate（参数下标 5：外部 this0,handler,x,y,idx,predicate）。
+    @ModifyArg(
+        method = "<init>",
+        at = @At(value = "INVOKE",
+            target = "Ldev/shadowsoffire/apotheosis/adventure/affix/reforging/ReforgingMenu$1;<init>(Ldev/shadowsoffire/apotheosis/adventure/affix/reforging/ReforgingMenu;Ldev/shadowsoffire/placebo/cap/InternalItemHandler;IIILjava/util/function/Predicate;)V",
+            remap = false),
+        index = 5)
+    private Predicate<ItemStack> enhanceSlotValidator(Predicate<ItemStack> original) {
+        return s -> original.test(s) && hasAffixFor(s);
     }
 
     @Inject(method = "slotsChanged", at = @At("HEAD"), remap = true)
@@ -171,10 +179,13 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             ItemStack mat = menu.getSlot(1).getItem();
             if (mat.isEmpty()) return;
 
-            LootRarity rarity = RarityRegistry.getMaterialRarity(mat.getItem()).get();
-            if (rarity == null) return;
+            var rarityHolder = RarityRegistry.getMaterialRarity(mat.getItem());
+            if (!rarityHolder.isBound()) return; // unbound 时 .get() 会抛 NPE，不能用 ==null 判断
+            LootRarity rarity = rarityHolder.get();
 
-            String catName = this.curiosforge_availableSlots.get(this.curiosforge_selectedSlotIdx);
+            int sel = this.curiosforge_selectedSlotIdx;
+            if (sel < 0 || sel >= this.curiosforge_availableSlots.size()) sel = 0;
+            String catName = this.curiosforge_availableSlots.get(sel);
 
             LootCategory cat;
             if (catName.startsWith("curio:")) {

@@ -19,11 +19,17 @@ public class GemMixin {
     private void cf_isValidIn(ItemStack socketed, ItemStack gem, dev.shadowsoffire.apotheosis.adventure.loot.LootRarity rarity, CallbackInfoReturnable<Boolean> cir) {
         if (cir.getReturnValue()) return;
 
+        // 仅当被镶嵌的是「饰品」时才走通用 curio 回退；否则通用 curio 宝石会被允许镶进
+        // 任意物品（剑/盔甲等），属于 bug。
+        LootCategory cat = LootCategory.forItem(socketed);
+        if (cat == null || !cat.getName().startsWith("curio")) return;
+
         Map<LootCategory, GemBonus> map = ((GemAccessor) (Object) this).getBonusMap();
         LootCategory genericCurio = LootCategory.byId("curio");
         if (genericCurio == null || genericCurio.isNone()) return;
 
-        if (map.containsKey(genericCurio)) {
+        GemBonus bonus = map.get(genericCurio);
+        if (bonus != null && bonus.supports(rarity)) {
             cir.setReturnValue(true);
         }
     }

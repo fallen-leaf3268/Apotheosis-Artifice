@@ -20,7 +20,7 @@ public class GemInstanceMixin {
 
         LootCategory curioCat = self.cat();
         String catName = curioCat.getName();
-        if (!catName.startsWith("curio:") || catName.equals("curio")) return;
+        if (!catName.startsWith("curio:")) return;
 
         LootCategory genericCurio = LootCategory.byId("curio");
         if (genericCurio == null || genericCurio.isNone()) return;

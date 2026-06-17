@@ -29,7 +29,7 @@ public class AttributesGuiLocalizeMixin {
     /**
      * renderTooltip() 中 this.addComp(Component.literal("Modifier Formula"), ...)
      */
-    @Redirect(method = "renderTooltip", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;literal(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;", ordinal = 0), remap = false)
+    @Redirect(method = "renderTooltip", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;literal(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;"), remap = true)
     private MutableComponent localizeModifierFormula(String text) {
         if ("Modifier Formula".equals(text)) {
             return Component.translatable("attributeslib.gui.modifier_formula");
@@ -43,7 +43,7 @@ public class AttributesGuiLocalizeMixin {
      */
     @Mixin(value = dev.shadowsoffire.attributeslib.client.AttributesGui.HideUnchangedButton.class, remap = false)
     public static class HideUnchangedButtonMixin {
-        @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;literal(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;"), remap = false)
+        @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;literal(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;"), remap = true)
         private MutableComponent localizeHideUnchangedAttr(String text) {
             if ("Hide Unchanged Attributes".equals(text)) {
                 return Component.translatable("attributeslib.gui.hide_unchanged_attr");

@@ -10,12 +10,12 @@ import com.apotheosis_artifice.affix.DamageResistanceAffix;
 import com.apotheosis_artifice.affix.EffectImmunityAffix;
 import com.apotheosis_artifice.affix.RadianceAffix;
 
+import dev.shadowsoffire.apotheosis.adventure.affix.Affix;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
+import dev.shadowsoffire.placebo.reload.DynamicRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
-
-import com.mojang.serialization.Codec;
 
 import top.theillusivec4.curios.common.data.CuriosSlotManager;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -23,17 +23,14 @@ import net.minecraft.world.entity.EquipmentSlot;
 @Mixin(value = AffixRegistry.class, remap = false)
 public class AffixRegistryMixin {
 
+    @SuppressWarnings("unchecked")
     @Inject(method = "registerBuiltinCodecs", at = @At("TAIL"))
     private void apotheosis_artifice_registerCodecs(CallbackInfo ci) {
-        try {
-            var m = AffixRegistry.class.getSuperclass().getDeclaredMethod("registerCodec", ResourceLocation.class, Codec.class);
-            m.setAccessible(true);
-            m.invoke(this, new ResourceLocation("apotheosis_artifice", "damage_resistance"), DamageResistanceAffix.CODEC);
-            m.invoke(this, new ResourceLocation("apotheosis_artifice", "effect_immunity"), EffectImmunityAffix.CODEC);
-            m.invoke(this, new ResourceLocation("apotheosis_artifice", "radiance"), RadianceAffix.CODEC);
-        } catch (Exception e) {
-            ApotheosisArtificeMod.LOGGER.error("Failed to register custom affix codecs", e);
-        }
+        // registerCodec 是 DynamicRegistry 上的 public final 方法，直接调用即可（无需反射）。
+        DynamicRegistry<Affix> self = (DynamicRegistry<Affix>) (Object) this;
+        self.registerCodec(new ResourceLocation("apotheosis_artifice", "damage_resistance"), DamageResistanceAffix.CODEC);
+        self.registerCodec(new ResourceLocation("apotheosis_artifice", "effect_immunity"), EffectImmunityAffix.CODEC);
+        self.registerCodec(new ResourceLocation("apotheosis_artifice", "radiance"), RadianceAffix.CODEC);
     }
 
     @Inject(method = "beginReload", at = @At("TAIL"))
