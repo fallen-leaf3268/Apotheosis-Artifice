@@ -109,6 +109,9 @@ public class ApotheosisEvents {
     // ───────────────────────────── 光辉词缀：可移动光源 ─────────────────────────────
     // 记录每名玩家当前放置的隐形光块位置（含维度），用于移动时清除旧光源。
     private static final Map<UUID, GlobalPos> RADIANCE_LIGHTS = new HashMap<>();
+    // 缓存每名玩家的光照强度，避免每 tick 都解析饰品 NBT；每隔若干 tick 重新扫描一次。
+    private static final Map<UUID, Integer> RADIANCE_LEVEL = new HashMap<>();
+    private static final int RADIANCE_RESCAN_INTERVAL = 10;
 
     @SubscribeEvent
     public void radianceTick(TickEvent.PlayerTickEvent event) {
@@ -116,8 +119,17 @@ public class ApotheosisEvents {
         Player player = event.player;
         if (!(player.level() instanceof ServerLevel level)) return; // 仅服务端处理
 
-        int light = getMaxRadianceLight(player);
         UUID id = player.getUUID();
+        // 词缀扫描较重（饰品 NBT 解析），只每隔 RADIANCE_RESCAN_INTERVAL tick 重算一次光强并缓存；
+        // 其余 tick 用缓存值，使光源仍能每 tick 平滑跟随玩家。
+        int light;
+        if (player.tickCount % RADIANCE_RESCAN_INTERVAL == 0) {
+            light = getMaxRadianceLight(player);
+            if (light > 0) RADIANCE_LEVEL.put(id, light);
+            else RADIANCE_LEVEL.remove(id);
+        } else {
+            light = RADIANCE_LEVEL.getOrDefault(id, 0);
+        }
         GlobalPos prev = RADIANCE_LIGHTS.get(id);
 
         // 无光辉 / 玩家死亡 → 清除并退出
@@ -140,20 +152,22 @@ public class ApotheosisEvents {
         }
 
         BlockState cur = level.getBlockState(desired);
+        // 用 UPDATE_CLIENTS（仅同步客户端，不触发邻居更新）：光照引擎与 flag 无关照常重算，
+        // 但避免移动光源沿途持续误触发红石/观察者/BUD 等邻居更新。
         if (prev == null) {
             // 仅在空气处放置，绝不覆盖玩家放置的方块
             if (cur.isAir()) {
-                level.setBlock(desired, radianceLightState(light), Block.UPDATE_ALL);
+                level.setBlock(desired, radianceLightState(light), Block.UPDATE_CLIENTS);
                 RADIANCE_LIGHTS.put(id, desiredGp);
             }
         } else if (cur.is(Blocks.LIGHT)) {
             // 同一格：亮度变化时更新
             if (cur.getValue(LightBlock.LEVEL) != light) {
-                level.setBlock(desired, radianceLightState(light), Block.UPDATE_ALL);
+                level.setBlock(desired, radianceLightState(light), Block.UPDATE_CLIENTS);
             }
         } else if (cur.isAir()) {
             // 我们的光块被外部清除了，重新放置
-            level.setBlock(desired, radianceLightState(light), Block.UPDATE_ALL);
+            level.setBlock(desired, radianceLightState(light), Block.UPDATE_CLIENTS);
         }
     }
 
@@ -170,6 +184,7 @@ public class ApotheosisEvents {
     }
 
     private static void clearRadiance(UUID id, MinecraftServer server) {
+        RADIANCE_LEVEL.remove(id);
         GlobalPos gp = RADIANCE_LIGHTS.remove(id);
         if (gp != null) removeRadianceLight(server, gp);
     }
@@ -185,7 +200,7 @@ public class ApotheosisEvents {
         ServerLevel lvl = server.getLevel(gp.dimension());
         if (lvl == null) return;
         if (lvl.getBlockState(gp.pos()).is(Blocks.LIGHT)) {
-            lvl.setBlock(gp.pos(), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            lvl.setBlock(gp.pos(), Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
         }
     }
 

@@ -59,17 +59,17 @@ public class RadianceAffix extends Affix implements AffixTypes {
     public boolean canApplyTo(ItemStack stack, LootCategory cat, LootRarity rarity) {
         if (!rarityInValues(rarity)) return false;
         if (types.isEmpty()) return true;
-        if (types.contains(cat)) return true;
-        if (tagMatches(stack)) return true;
-        String name = cat.getName();
-        return types.stream().anyMatch(t -> name.startsWith(t.getName()));
+        // 用 AffixTypes 提供的边界匹配（按 ':' 区分槽位），避免 curio:necklace 误匹配 curio:necklace_x。
+        if (AffixTypes.curiosforge_typeMatches(types, cat)) return true;
+        return tagMatches(stack);
     }
 
     private boolean tagMatches(ItemStack stack) {
         var afxData = stack.getTagElement(AffixHelper.AFFIX_DATA);
         if (afxData != null && afxData.contains("curio_artifice")) {
             String val = afxData.getString("curio_artifice");
-            return types.stream().anyMatch(t -> val.startsWith(t.getName()));
+            return types.stream().anyMatch(t ->
+                val.equals(t.getName()) || val.startsWith(t.getName() + ":"));
         }
         return false;
     }
