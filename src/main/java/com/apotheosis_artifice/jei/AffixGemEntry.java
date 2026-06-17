@@ -25,27 +25,24 @@ public record AffixGemEntry(LootCategory category, Gem gem, List<RarityEntry> ra
         List<AffixGemEntry> entries = new ArrayList<>();
 
         for (Gem gem : GemRegistry.INSTANCE.getValues()) {
-            boolean matches = gem.getBonuses().stream()
-                .anyMatch(b -> b.getGemClass().types().contains(cat));
-            if (!matches) continue;
-
             List<RarityEntry> supported = new ArrayList<>();
             for (DynamicHolder<LootRarity> holder : orderedRarities) {
                 if (!holder.isBound()) continue;
                 LootRarity rarity = holder.get();
                 if (rarity.ordinal() < gem.getMinRarity().ordinal() || rarity.ordinal() > gem.getMaxRarity().ordinal()) continue;
 
-                // 收集该分类对应的镶嵌属性描述（保留原始颜色）
+                // 用 gem.getBonus(cat, rarity) 判定可镶嵌性：它已包含 GemGetBonusMixin
+                // 注入的“通用 curio → 具体 curio:xxx 槽位”回退，因此 JEI 显示与运行时
+                // 实际可镶嵌行为完全一致（修复：万能神化护符等具体 curio 槽位看不到宝石）。
                 Component bonusComp = Component.literal("");
                 try {
-                    ItemStack stack = new ItemStack(Adventure.Items.GEM.get());
-                    GemItem.setGem(stack, gem);
-                    AffixHelper.setRarity(stack, rarity);
-                    for (var bonus : gem.getBonuses()) {
-                        if (bonus.getGemClass().types().contains(cat) && bonus.supports(rarity)) {
-                            bonusComp = bonus.getSocketBonusTooltip(stack, rarity);
-                            break;
-                        }
+                    var bonusOpt = gem.getBonus(cat, rarity);
+                    if (bonusOpt.isPresent()) {
+                        ItemStack stack = new ItemStack(Adventure.Items.GEM.get());
+                        GemItem.setGem(stack, gem);
+                        AffixHelper.setRarity(stack, rarity);
+                        Component tt = bonusOpt.get().getSocketBonusTooltip(stack, rarity);
+                        if (tt != null) bonusComp = tt;
                     }
                 } catch (Exception ignored) {}
                 if (!bonusComp.getString().isBlank()) {
