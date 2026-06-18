@@ -62,7 +62,14 @@ public class MechanicalRavenEnchantingTableBlock extends RavenEnchantingTableBlo
         if (!state.is(newState.getBlock())) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof MechanicalRavenEnchantTile rt) {
-                // 物品保存在附魔台中，不掉落
+                // 破坏时把缓冲/输出/暂存槽里的物品掉出来，避免直接丢失
+                // （方块本身不携带 BE NBT，旧逻辑只 removeBlockEntity 会吞掉里面的物品）。
+                // popResource 内部已判空且仅服务端执行。
+                var io = rt.getIOInv();
+                for (int i = 0; i < io.getSlots(); i++) {
+                    Block.popResource(level, pos, io.getStackInSlot(i));
+                }
+                Block.popResource(level, pos, rt.getSavedEnchantSlot());
                 level.removeBlockEntity(pos);
             } else {
                 super.onRemove(state, level, pos, newState, moved);
