@@ -7,7 +7,7 @@
             "type": "apotheosis:multi_attribute",
             "gem_class": {
                 "key": "curio_necklace",
-                "types": ["curio:necklace"]
+                "types": ["curio"]
             },
             "modifiers": [
                 {
