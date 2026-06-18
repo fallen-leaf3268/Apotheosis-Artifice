@@ -1,0 +1,41 @@
+{
+    "weight": 6,
+    "quality": 0,
+    "dimensions": [],
+    "bonuses": [
+        {
+            "type": "apotheosis:multi_attribute",
+            "gem_class": {
+                "key": "curse_violent",
+                "types": ["curio:hostility_curse"]
+            },
+            "modifiers": [
+                {
+                    "attribute": "minecraft:generic.attack_damage",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 1,
+                        "uncommon": 2,
+                        "rare": 4,
+                        "epic": 5,
+                        "mythic": 7,
+                        "ancient": 10
+                    }
+                },
+                {
+                    "attribute": "minecraft:generic.armor",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 1,
+                        "uncommon": 2,
+                        "rare": 3,
+                        "epic": 4,
+                        "mythic": 6,
+                        "ancient": 8
+                    }
+                }
+            ],
+            "desc": "desc.curse_violent"
+        }
+    ]
+}

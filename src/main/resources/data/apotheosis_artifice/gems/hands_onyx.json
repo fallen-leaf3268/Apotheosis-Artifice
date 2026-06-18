@@ -1,0 +1,41 @@
+{
+    "weight": 8,
+    "quality": 0,
+    "dimensions": [],
+    "bonuses": [
+        {
+            "type": "apotheosis:multi_attribute",
+            "gem_class": {
+                "key": "hands_offensive",
+                "types": ["curio:hands"]
+            },
+            "modifiers": [
+                {
+                    "attribute": "minecraft:generic.attack_damage",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 1,
+                        "uncommon": 2,
+                        "rare": 3,
+                        "epic": 4,
+                        "mythic": 6,
+                        "ancient": 9
+                    }
+                },
+                {
+                    "attribute": "minecraft:generic.attack_speed",
+                    "operation": "MULTIPLY_BASE",
+                    "values": {
+                        "common": 0.02,
+                        "uncommon": 0.03,
+                        "rare": 0.04,
+                        "epic": 0.06,
+                        "mythic": 0.08,
+                        "ancient": 0.10
+                    }
+                }
+            ],
+            "desc": "desc.hands_offensive"
+        }
+    ]
+}

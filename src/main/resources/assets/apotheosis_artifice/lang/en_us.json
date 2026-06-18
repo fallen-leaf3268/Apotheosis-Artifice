@@ -1,0 +1,54 @@
+{
+    "affix.apotheosis_artifice.damage_immunity": "Immune to %s",
+    "affix.apotheosis_artifice.damage_resistance": "%s%% Resistance to %s",
+    "affix.apotheosis_artifice.effect_immunity": "Immune to %s",
+    "affix.apotheosis_artifice.radiance": "Sheds light on your surroundings (level %s)",
+    "affix.apotheosis_artifice:ability/radiance": "Radiant",
+    "affix.apotheosis_artifice:ability/radiance.suffix": "of Radiance",
+    "item.apotheosis_artifice.apotheosis_charm": "Apotheosis Charm",
+    "item.apotheosis.gem.apotheosis_artifice:moonglow_pearl": "Moonglow Pearl",
+    "gem_class.curio_necklace": "Necklaces",
+    "desc.curio_necklace": "%s, %s",
+    "affix.apotheosis_artifice:attribute/charm_spirit": "Spirit",
+    "affix.apotheosis_artifice:attribute/charm_spirit.suffix": "of Spirit",
+    "affix.apotheosis_artifice:attribute/hands_swiftness": "Swiftness",
+    "affix.apotheosis_artifice:attribute/hands_swiftness.suffix": "of Swiftness",
+    "info.apotheosis_artifice.binder.gemcase_bind_hint": "Hold Shift + Right-click to bind to a Gem Case",
+
+    "text.apotheosis.category.curio:ring": "Ring",
+    "text.apotheosis.category.curio:necklace": "Necklace",
+    "text.apotheosis.category.curio:charm": "Charm",
+    "text.apotheosis.category.curio:belt": "Belt",
+    "text.apotheosis.category.curio:hands": "Hands",
+    "text.apotheosis.category.curio:bracelet": "Bracelet",
+    "text.apotheosis.category.curio:hostility_curse": "Curse",
+    "text.apotheosis.category.curio:pandora_charm": "Pandora Charm",
+
+    "item.apotheosis.gem.apotheosis_artifice:belt_amber": "Amber Belt",
+    "gem_class.belt_protective": "Belts",
+    "desc.belt_protective": "%s, %s",
+
+    "item.apotheosis.gem.apotheosis_artifice:bracelet_coral": "Coral Bracelet",
+    "gem_class.bracelet_balanced": "Bracelets",
+    "desc.bracelet_balanced": "%s, %s",
+
+    "item.apotheosis.gem.apotheosis_artifice:charm_jade": "Jade Charm",
+    "gem_class.charm_defensive": "Charms",
+    "desc.charm_defensive": "%s, %s",
+
+    "item.apotheosis.gem.apotheosis_artifice:curse_ruby": "Cursed Ruby",
+    "gem_class.curse_violent": "Curses",
+    "desc.curse_violent": "%s, %s",
+
+    "item.apotheosis.gem.apotheosis_artifice:hands_onyx": "Onyx Hands",
+    "gem_class.hands_offensive": "Hands",
+    "desc.hands_offensive": "%s, %s",
+
+    "item.apotheosis.gem.apotheosis_artifice:necklace_opal": "Opal Necklace",
+    "gem_class.necklace_arcane": "Necklaces",
+    "desc.necklace_arcane": "%s, %s",
+
+    "item.apotheosis.gem.apotheosis_artifice:ring_garnet": "Garnet Ring",
+    "gem_class.ring_defensive": "Rings",
+    "desc.ring_defensive": "%s, %s"
+}

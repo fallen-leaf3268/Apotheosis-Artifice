@@ -1,0 +1,41 @@
+{
+    "weight": 8,
+    "quality": 0,
+    "dimensions": [],
+    "bonuses": [
+        {
+            "type": "apotheosis:multi_attribute",
+            "gem_class": {
+                "key": "belt_protective",
+                "types": ["curio:belt"]
+            },
+            "modifiers": [
+                {
+                    "attribute": "minecraft:generic.armor",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 2,
+                        "uncommon": 3,
+                        "rare": 5,
+                        "epic": 7,
+                        "mythic": 9,
+                        "ancient": 12
+                    }
+                },
+                {
+                    "attribute": "minecraft:generic.max_health",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 1,
+                        "uncommon": 2,
+                        "rare": 3,
+                        "epic": 5,
+                        "mythic": 7,
+                        "ancient": 10
+                    }
+                }
+            ],
+            "desc": "desc.belt_protective"
+        }
+    ]
+}

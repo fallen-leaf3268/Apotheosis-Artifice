@@ -1,0 +1,41 @@
+{
+    "weight": 8,
+    "quality": 0,
+    "dimensions": [],
+    "bonuses": [
+        {
+            "type": "apotheosis:multi_attribute",
+            "gem_class": {
+                "key": "ring_defensive",
+                "types": ["curio:ring"]
+            },
+            "modifiers": [
+                {
+                    "attribute": "minecraft:generic.armor_toughness",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 1,
+                        "uncommon": 2,
+                        "rare": 3,
+                        "epic": 4,
+                        "mythic": 6,
+                        "ancient": 8
+                    }
+                },
+                {
+                    "attribute": "minecraft:generic.knockback_resistance",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 0.05,
+                        "uncommon": 0.10,
+                        "rare": 0.15,
+                        "epic": 0.20,
+                        "mythic": 0.25,
+                        "ancient": 0.30
+                    }
+                }
+            ],
+            "desc": "desc.ring_defensive"
+        }
+    ]
+}

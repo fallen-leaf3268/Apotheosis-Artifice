@@ -1,0 +1,24 @@
+{
+    "type": "apotheosis:mob_effect",
+    "mob_effect": "minecraft:absorption",
+    "target": "HURT_SELF",
+    "values": {
+        "rare": {
+            "duration": 1200,
+            "amplifier": 0
+        },
+        "epic": {
+            "duration": 1200,
+            "amplifier": 0
+        },
+        "mythic": {
+            "duration": 2400,
+            "amplifier": 1
+        },
+        "ancient": {
+            "duration": 2400,
+            "amplifier": 1
+        }
+    },
+    "types": ["curio"]
+}
