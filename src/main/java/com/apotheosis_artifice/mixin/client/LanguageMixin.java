@@ -38,7 +38,8 @@ public class LanguageMixin {
             case "hands_offensive" -> "hands";
             case "necklace_arcane" -> "necklace";
             case "ring_defensive" -> "ring";
-            case "curio_defensive" -> "curio";
+            // 通用 curio 走我们自己翻译（"任意饰品栏位"）
+            case "curio_defensive" -> null;
             case "curio_necklace" -> "necklace";
             default -> null;
         };

@@ -20,6 +20,7 @@
     "item.apotheosis.gem.apotheosis_artifice:necklace_opal": "Opal Necklace",
     "item.apotheosis.gem.apotheosis_artifice:ring_garnet": "Garnet Ring",
 
+    "gem_class.curio_defensive": "Any Curio Slot",
 
 
     "affix.apotheosis_artifice.radiance": "Sheds light on your surroundings (level %s)",
