@@ -3,21 +3,29 @@
     "mob_effect": "minecraft:absorption",
     "target": "HURT_SELF",
     "values": {
+        "common": {
+            "duration": { "min": 600, "steps": 1, "step": 0 },
+            "amplifier": { "min": 0, "steps": 1, "step": 0 }
+        },
+        "uncommon": {
+            "duration": { "min": 600, "steps": 1, "step": 0 },
+            "amplifier": { "min": 0, "steps": 1, "step": 0 }
+        },
         "rare": {
-            "duration": 1200,
-            "amplifier": 0
+            "duration": { "min": 1200, "steps": 1, "step": 0 },
+            "amplifier": { "min": 0, "steps": 1, "step": 0 }
         },
         "epic": {
-            "duration": 1200,
-            "amplifier": 0
+            "duration": { "min": 1200, "steps": 1, "step": 0 },
+            "amplifier": { "min": 0, "steps": 1, "step": 0 }
         },
         "mythic": {
-            "duration": 2400,
-            "amplifier": 1
+            "duration": { "min": 2400, "steps": 1, "step": 0 },
+            "amplifier": { "min": 1, "steps": 1, "step": 0 }
         },
         "ancient": {
-            "duration": 2400,
-            "amplifier": 1
+            "duration": { "min": 2400, "steps": 1, "step": 0 },
+            "amplifier": { "min": 1, "steps": 1, "step": 0 }
         }
     },
     "types": ["curio"]

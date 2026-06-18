@@ -3,6 +3,16 @@
     "attribute": "minecraft:generic.luck",
     "operation": "ADDITION",
     "values": {
+        "common": {
+            "min": 0.5,
+            "steps": 2,
+            "step": 0.5
+        },
+        "uncommon": {
+            "min": 0.5,
+            "steps": 2,
+            "step": 0.5
+        },
         "rare": {
             "min": 0.5,
             "steps": 2,
@@ -22,19 +32,7 @@
             "min": 2,
             "steps": 6,
             "step": 0.5
-        },
-        "common": {
-            "min": 0.5,
-            "steps": 2,
-            "step": 0.5
-        },
-        "uncommon": {
-            "min": 0.5,
-            "steps": 2,
-            "step": 0.5
         }
     },
-    "types": [
-        "curio"
-    ]
+    "types": ["curio"]
 }

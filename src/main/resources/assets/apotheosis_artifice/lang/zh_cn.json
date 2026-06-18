@@ -156,31 +156,31 @@
     "text.apotheosis.category.curio:hostility_curse": "诅咒",
     "text.apotheosis.category.curio:pandora_charm": "潘多拉护符",
 
-    "item.apotheosis.gem.apotheosis_artifice:belt_amber": "琥珀腰带",
-    "gem_class.belt_protective": "腰带饰品",
+    "item.apotheosis.gem.apotheosis_artifice:belt_amber": "琥珀宝石",
+    "gem_class.belt_protective": "腰带",
     "desc.belt_protective": "%s, %s",
 
-    "item.apotheosis.gem.apotheosis_artifice:bracelet_coral": "珊瑚手镯",
-    "gem_class.bracelet_balanced": "手镯饰品",
+    "item.apotheosis.gem.apotheosis_artifice:bracelet_coral": "珊瑚宝石",
+    "gem_class.bracelet_balanced": "手镯",
     "desc.bracelet_balanced": "%s, %s",
 
-    "item.apotheosis.gem.apotheosis_artifice:charm_jade": "翡翠护符",
-    "gem_class.charm_defensive": "护符饰品",
+    "item.apotheosis.gem.apotheosis_artifice:charm_jade": "翡翠宝石",
+    "gem_class.charm_defensive": "护符",
     "desc.charm_defensive": "%s, %s",
 
     "item.apotheosis.gem.apotheosis_artifice:curse_ruby": "诅咒红宝石",
-    "gem_class.curse_violent": "诅咒饰品",
+    "gem_class.curse_violent": "恶意-诅咒",
     "desc.curse_violent": "%s, %s",
 
-    "item.apotheosis.gem.apotheosis_artifice:hands_onyx": "玛瑙手套",
-    "gem_class.hands_offensive": "手套饰品",
+    "item.apotheosis.gem.apotheosis_artifice:hands_onyx": "玛瑙宝石",
+    "gem_class.hands_offensive": "手饰",
     "desc.hands_offensive": "%s, %s",
 
-    "item.apotheosis.gem.apotheosis_artifice:necklace_opal": "蛋白石项链",
-    "gem_class.necklace_arcane": "项链饰品",
+    "item.apotheosis.gem.apotheosis_artifice:necklace_opal": "蛋白石宝石",
+    "gem_class.necklace_arcane": "项链",
     "desc.necklace_arcane": "%s, %s",
 
-    "item.apotheosis.gem.apotheosis_artifice:ring_garnet": "石榴戒指",
-    "gem_class.ring_defensive": "戒指饰品",
+    "item.apotheosis.gem.apotheosis_artifice:ring_garnet": "石榴宝石",
+    "gem_class.ring_defensive": "戒指",
     "desc.ring_defensive": "%s, %s"
 }
