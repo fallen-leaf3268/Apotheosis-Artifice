@@ -87,6 +87,8 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         List<AffixDetailEntry> prefixEntries = new ArrayList<>();
         for (LootCategory cat : LootCategory.VALUES) {
             if (cat.isNone()) continue;
+            // curio:xxx 已合并到通用 curio，不单独生成条目
+            if (cat.getName().startsWith("curio:") && !"curio".equals(cat.getName())) continue;
             for (Affix affix : dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry.INSTANCE.getValues()) {
                 List<AffixDetailEntry.RarityEntry> supported = new ArrayList<>();
                 for (var holder : dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry.INSTANCE.getOrderedRarities()) {

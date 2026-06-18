@@ -38,7 +38,8 @@
         "client.AttributesGuiSearchMixin",
         "client.AttributesGuiLocalizeMixin",
         "client.AffixTooltipMixin",
-        "client.InventoryScreenKeyForwardMixin"
+        "client.InventoryScreenKeyForwardMixin",
+        "client.LanguageMixin"
     ],
     "server": []
 }
