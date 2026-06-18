@@ -87,8 +87,6 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         List<AffixDetailEntry> prefixEntries = new ArrayList<>();
         for (LootCategory cat : LootCategory.VALUES) {
             if (cat.isNone()) continue;
-            // curio:xxx 已合并到通用 curio，不单独生成条目
-            if (cat.getName().startsWith("curio:") && !"curio".equals(cat.getName())) continue;
             for (Affix affix : dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry.INSTANCE.getValues()) {
                 List<AffixDetailEntry.RarityEntry> supported = new ArrayList<>();
                 for (var holder : dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry.INSTANCE.getOrderedRarities()) {
@@ -96,10 +94,11 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
                     var rarity = holder.get();
                     try {
                         boolean match = affix.canApplyTo(ItemStack.EMPTY, cat, rarity);
-                        if (!match && cat.getName().startsWith("curio:") && !"curio".equals(cat.getName())) {
+                        // 子槽位词条如果也匹配通用 curio → 由通用页显示，子槽位不重复
+                        if (match && cat.getName().startsWith("curio:") && !"curio".equals(cat.getName())) {
                             LootCategory genericCurio = LootCategory.byId("curio");
                             if (genericCurio != null && affix.canApplyTo(ItemStack.EMPTY, genericCurio, rarity)) {
-                                match = true;
+                                match = false;
                             }
                         }
                         if (match) supported.add(new AffixDetailEntry.RarityEntry(rarity, AffixDetailEntry.buildDescription(affix, rarity)));

@@ -39,9 +39,11 @@ public record AffixCodexEntry(List<LootCategory> categories) {
 
         var cats = LootCategory.VALUES.stream()
             .filter(c -> !c.isNone())
-            //  curio:xxx 子槽位合并到通用 curio，不单独在代码书显示
-            .filter(c -> !c.getName().startsWith("curio:") || "curio".equals(c.getName()))
             .filter(c -> {
+                // 没有实际物品的分类不显示
+                List<ItemStack> catItems = getCategoryItems(c);
+                boolean hasRealItems = catItems.stream().anyMatch(s -> !s.is(Items.BARRIER));
+                if (!hasRealItems) return false;
                 for (Affix a : registry.getValues()) {
                     for (DynamicHolder<LootRarity> holder : orderedRarities) {
                         if (!holder.isBound()) continue;

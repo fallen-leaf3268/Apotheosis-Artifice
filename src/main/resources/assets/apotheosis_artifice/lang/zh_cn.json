@@ -75,6 +75,8 @@
     "affix.apotheosis_artifice:mob_effect/haste.suffix": "迅捷之",
     "affix.apotheosis_artifice:mob_effect/absorption": "壁垒",
     "affix.apotheosis_artifice:mob_effect/absorption.suffix": "壁垒之",
+    "affix.apotheosis_artifice:mob_effect/saturation": "饱食",
+    "affix.apotheosis_artifice:mob_effect/saturation.suffix": "饱食之",
 
     "affix.apotheosis_artifice:ability/radiance": "光辉",
     "affix.apotheosis_artifice:ability/radiance.suffix": "光辉之",

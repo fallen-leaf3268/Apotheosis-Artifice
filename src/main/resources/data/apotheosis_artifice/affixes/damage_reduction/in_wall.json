@@ -6,7 +6,7 @@
         "uncommon": { "min": 0.4, "steps": 3, "step": 0.1 },
         "rare":     { "min": 0.5, "steps": 3, "step": 0.1 },
         "epic":     { "min": 0.6, "steps": 4, "step": 0.1 },
-        "mythic":   { "min": 0.7, "steps": 3, "step": 0.1 },
+        "mythic":   { "min": 0.8, "steps": 3, "step": 0.1 },
         "ancient":  { "min": 0.8, "steps": 3, "step": 0.1 }
     },
     "types": ["curio"]

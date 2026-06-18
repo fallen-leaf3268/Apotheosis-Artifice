@@ -33,6 +33,9 @@
     "affix.apotheosis_artifice:attribute/attack_speed": "Swiftness",
     "affix.apotheosis_artifice:attribute/attack_speed.suffix": "of Swiftness",
 
+    "affix.apotheosis_artifice:mob_effect/saturation": "Saturation",
+    "affix.apotheosis_artifice:mob_effect/saturation.suffix": "of Saturation",
+
     "affix.apotheosis_artifice:ability/radiance": "Radiant",
     "affix.apotheosis_artifice:ability/radiance.suffix": "of Radiance",
 
