@@ -1,0 +1,8 @@
+{
+    "variants": {
+        "facing=north": { "model": "apotheosis_artifice:block/gem_case" },
+        "facing=east":  { "model": "apotheosis_artifice:block/gem_case", "y": 90 },
+        "facing=south": { "model": "apotheosis_artifice:block/gem_case", "y": 180 },
+        "facing=west":  { "model": "apotheosis_artifice:block/gem_case", "y": 270 }
+    }
+}

@@ -1,0 +1,43 @@
+{
+    "weight": 8,
+    "quality": 0,
+    "dimensions": [],
+    "bonuses": [
+        {
+            "type": "apotheosis:multi_attribute",
+            "gem_class": {
+                "key": "curios_defensive",
+                "types": [
+                    "curio"
+                ]
+            },
+            "modifiers": [
+                {
+                    "attribute": "minecraft:generic.armor_toughness",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 0.5,
+                        "uncommon": 1.0,
+                        "rare": 1.5,
+                        "epic": 2.5,
+                        "mythic": 4,
+                        "ancient": 6
+                    }
+                },
+                {
+                    "attribute": "minecraft:generic.knockback_resistance",
+                    "operation": "ADDITION",
+                    "values": {
+                        "common": 0.05,
+                        "uncommon": 0.1,
+                        "rare": 0.15,
+                        "epic": 0.25,
+                        "mythic": 0.4,
+                        "ancient": 0.5
+                    }
+                }
+            ],
+            "desc": "bonus.apotheosis:multi_attr.desc.and"
+        }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "type": "apotheosis_artifice:radiance",
+    "values": {
+        "common":   { "min": 4,  "steps": 1, "step": 0 },
+        "uncommon": { "min": 6,  "steps": 1, "step": 0 },
+        "rare":     { "min": 8,  "steps": 1, "step": 0 },
+        "epic":     { "min": 10, "steps": 1, "step": 0 },
+        "mythic":   { "min": 15, "steps": 1, "step": 0 },
+        "ancient":  { "min": 15, "steps": 1, "step": 0 }
+    },
+    "types": ["curio"]
+}
