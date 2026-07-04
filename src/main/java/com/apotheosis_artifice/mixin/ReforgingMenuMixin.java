@@ -155,6 +155,24 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         return s -> original.test(s) && hasAffixFor(s);
     }
 
+    /**
+     * 原版 slotsChanged 里 createLootItem 在“当前稀有度一个词条都凑不出来”时会抛
+     * RuntimeException，导致 slotsChanged 中途夭折：预览槽全空、我们的 TAIL 注入也不执行
+     * （表现为“无重铸预览”）。这里兜住异常，该候选槽置空即可。
+     */
+    @org.spongepowered.asm.mixin.injection.Redirect(method = "slotsChanged", remap = true,
+        at = @At(value = "INVOKE", remap = false,
+            target = "Ldev/shadowsoffire/apotheosis/adventure/loot/LootController;createLootItem(Lnet/minecraft/world/item/ItemStack;Ldev/shadowsoffire/apotheosis/adventure/loot/LootRarity;Lnet/minecraft/util/RandomSource;)Lnet/minecraft/world/item/ItemStack;"))
+    private ItemStack curiosforge_safeCreateLootItem(ItemStack stack, LootRarity rarity, RandomSource rand) {
+        try {
+            return LootController.createLootItem(stack, rarity, rand);
+        } catch (Exception e) {
+            ApotheosisArtificeMod.LOGGER.warn("Reforge preview roll failed for {} at rarity {}: {}",
+                stack.getItem(), rarity, e.toString());
+            return ItemStack.EMPTY;
+        }
+    }
+
     @Inject(method = "slotsChanged", at = @At("HEAD"), remap = true)
     private void curiosforge_updateSlots(net.minecraft.world.Container container, CallbackInfo ci) {
         ItemStack input = ((ReforgingMenu)(Object)this).getSlot(0).getItem();
@@ -203,7 +221,15 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
                             dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper.setSockets(copy, 0);
                         }
                     }
-                    ItemStack result = LootController.createLootItem(copy, cat, rarity, r);
+                    ItemStack result;
+                    try {
+                        result = LootController.createLootItem(copy, cat, rarity, r);
+                    } catch (Exception e) {
+                        ApotheosisArtificeMod.LOGGER.warn("Reforge choice roll failed for {} ({} / {}): {}",
+                            copy.getItem(), cat.getName(), rarity, e.toString());
+                        this.choicesInv.setStackInSlot(s, ItemStack.EMPTY);
+                        continue;
+                    }
                     String cc = cat.getName();
                     result.getOrCreateTagElement("affix_data").putString("curio_artifice", cc);
                     this.choicesInv.setStackInSlot(s, result);
@@ -222,21 +248,42 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
 
     private static boolean hasAffixFor(ItemStack stack, LootCategory cat) {
         if (cat == null || cat.isNone()) return false;
-        return AffixRegistry.INSTANCE.getValues().stream()
-            .anyMatch(a -> {
-                if (!(a instanceof AffixTypes af)) return false;
+        for (var a : AffixRegistry.INSTANCE.getValues()) {
+            if (a instanceof AffixTypes af) {
                 Set<LootCategory> types = af.curiosforge_getTypes();
-                return types.contains(cat) || AffixTypes.curiosforge_typeMatches(types, cat);
-            });
+                if (types.contains(cat) || AffixTypes.curiosforge_typeMatches(types, cat)) return true;
+            } else if (curiosforge_canApplyAnyRarity(a, stack, cat)) {
+                // 第三方自定义 Affix 类（如 apotheosis_spells 的法术词条）没有被 AffixTypes mixin
+                // 覆盖到，用 canApplyTo 兜底，避免其物品被挡在重铸台输入槽外。
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Unique
+    private static boolean curiosforge_canApplyAnyRarity(dev.shadowsoffire.apotheosis.adventure.affix.Affix a, ItemStack stack, LootCategory cat) {
+        for (var holder : RarityRegistry.INSTANCE.getOrderedRarities()) {
+            if (!holder.isBound()) continue;
+            try {
+                if (a.canApplyTo(stack, cat, holder.get())) return true;
+            } catch (Exception ignored) {}
+        }
+        return false;
     }
 
     @Unique
     private static boolean curiosforge_hasAffixForRarity(ItemStack stack, LootCategory cat, LootRarity rarity) {
         for (var a : AffixRegistry.INSTANCE.getValues()) {
-            if (!(a instanceof AffixTypes af)) continue;
-            Set<LootCategory> types = af.curiosforge_getTypes();
-            if (!types.contains(cat) && !AffixTypes.curiosforge_typeMatches(types, cat)) continue;
-            if (((dev.shadowsoffire.apotheosis.adventure.affix.Affix) a).canApplyTo(stack, cat, rarity)) return true;
+            if (a instanceof AffixTypes af) {
+                Set<LootCategory> types = af.curiosforge_getTypes();
+                if (!types.contains(cat) && !AffixTypes.curiosforge_typeMatches(types, cat)) continue;
+                if (((dev.shadowsoffire.apotheosis.adventure.affix.Affix) a).canApplyTo(stack, cat, rarity)) return true;
+            } else {
+                try {
+                    if (((dev.shadowsoffire.apotheosis.adventure.affix.Affix) a).canApplyTo(stack, cat, rarity)) return true;
+                } catch (Exception ignored) {}
+            }
         }
         return false;
     }
