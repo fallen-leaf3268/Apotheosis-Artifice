@@ -256,6 +256,7 @@ public class GemBinderItem extends Item {
     }
 
     private static boolean isGem(ItemStack stack) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return false;
         return stack.getItem() == Adventure.Items.GEM.get() && GemItem.getGem(stack).isBound();
     }
 
