@@ -133,6 +133,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
     /** 该物品能否被宝石柜接收（必须是已绑定的宝石且带稀有度）。 */
     public boolean canAcceptGem(ItemStack stack) {
         return !stack.isEmpty()
+            && dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure
             && GemItem.getGem(stack).isBound()
             && AffixHelper.getRarity(stack).isBound();
     }

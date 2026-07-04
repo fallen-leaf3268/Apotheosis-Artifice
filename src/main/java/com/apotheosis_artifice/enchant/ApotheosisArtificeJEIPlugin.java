@@ -55,10 +55,20 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     @Override public ResourceLocation getPluginUid() { return new ResourceLocation(ApotheosisArtificeMod.MODID, "enchant"); }
 
     @Override public void registerCategories(IRecipeCategoryRegistration reg) {
-        suffixCategory = new AffixDetailCategory(SUFFIX_TYPE, Component.translatable("jei.apotheosis_artifice.affix_suffix"),
-            new ItemStack(dev.shadowsoffire.apotheosis.adventure.Adventure.Items.SIGIL_OF_ENHANCEMENT.get()));
-        prefixCategory = new AffixDetailCategory(PREFIX_TYPE, Component.translatable("jei.apotheosis_artifice.affix_prefix"),
-            new ItemStack(dev.shadowsoffire.apotheosis.adventure.Adventure.Items.SIGIL_OF_REBIRTH.get()));
+        // adventure 模块被禁用时绝不能碰 Adventure$Items：Apotheosis 没在自己的构造期
+        // 初始化过它，此处触发 <clinit> 会因 FMLJavaModLoadingContext.get()==null 抛
+        // ExceptionInInitializerError 并把类永久毒化（后续宝石柜交互全部 NoClassDefFoundError）。
+        ItemStack suffixIcon;
+        ItemStack prefixIcon;
+        if (dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) {
+            suffixIcon = new ItemStack(dev.shadowsoffire.apotheosis.adventure.Adventure.Items.SIGIL_OF_ENHANCEMENT.get());
+            prefixIcon = new ItemStack(dev.shadowsoffire.apotheosis.adventure.Adventure.Items.SIGIL_OF_REBIRTH.get());
+        } else {
+            suffixIcon = new ItemStack(ApotheosisArtificeMod.APOTHEOSIS_REFORGING_TABLE_ITEM.get());
+            prefixIcon = new ItemStack(ApotheosisArtificeMod.APOTHEOSIS_REFORGING_TABLE_ITEM.get());
+        }
+        suffixCategory = new AffixDetailCategory(SUFFIX_TYPE, Component.translatable("jei.apotheosis_artifice.affix_suffix"), suffixIcon);
+        prefixCategory = new AffixDetailCategory(PREFIX_TYPE, Component.translatable("jei.apotheosis_artifice.affix_prefix"), prefixIcon);
         reg.addRecipeCategories(new AffixCodexCategory());
         reg.addRecipeCategories(suffixCategory);
         reg.addRecipeCategories(prefixCategory);
@@ -68,6 +78,7 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     @Override public void registerRecipeCatalysts(IRecipeCatalystRegistration reg) {
         reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.RAVEN_ENCHANTING_TABLE_ITEM.get()), EnchantingCategory.TYPE);
         reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.MECHANICAL_RAVEN_TABLE_ITEM.get()), EnchantingCategory.TYPE);
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return; // 词缀/重铸都属 adventure 模块
         var ourTable = new ItemStack(ApotheosisArtificeMod.APOTHEOSIS_REFORGING_TABLE_ITEM.get());
         for (var type : List.of(AffixCodexCategory.TYPE, SUFFIX_TYPE, PREFIX_TYPE)) reg.addRecipeCatalyst(ourTable, type);
         reg.addRecipeCatalyst(ourTable, AffixGemCategory.TYPE);
@@ -83,6 +94,8 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     }
 
     @Override public void registerRecipes(IRecipeRegistration reg) {
+        // adventure 模块禁用时词缀/宝石注册表为空，类别已注册但不添加任何条目
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         // 用 JEI 物品变体列表（含 NBT，如每个法术一支的卷轴）驱动类别物品扫描，
         // 修复"可重铸物品"里法术卷轴只显示一个空 NBT 卷轴的问题
         AffixCodexEntry.bindIngredientManager(reg.getIngredientManager());

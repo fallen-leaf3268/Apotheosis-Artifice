@@ -80,6 +80,8 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
         this.addSlot(new Slot(this.ioInv, 0, 142, 99) {
             @Override
             public boolean mayPlace(ItemStack stack) {
+                // adventure 模块禁用时 GemItem.getGem 会触发 Adventure$Items 的失败初始化并崩溃
+                if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return false;
                 return GemItem.getGem(stack).isBound();
             }
             @Override
@@ -172,7 +174,8 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
         this.mover.registerRule((stack, slot) -> slot == FILTER_SLOT, this.playerInvStart, this.slots.size());
         this.mover.registerRule((stack, slot) -> slot >= FIRST_GEM_SLOT && slot < FIRST_UPGRADE_MAT_SLOT, this.playerInvStart, this.slots.size());
         this.mover.registerRule((stack, slot) -> slot >= FIRST_UPGRADE_MAT_SLOT && slot < FIRST_UPGRADE_MAT_SLOT + UPGRADE_MAT_COUNT, this.playerInvStart, this.slots.size());
-        this.mover.registerRule((stack, slot) -> slot >= this.playerInvStart && GemItem.getGem(stack).isBound(), INPUT_SLOT, INPUT_SLOT + 1);
+        this.mover.registerRule((stack, slot) -> slot >= this.playerInvStart
+            && dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure && GemItem.getGem(stack).isBound(), INPUT_SLOT, INPUT_SLOT + 1);
         this.mover.registerRule((stack, slot) -> slot >= this.playerInvStart && this.isValidUpgradeMaterial(stack), FIRST_UPGRADE_MAT_SLOT, FIRST_UPGRADE_MAT_SLOT + UPGRADE_MAT_COUNT);
         this.mover.registerRule((stack, slot) -> slot >= this.playerInvStart && !LootCategory.forItem(stack).isNone(), FILTER_SLOT, FILTER_SLOT + 1);
         this.registerInvShuffleRules();
@@ -252,6 +255,7 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
 
     public boolean isValidUpgradeMaterial(ItemStack stack) {
         if (stack.isEmpty()) return false;
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return false;
         if (stack.getItem() == dev.shadowsoffire.apotheosis.adventure.Adventure.Items.GEM_DUST.get()) return true;
         for (LootRarity rarity : RarityRegistry.INSTANCE.getValues()) {
             if (stack.is(rarity.getMaterial())) return true;

@@ -55,6 +55,11 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
             @Override public int getWidth() { return 16; }
             @Override public int getHeight() { return 16; }
             @Override public void draw(GuiGraphics gfx, int x, int y) {
+                if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) {
+                    gfx.renderItem(new net.minecraft.world.item.ItemStack(
+                        com.apotheosis_artifice.ApotheosisArtificeMod.APOTHEOSIS_REFORGING_TABLE_ITEM.get()), x, y);
+                    return;
+                }
                 net.minecraft.world.item.ItemStack icon = new net.minecraft.world.item.ItemStack(dev.shadowsoffire.apotheosis.adventure.Adventure.Items.GEM.get());
                 net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
                 net.minecraft.nbt.CompoundTag affixData = new net.minecraft.nbt.CompoundTag();

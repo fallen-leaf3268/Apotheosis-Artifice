@@ -22,6 +22,10 @@ public class ApotheosisArtificeReforgingTableBlock extends ReforgingTableBlock {
 
     @Override
     public LootRarity getMaxRarity() {
+        // adventure 模块禁用/稀有度未加载时列表为空，RarityRegistry.getMaxRarity()
+        // 内部 list.get(size-1) 会抛 IndexOutOfBoundsException（JEI 构建搜索树取
+        // tooltip 时崩溃），先判空。
+        if (RarityRegistry.INSTANCE.getOrderedRarities().isEmpty()) return null;
         return RarityRegistry.getMaxRarity().get();
     }
 
@@ -29,6 +33,18 @@ public class ApotheosisArtificeReforgingTableBlock extends ReforgingTableBlock {
     public void appendHoverText(ItemStack pStack, BlockGetter pLevel, List<Component> list, TooltipFlag pFlag) {
         // 不调 super.appendHoverText()，父类的实现直接访问 this.maxRarity 字段
         // 且引用的是 Apotheosis 本体的方块翻译键，不适合我们使用。
-        list.add(Component.translatable("info.apotheosis_artifice.max_rarity", this.getMaxRarity().toComponent()).withStyle(ChatFormatting.GRAY));
+        LootRarity max = this.getMaxRarity();
+        if (max != null) {
+            list.add(Component.translatable("info.apotheosis_artifice.max_rarity", max.toComponent()).withStyle(ChatFormatting.GRAY));
+        }
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level,
+        net.minecraft.core.BlockPos pos, net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand,
+        net.minecraft.world.phys.BlockHitResult hit) {
+        // adventure 模块禁用时 Apoth.Menus.REFORGING 未注册，父类开菜单会崩
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return net.minecraft.world.InteractionResult.PASS;
+        return super.use(state, level, pos, player, hand, hit);
     }
 }
