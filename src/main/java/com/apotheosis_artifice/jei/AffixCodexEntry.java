@@ -74,6 +74,22 @@ public record AffixCodexEntry(List<LootCategory> categories) {
     private static volatile boolean initialized = false;
 
     /**
+     * JEI 的物品变体列表（含 NBT 变体，例如 Iron's Spellbooks 每个法术一支的卷轴）。
+     * 由 JEI 插件在 registerRecipes 时绑定；扫描优先用它，这样带 NBT 才有意义的物品
+     * （法术卷轴等）会以全部变体进入类别列表，JEI 槽位自动轮播展示。
+     */
+    private static volatile mezz.jei.api.runtime.IIngredientManager ingredientManager;
+
+    public static synchronized void bindIngredientManager(mezz.jei.api.runtime.IIngredientManager manager) {
+        if (manager != null && ingredientManager != manager) {
+            ingredientManager = manager;
+            // JEI 重载（换资源包/重连）会带来新的 manager，重扫一遍
+            initialized = false;
+            CATEGORY_ITEMS.clear();
+        }
+    }
+
+    /**
      * 惰性、幂等的一次性初始化。原先在 static 块里执行：类加载期就调用
      * {@code CuriosApi.getSlotHelper()}（可能为 null）并修改全局 LootCategory 注册表，
      * 一旦 NPE 就用 ExceptionInInitializerError 污染整个类、后续 JEI 全挂。
@@ -93,9 +109,22 @@ public record AffixCodexEntry(List<LootCategory> categories) {
             }
         }
 
-        // 遍历所有物品，统计每个物品的饰品槽位数量
-        for (Item item : ForgeRegistries.ITEMS) {
-            ItemStack stack = new ItemStack(item);
+        // 物品来源：优先 JEI 物品变体列表（含 NBT 变体），JEI 未就绪时退回注册表裸物品
+        java.util.Collection<ItemStack> universe;
+        var manager = ingredientManager;
+        if (manager != null) {
+            universe = manager.getAllIngredients(mezz.jei.api.constants.VanillaTypes.ITEM_STACK);
+        } else {
+            List<ItemStack> all = new ArrayList<>();
+            for (Item item : ForgeRegistries.ITEMS) {
+                ItemStack s = new ItemStack(item);
+                if (!s.isEmpty()) all.add(s);
+            }
+            universe = all;
+        }
+
+        // 遍历所有物品（含变体），统计每个物品的饰品槽位数量
+        for (ItemStack stack : universe) {
             if (stack.isEmpty()) continue;
 
             // 手动找原生非 curio 分类（绕过注册顺序影响）

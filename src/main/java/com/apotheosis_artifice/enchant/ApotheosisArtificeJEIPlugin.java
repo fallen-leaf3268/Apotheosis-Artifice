@@ -83,6 +83,9 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     }
 
     @Override public void registerRecipes(IRecipeRegistration reg) {
+        // 用 JEI 物品变体列表（含 NBT，如每个法术一支的卷轴）驱动类别物品扫描，
+        // 修复"可重铸物品"里法术卷轴只显示一个空 NBT 卷轴的问题
+        AffixCodexEntry.bindIngredientManager(reg.getIngredientManager());
         AffixCodexEntry codex = AffixCodexEntry.create();
         if (codex != null) reg.addRecipes(AffixCodexCategory.TYPE, List.of(codex));
         List<AffixDetailEntry> suffixEntries = new ArrayList<>();
