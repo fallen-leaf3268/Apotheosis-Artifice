@@ -14,7 +14,7 @@ public class SocketingRecipeMixin {
 
     @Inject(method = "assemble", at = @At("HEAD"), cancellable = true)
     private void cf_guard(Container inv, net.minecraft.core.RegistryAccess regs, CallbackInfoReturnable<ItemStack> cir) {
-        if (inv.getItem(1).isEmpty()) {
+        if (inv.getItem(0).isEmpty() || inv.getItem(1).isEmpty()) {
             cir.setReturnValue(ItemStack.EMPTY);
         }
     }

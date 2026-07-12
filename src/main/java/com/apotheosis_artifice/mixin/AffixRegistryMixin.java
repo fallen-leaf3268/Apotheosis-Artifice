@@ -35,6 +35,10 @@ public class AffixRegistryMixin {
 
     @Inject(method = "beginReload", at = @At("TAIL"))
     private void apotheosis_artifice_registerSlots(CallbackInfo ci) {
+        if (!com.apotheosis_artifice.ApotheosisConfig.ENABLE_CURIOS_LOOT_RARITY.get()) {
+            ApotheosisArtificeMod.LOGGER.info("Curios loot rarity is disabled, skipping curios LootCategory registration");
+            return;
+        }
         try {
             for (String slotId : CuriosSlotManager.SERVER.getSlots().keySet()) {
                 String catName = "curios:" + slotId;

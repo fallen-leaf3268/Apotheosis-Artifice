@@ -12,6 +12,7 @@ public class ApotheosisConfig {
     public static ForgeConfigSpec.BooleanValue CLEAR_SOCKETS_ON_RARITY_CHANGE;
     public static ForgeConfigSpec.BooleanValue USE_APOTH_ARMOR_FORMULA;
     public static ForgeConfigSpec.BooleanValue USE_APOTH_PROT_FORMULA;
+    public static ForgeConfigSpec.BooleanValue ENABLE_CURIOS_LOOT_RARITY;
 
     static {
         BUILDER.push("Reforging");
@@ -27,6 +28,12 @@ public class ApotheosisConfig {
         USE_APOTH_PROT_FORMULA = BUILDER
             .comment("是否启用 Apothic Attributes 的保护公式修改。")
             .define("use_apoth_prot_formula", true);
+        BUILDER.pop();
+
+        BUILDER.push("Loot Rarity");
+        ENABLE_CURIOS_LOOT_RARITY = BUILDER
+            .comment("是否允许饰品（Curios）物品在战利品中生成重铸稀有度。")
+            .define("enable_curios_loot_rarity", true);
         BUILDER.pop();
 
         SPEC = BUILDER.build();
