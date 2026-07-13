@@ -35,10 +35,10 @@ public class EnchHwylaPluginMixin {
                 e = shelf.eterna(); q = shelf.quanta(); a = shelf.arcana();
             }
 
-            float maxE = EnchantingStatRegistry.getAbsoluteMaxEterna();
+            float maxE = Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), com.apotheosis_artifice.ApotheosisConfig.MAX_ETERNA.get());
             tooltip.add(Component.translatable("info.apotheosis.eterna.t", String.format("%.1f", e), String.format("%.1f", maxE)).withStyle(ChatFormatting.GREEN));
-            tooltip.add(Component.translatable("info.apotheosis.quanta.t", String.format("%.1f", Math.min(100, q))).withStyle(ChatFormatting.RED));
-            tooltip.add(Component.translatable("info.apotheosis.arcana.t", String.format("%.1f", Math.min(100, a))).withStyle(ChatFormatting.DARK_PURPLE));
+            tooltip.add(Component.translatable("info.apotheosis.quanta.t", String.format("%.1f", q)).withStyle(ChatFormatting.RED));
+            tooltip.add(Component.translatable("info.apotheosis.arcana.t", String.format("%.1f", a)).withStyle(ChatFormatting.DARK_PURPLE));
             tooltip.add(Component.translatable("info.apotheosis.rectification.t", String.format("%.1f", Mth.clamp(shelf.rectification(), -100, 100))).withStyle(ChatFormatting.YELLOW));
             tooltip.add(Component.translatable("info.apotheosis.clues.t", String.format("%d", shelf.clues())).withStyle(ChatFormatting.DARK_AQUA));
         }

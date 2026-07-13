@@ -1,6 +1,7 @@
 package com.apotheosis_artifice.enchant;
 
 import org.jetbrains.annotations.Nullable;
+import com.apotheosis_artifice.ApotheosisConfig;
 import com.apotheosis_artifice.ApotheosisNetwork;
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantScreen;
 import dev.shadowsoffire.apotheosis.ench.table.EnchantingStatRegistry;
@@ -12,6 +13,8 @@ import net.minecraft.world.inventory.EnchantmentMenu;
 import net.minecraft.world.item.ItemStack;
 
 public class RavenEnchantScreen extends ApothEnchantScreen {
+
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(RavenEnchantScreen.class);
 
     private static final net.minecraft.resources.ResourceLocation CURIOS_TEX =
         new net.minecraft.resources.ResourceLocation("apotheosis_artifice", "textures/gui/enchanting_table.png");
@@ -31,14 +34,17 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
         this.ravenMenu = (RavenEnchantMenu) container;
         var s = ravenMenu.getRavenStats();
         this.curE = Math.min(s.eterna(), eternaMax());
-        this.curQ = s.quanta();
-        this.curA = s.arcana();
+        this.curQ = Mth.clamp(s.quanta(), 0, ApotheosisConfig.MAX_QUANTA.get());
+        this.curA = Mth.clamp(s.arcana(), 0, ApotheosisConfig.MAX_ARCANA.get());
+        LOGGER.info("RavenEnchantScreen created: max_quanta={}, max_arcana={}, eternaMax={}", ApotheosisConfig.MAX_QUANTA.get(), ApotheosisConfig.MAX_ARCANA.get(), eternaMax());
     }
 
     @Override
     public void containerTick() {
         super.containerTick();
         this.curE = Math.min(this.curE, eternaMax());
+        this.curQ = Mth.clamp(this.curQ, 0, ApotheosisConfig.MAX_QUANTA.get());
+        this.curA = Mth.clamp(this.curA, 0, ApotheosisConfig.MAX_ARCANA.get());
         this.eterna = this.curE;
         this.lastEterna = this.eterna;
         this.quanta = this.curQ;
@@ -61,15 +67,25 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
+        LOGGER.info("mouseClicked: mx={}, my={}, max_quanta={}, max_arcana={}", mx, my, ApotheosisConfig.MAX_QUANTA.get(), ApotheosisConfig.MAX_ARCANA.get());
         if (hoverBar(mx, my, ETERNA_Y)) { dragging = DragStat.E; updateVal(mx, eternaMax()); return true; }
-        if (hoverBar(mx, my, QUANTA_Y)) { dragging = DragStat.Q; updateVal(mx, 100); return true; }
-        if (hoverBar(mx, my, ARCANA_Y)) { dragging = DragStat.A; updateVal(mx, 100); return true; }
+        if (hoverBar(mx, my, QUANTA_Y)) { dragging = DragStat.Q; updateVal(mx, ApotheosisConfig.MAX_QUANTA.get()); return true; }
+        if (hoverBar(mx, my, ARCANA_Y)) { dragging = DragStat.A; updateVal(mx, ApotheosisConfig.MAX_ARCANA.get()); return true; }
         return super.mouseClicked(mx, my, btn);
     }
 
     @Override
     public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
-        if (dragging != null) { updateVal(mx, dragging == DragStat.E ? eternaMax() : 100); return true; }
+        if (dragging != null) {
+            float max = switch (dragging) {
+                case E -> eternaMax();
+                case Q -> ApotheosisConfig.MAX_QUANTA.get();
+                case A -> ApotheosisConfig.MAX_ARCANA.get();
+            };
+            LOGGER.info("mouseDragged: mx={}, max={}, dragging={}", mx, max, dragging);
+            updateVal(mx, max);
+            return true;
+        }
         return super.mouseDragged(mx, my, btn, dx, dy);
     }
 
@@ -81,8 +97,8 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
 
     public void transferSetSliders(float e, float q, float a) {
         this.curE = Mth.clamp(e, 0, eternaMax());
-        this.curQ = Mth.clamp(q, 0, 100);
-        this.curA = Mth.clamp(a, 0, 100);
+        this.curQ = Mth.clamp(q, 0, ApotheosisConfig.MAX_QUANTA.get());
+        this.curA = Mth.clamp(a, 0, ApotheosisConfig.MAX_ARCANA.get());
         this.dirty = true;
     }
 
@@ -90,6 +106,7 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
         double t = Mth.clamp((mx - (this.leftPos + BAR_X)) / (double)BAR_W, 0, 1);
         float v = (float)(Math.round(t * max * 2) / 2.0);
         v = Mth.clamp(v, 0, max);
+        LOGGER.info("updateVal: mx={}, max={}, t={}, v={}", mx, max, t, v);
         switch (dragging) {
             case E -> { if (v != curE) { curE = v; dirty = true; } }
             case Q -> { if (v != curQ) { curQ = v; dirty = true; } }
@@ -102,8 +119,8 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
         float[] jei = RavenEnchantMenu.consumeJEISliders();
         if (jei != null) {
             this.curE = Mth.clamp(jei[0], 0, eternaMax());
-            this.curQ = Mth.clamp(jei[1], 0, 100);
-            this.curA = Mth.clamp(jei[2], 0, 100);
+            this.curQ = Mth.clamp(jei[1], 0, ApotheosisConfig.MAX_QUANTA.get());
+            this.curA = Mth.clamp(jei[2], 0, ApotheosisConfig.MAX_ARCANA.get());
         }
         this.ravenMenu.syncStatsToSliders(this.curE, this.curQ, this.curA);
         super.render(gfx, mx, my, pt);
@@ -111,19 +128,31 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
 
     @Override
     protected void renderBg(GuiGraphics gfx, float pt, int mx, int my) {
-        this.eterna = this.curE; this.lastEterna = this.eterna;
-        this.quanta = this.curQ; this.lastQuanta = this.quanta;
-        this.arcana = this.curA; this.lastArcana = this.arcana;
+        float displayMaxQ = ApotheosisConfig.MAX_QUANTA.get();
+        float displayMaxA = ApotheosisConfig.MAX_ARCANA.get();
+        // 转换为百分比给父类渲染条
+        this.quanta = displayMaxQ > 0 ? (this.curQ / displayMaxQ) * 100.0f : 0;
+        this.arcana = displayMaxA > 0 ? (this.curA / displayMaxA) * 100.0f : 0;
+        // 父类按 curE/getAbsoluteMaxEterna 计算条宽；若我们的上限更大需按比例缩放，防止填充条溢出
+        float absMaxE = EnchantingStatRegistry.getAbsoluteMaxEterna();
+        this.eterna = eternaMax() > 0 ? this.curE * (absMaxE / eternaMax()) : this.curE;
+        this.lastEterna = this.eterna;
+        this.lastQuanta = this.quanta;
+        this.lastArcana = this.arcana;
         super.renderBg(gfx, pt, mx, my);
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
         drawHandle(gfx, x + BAR_X, y + ETERNA_Y, this.curE, eternaMax(), HANDLE_V_ETERNA);
-        drawHandle(gfx, x + BAR_X, y + QUANTA_Y, this.curQ, 100, HANDLE_V_QUANTA);
-        drawHandle(gfx, x + BAR_X, y + ARCANA_Y, this.curA, 100, HANDLE_V_ARCANA);
+        drawHandle(gfx, x + BAR_X, y + QUANTA_Y, this.curQ, displayMaxQ, HANDLE_V_QUANTA);
+        drawHandle(gfx, x + BAR_X, y + ARCANA_Y, this.curA, displayMaxA, HANDLE_V_ARCANA);
     }
 
     private void drawHandle(GuiGraphics gfx, int bx, int by, float val, float max, int v) {
-        int tipX = bx + (int)(val * (BAR_W / Math.max(max, 1)));
+        float clampedVal = Mth.clamp(val, 0, max);
+        // 计算像素位置，钳制不超过纹理最大宽度
+        int barPixelWidth = (int)(clampedVal * (BAR_W / Math.max(max, 1)));
+        barPixelWidth = Math.min(barPixelWidth, BAR_W);
+        int tipX = bx + barPixelWidth;
         gfx.blit(CURIOS_TEX, tipX - HANDLE_W/2, by + (BAR_H - HANDLE_H)/2, HANDLE_U, v, HANDLE_W, HANDLE_H);
     }
 
@@ -132,7 +161,9 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
             && my >= this.topPos + barY - 3 && my < this.topPos + barY + BAR_H + 3;
     }
 
-    private static float eternaMax() { return EnchantingStatRegistry.getAbsoluteMaxEterna(); }
+    private static float eternaMax() {
+        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.MAX_ETERNA.get());
+    }
 
     private enum DragStat { E, Q, A }
 }

@@ -26,7 +26,16 @@
         "GemMixin",
         "GemInstanceMixin",
         "GemGetBonusMixin",
-        "LivingEntityMixin"
+        "LivingEntityMixin",
+        "TableStatsClampMixin",
+        "CommonTooltipUtilMixin",
+        "PowerCapEnchModuleMixin",
+        "PowerCapEnchInfoMixin",
+        "SelectEnchantmentMixin",
+        "ArcanaEnchantmentDataAccessor",
+        "QuantaFactorMixin",
+        "EnchantMaxLevelMixin",
+        "DefaultMinCurveMixin"
     ],
     "client": [
         "ContainerScreenMixin",
@@ -38,7 +47,9 @@
         "client.AttributesGuiLocalizeMixin",
         "client.AffixTooltipMixin",
         "client.InventoryScreenKeyForwardMixin",
-        "client.LanguageMixin"
+        "client.LanguageMixin",
+        "client.EnchantScreenEternaMaxMixin",
+        "client.EnchantingInfoScreenMixin"
     ],
     "server": []
 }
