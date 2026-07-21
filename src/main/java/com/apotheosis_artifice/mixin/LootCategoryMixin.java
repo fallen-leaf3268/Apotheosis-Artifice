@@ -5,7 +5,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import com.apotheosis_artifice.ApotheosisConfig;
 import com.apotheosis_artifice.CatOverride;
+import com.apotheosis_artifice.compat.BetterCombatCompat;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
@@ -28,6 +30,15 @@ public class LootCategoryMixin {
             LootCategory cat = LootCategory.byId(val);
             if (cat != null && !cat.isNone()) {
                 cir.setReturnValue(cat);
+                return;
+            }
+        }
+
+        if (ApotheosisConfig.USE_BETTERCOMBAT_HEAVY_OVERRIDE.get()
+            && BetterCombatCompat.isTwoHanded(item)) {
+            boolean isLightWeapon = LootCategory.SWORD.isValid(item) || LootCategory.TRIDENT.isValid(item);
+            if (isLightWeapon) {
+                cir.setReturnValue(LootCategory.HEAVY_WEAPON);
             }
         }
     }

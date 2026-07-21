@@ -6,8 +6,11 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.apotheosis_artifice.affix.HeartBaseListener;
 import com.apotheosis_artifice.enchant.ApotheosisArtificeReforgingTableBlock;
+import com.apotheosis_artifice.enchant.CleansingRecipe;
 import com.apotheosis_artifice.enchant.GemBinderItem;
+import com.apotheosis_artifice.PortableSalvagingMenu;
 import com.apotheosis_artifice.enchant.MechanicalRavenEnchantBlockItem;
 import com.apotheosis_artifice.enchant.MechanicalRavenEnchantMenu;
 import com.apotheosis_artifice.enchant.MechanicalRavenEnchantTile;
@@ -43,6 +46,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import net.minecraftforge.registries.RegisterEvent;
 import top.theillusivec4.curios.api.CuriosCapability;
 
 @Mod(ApotheosisArtificeMod.MODID)
@@ -59,14 +63,13 @@ public class ApotheosisArtificeMod {
     public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(ForgeRegistries.MENU_TYPES, MODID);
     public static final DeferredRegister<BlockEntityType<?>> TILE_TYPES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    public static final DeferredRegister<net.minecraft.world.item.crafting.RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, MODID);
 
-    // === 便携回收工具 ===
     public static final RegistryObject<MenuType<PortableSalvagingMenu>> PORTABLE_SALVAGING_MENU = MENU_TYPES.register("portable_salvaging",
         () -> IForgeMenuType.create((id, inv, data) -> new PortableSalvagingMenu(id, inv)));
     public static final RegistryObject<Item> PORTABLE_SALVAGING_TOOL = ITEMS.register("portable_salvaging_tool",
         () -> new PortableSalvagingItem(new Item.Properties().stacksTo(1)));
 
-    // === 宝石柜 ===
     public static final RegistryObject<Block> GEM_CASE_BLOCK = BLOCKS.register("gem_case",
         () -> new GemCaseBlock(Short.MAX_VALUE));
     public static final RegistryObject<Item> GEM_CASE_ITEM = ITEMS.register("gem_case",
@@ -82,7 +85,6 @@ public class ApotheosisArtificeMod {
     public static final RegistryObject<BlockEntityType<GemCaseTile>> ENDER_GEM_CASE_TILE = TILE_TYPES.register("ender_gem_case",
         () -> BlockEntityType.Builder.<GemCaseTile>of(GemCaseTile.AdvancedGemCaseTile::new, ENDER_GEM_CASE_BLOCK.get()).build(null));
 
-    // === 渡鸦附魔台 ===
     public static final RegistryObject<Block> RAVEN_ENCHANTING_TABLE = BLOCKS.register("raven_enchanting_table",
         () -> new RavenEnchantingTableBlock());
     public static final RegistryObject<Item> RAVEN_ENCHANTING_TABLE_ITEM = ITEMS.register("raven_enchanting_table",
@@ -118,17 +120,20 @@ public class ApotheosisArtificeMod {
             return type;
         });
 
-    // === 宝石绑定器 ===
     public static final RegistryObject<Item> APOTHEOSIS_CHARM = ITEMS.register("apotheosis_charm",
         () -> new GemBinderItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
-    // === 高级重铸台 ===
+    public static final RegistryObject<Item> SIGIL_OF_CLEANSING = ITEMS.register("sigil_of_cleansing",
+        () -> new dev.shadowsoffire.apotheosis.util.TooltipItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    public static final RegistryObject<net.minecraft.world.item.crafting.RecipeSerializer<?>> CLEANSING_SERIALIZER = RECIPE_SERIALIZERS.register("cleansing",
+        () -> CleansingRecipe.Serializer.INSTANCE);
+
     public static final RegistryObject<Block> APOTHEOSIS_REFORGING_TABLE = BLOCKS.register("apotheosis_reforging_table",
         () -> new ApotheosisArtificeReforgingTableBlock());
     public static final RegistryObject<Item> APOTHEOSIS_REFORGING_TABLE_ITEM = ITEMS.register("apotheosis_reforging_table",
         () -> new BlockItem(APOTHEOSIS_REFORGING_TABLE.get(), new Item.Properties().rarity(Rarity.EPIC)));
 
-    // === 创造物品栏（必须在所有物品之后声明） ===
     public static final RegistryObject<CreativeModeTab> TAB_APOTHEOSIS_ARTIFICE = CREATIVE_TABS.register("tab",
         () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.apotheosis_artifice"))
@@ -139,6 +144,7 @@ public class ApotheosisArtificeMod {
                 output.accept(MECHANICAL_RAVEN_TABLE_ITEM.get());
                 output.accept(APOTHEOSIS_CHARM.get());
                 output.accept(APOTHEOSIS_REFORGING_TABLE_ITEM.get());
+                output.accept(SIGIL_OF_CLEANSING.get());
                 output.accept(GEM_CASE_ITEM.get());
                 output.accept(ENDER_GEM_CASE_ITEM.get());
             })
@@ -156,9 +162,11 @@ public class ApotheosisArtificeMod {
         ITEMS.register(modBus);
         MENU_TYPES.register(modBus);
         TILE_TYPES.register(modBus);
+        RECIPE_SERIALIZERS.register(modBus);
         modBus.addListener(this::commonSetup);
         CREATIVE_TABS.register(modBus);
         MinecraftForge.EVENT_BUS.register(new ApotheosisEvents());
+        HeartBaseListener.init();
     }
 
     private static final List<String> DEFAULT_SLOTS = Arrays.asList(

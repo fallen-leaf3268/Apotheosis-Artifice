@@ -12,6 +12,8 @@
     "item.apotheosis_artifice.portable_salvaging_tool": "便携回收台",
     "item.apotheosis_artifice.portable_salvaging_tool.desc": "右键打开回收台UI",
     "item.apotheosis_artifice.apotheosis_charm": "万能神化护符",
+    "item.apotheosis_artifice.sigil_of_cleansing": "清除符石",
+    "item.apotheosis_artifice.sigil_of_cleansing.desc": "清除装备的所有重铸属性",
 
     "item.apotheosis.gem.apotheosis_artifice:vital_stone": "生命之石",
     "item.apotheosis.gem.apotheosis_artifice:moonglow_pearl": "月华之珠",
@@ -30,6 +32,9 @@
     "affix.apotheosis_artifice.damage_immunity": "免疫%s伤害",
     "affix.apotheosis_artifice.damage_resistance": "受到的%s伤害减少%s%%",
     "affix.apotheosis_artifice.effect_immunity": "免疫 %s",
+    "affix.apotheosis_artifice.attribute_base": "%2$s基础值+%1$s",
+    "affix.apotheosis_artifice.curio_slot_bonus": "%1$s栏位+%2$s",
+    "affix.apotheosis_artifice.curio_slot_bonus.unique": "(唯一)",
 
     "affix.apotheosis_artifice:attribute/movement_speed": "敏捷",
     "affix.apotheosis_artifice:attribute/movement_speed.suffix": "敏捷之",
@@ -74,6 +79,12 @@
 
     "affix.apotheosis_artifice:ability/radiance": "光辉",
     "affix.apotheosis_artifice:ability/radiance.suffix": "光辉之",
+    "affix.apotheosis_artifice:attribute/attribute_base": "根基",
+    "affix.apotheosis_artifice:attribute/attribute_base.suffix": "根基之",
+    "affix.apotheosis_artifice:stat/curio_slot_bonus": "护符",
+    "affix.apotheosis_artifice:stat/curio_slot_bonus.suffix": "护符之",
+    "affix.apotheosis_artifice:stat/head_necklace_bonus": "冕冠",
+    "affix.apotheosis_artifice:stat/head_necklace_bonus.suffix": "冕冠之",
     "affix.apotheosis_artifice:ability/slowness_immunity": "轻快",
     "affix.apotheosis_artifice:ability/slowness_immunity.suffix": "轻快之",
     "affix.apotheosis_artifice:ability/wither_immunity": "抗性",

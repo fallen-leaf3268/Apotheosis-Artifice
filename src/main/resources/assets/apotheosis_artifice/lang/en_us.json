@@ -12,6 +12,8 @@
     "item.apotheosis_artifice.portable_salvaging_tool": "Portable Salvaging Tool",
     "item.apotheosis_artifice.portable_salvaging_tool.desc": "Right-click to open the salvaging UI",
     "item.apotheosis_artifice.apotheosis_charm": "Apotheosis Charm",
+    "item.apotheosis_artifice.sigil_of_cleansing": "Sigil of Cleansing",
+    "item.apotheosis_artifice.sigil_of_cleansing.desc": "Clears all reforged attributes from equipment",
 
     "item.apotheosis.gem.apotheosis_artifice:vital_stone": "Vital Stone",
     "item.apotheosis.gem.apotheosis_artifice:moonglow_pearl": "Moonglow Pearl",
@@ -27,6 +29,9 @@
 
 
     "affix.apotheosis_artifice.radiance": "Sheds light on your surroundings (level %s)",
+    "affix.apotheosis_artifice.attribute_base": "%2$s Base +%1$s",
+    "affix.apotheosis_artifice.curio_slot_bonus": "%1$s Slot +%2$s",
+    "affix.apotheosis_artifice.curio_slot_bonus.unique": "(Unique)",
     "affix.apotheosis_artifice.damage_immunity": "Immune to %s",
     "affix.apotheosis_artifice.damage_resistance": "%s%% Resistance to %s",
     "affix.apotheosis_artifice.effect_immunity": "Immune to %s",
@@ -80,6 +85,12 @@
     "affix.apotheosis_artifice:ability/wither_immunity.suffix": "of Resistance",
     "affix.apotheosis_artifice:ability/poison_immunity": "Antivenom",
     "affix.apotheosis_artifice:ability/poison_immunity.suffix": "of Antivenom",
+    "affix.apotheosis_artifice:attribute/attribute_base": "Foundation",
+    "affix.apotheosis_artifice:attribute/attribute_base.suffix": "of the Foundation",
+    "affix.apotheosis_artifice:stat/curio_slot_bonus": "Amulet",
+    "affix.apotheosis_artifice:stat/curio_slot_bonus.suffix": "of the Amulet",
+    "affix.apotheosis_artifice:stat/head_necklace_bonus": "Crown",
+    "affix.apotheosis_artifice:stat/head_necklace_bonus.suffix": "of the Crown",
 
     "container.apotheosis_artifice.gem_case": "Gem Case",
     "container.apotheosis_artifice.gem_case.count": "x%s",

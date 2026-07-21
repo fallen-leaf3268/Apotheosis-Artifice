@@ -13,6 +13,7 @@ public class ApotheosisConfig {
     public static ForgeConfigSpec.BooleanValue USE_APOTH_ARMOR_FORMULA;
     public static ForgeConfigSpec.BooleanValue USE_APOTH_PROT_FORMULA;
     public static ForgeConfigSpec.BooleanValue ENABLE_CURIOS_LOOT_RARITY;
+    public static ForgeConfigSpec.BooleanValue USE_BETTERCOMBAT_HEAVY_OVERRIDE;
     public static ForgeConfigSpec.IntValue MAX_ETERNA;
     public static ForgeConfigSpec.IntValue MAX_QUANTA;
     public static ForgeConfigSpec.IntValue MAX_ARCANA;
@@ -40,6 +41,12 @@ public class ApotheosisConfig {
         ENABLE_CURIOS_LOOT_RARITY = BUILDER
             .comment("是否允许饰品（Curios）物品在战利品中生成重铸稀有度。")
             .define("enable_curios_loot_rarity", true);
+        BUILDER.pop();
+
+        BUILDER.push("BetterCombat");
+        USE_BETTERCOMBAT_HEAVY_OVERRIDE = BUILDER
+            .comment("是否启用 Better Combat 联动功能，开启后，双手武器将被判定为重型武器。")
+            .define("use_bettercombat_heavy_override", false);
         BUILDER.pop();
 
         BUILDER.push("Enchanting");

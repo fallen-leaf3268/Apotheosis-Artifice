@@ -6,6 +6,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
+import com.apotheosis_artifice.affix.AttributeBaseAffix;
+import com.apotheosis_artifice.affix.CurioSlotBonusAffix;
 import com.apotheosis_artifice.affix.DamageResistanceAffix;
 import com.apotheosis_artifice.affix.EffectImmunityAffix;
 import com.apotheosis_artifice.affix.RadianceAffix;
@@ -31,6 +33,8 @@ public class AffixRegistryMixin {
         self.registerCodec(new ResourceLocation("apotheosis_artifice", "damage_resistance"), DamageResistanceAffix.CODEC);
         self.registerCodec(new ResourceLocation("apotheosis_artifice", "effect_immunity"), EffectImmunityAffix.CODEC);
         self.registerCodec(new ResourceLocation("apotheosis_artifice", "radiance"), RadianceAffix.CODEC);
+        self.registerCodec(new ResourceLocation("apotheosis_artifice", "attribute_base"), AttributeBaseAffix.CODEC);
+        self.registerCodec(new ResourceLocation("apotheosis_artifice", "curio_slot_bonus"), CurioSlotBonusAffix.CODEC);
     }
 
     @Inject(method = "beginReload", at = @At("TAIL"))

@@ -1,0 +1,10 @@
+{
+    "type": "apotheosis_artifice:curio_slot_bonus",
+    "slot": "curios:necklace",
+    "values": {
+        "mythic":  { "min": 1, "steps": 1, "step": 0 },
+        "ancient": { "min": 1, "steps": 1, "step": 0 }
+    },
+    "types": ["curios:head"],
+    "uuid": "8a3f4c12-9b5d-4e6f-a7b8-c9d0e1f2a3b4"
+}

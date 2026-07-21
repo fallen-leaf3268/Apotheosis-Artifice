@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.apotheosis_artifice.affix.AttributeBaseAffix;
+import com.apotheosis_artifice.affix.CurioSlotBonusAffix;
 import com.apotheosis_artifice.affix.RadianceAffix;
 import com.apotheosis_artifice.mixin.AttributeAffixAccessor;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
@@ -22,6 +24,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
@@ -40,6 +43,7 @@ import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import top.theillusivec4.curios.api.CuriosCapability;
+import top.theillusivec4.curios.api.SlotAttribute;
 import top.theillusivec4.curios.api.event.CurioAttributeModifierEvent;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
@@ -69,7 +73,16 @@ public class ApotheosisEvents {
 
         if (AffixHelper.hasAffixes(stack)) {
             for (var inst : AffixHelper.getAffixes(stack).values()) {
-                if (inst.affix().get() instanceof AttributeAffix attrAfx) {
+                if (inst.affix().get() instanceof CurioSlotBonusAffix csb) {
+                    LootRarity rarity = inst.rarity().get();
+                    if (rarity == null) continue;
+                    float amount = csb.getBonus(rarity, inst.level());
+                    String slotId = csb.getSlotId();
+                    UUID uuid = slotBonusUUID(csb, event.getSlotContext());
+                    event.addModifier(
+                        SlotAttribute.getOrCreate(slotId),
+                        new AttributeModifier(uuid, "apotheosis_artifice:curio_slot_bonus:" + slotId, amount, Operation.ADDITION));
+                } else if (inst.affix().get() instanceof AttributeAffix attrAfx) {
                     AttributeAffixAccessor acc = (AttributeAffixAccessor) (Object) attrAfx;
                     LootRarity rarity = inst.rarity().get();
                     if (rarity == null) continue;
@@ -107,6 +120,16 @@ public class ApotheosisEvents {
     private static UUID affixUUID(top.theillusivec4.curios.api.SlotContext ctx, ResourceLocation affixId) {
         return UUID.nameUUIDFromBytes(
             ("apoth_art:" + ctx.identifier() + ":" + ctx.index() + ":" + affixId)
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private static UUID slotBonusUUID(CurioSlotBonusAffix csb, top.theillusivec4.curios.api.SlotContext ctx) {
+        String fixed = csb.getFixedUuid();
+        if (fixed != null && !fixed.isEmpty()) {
+            return UUID.fromString(fixed);
+        }
+        return UUID.nameUUIDFromBytes(
+            ("apoth_art:csb:" + ctx.identifier() + ":" + ctx.index() + ":" + csb.getSlotId())
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 

@@ -1,0 +1,25 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "aba",
+        "bcd",
+        "aba"
+    ],
+    "key": {
+        "a": {
+            "item": "apotheosis:prismatic_web"
+        },
+        "b": {
+            "item": "apotheosis:sigil_of_unnaming"
+        },
+        "c": {
+            "item": "apotheosis:sigil_of_enhancement"
+        },
+        "d": {
+            "item": "apotheosis:sigil_of_withdrawal"
+        }
+    },
+    "result": {
+        "item": "apotheosis_artifice:sigil_of_cleansing"
+    }
+}

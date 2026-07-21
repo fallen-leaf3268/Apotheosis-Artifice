@@ -2,6 +2,7 @@ package com.apotheosis_artifice.enchant;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.jetbrains.annotations.Nullable;
@@ -139,6 +140,30 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
                 (type == AffixType.STAT ? suffixEntries : prefixEntries).add(new AffixDetailEntry(cat, affix, supported));
             }
         }
+
+        if (com.apotheosis_artifice.ApotheosisConfig.USE_BETTERCOMBAT_HEAVY_OVERRIDE.get()) {
+            LootCategory heavyCat = dev.shadowsoffire.apotheosis.adventure.loot.LootCategory.byId("heavy_weapon");
+            if (heavyCat != null && !heavyCat.isNone()) {
+                for (Affix affix : dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry.INSTANCE.getValues()) {
+                    String affixId = affix.getId().toString();
+                    if (!affixId.contains("heavy_weapon")) continue;
+                    List<AffixDetailEntry.RarityEntry> supported = new ArrayList<>();
+                    for (var holder : dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry.INSTANCE.getOrderedRarities()) {
+                        if (!holder.isBound()) continue;
+                        var rarity = holder.get();
+                        try {
+                            if (affix.canApplyTo(ItemStack.EMPTY, heavyCat, rarity)) {
+                                supported.add(new AffixDetailEntry.RarityEntry(rarity, AffixDetailEntry.buildDescription(affix, rarity)));
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    if (supported.isEmpty()) continue;
+                    AffixType type;
+                    try { type = affix.getType(); } catch (Exception e) { type = null; }
+                    (type == AffixType.STAT ? suffixEntries : prefixEntries).add(new AffixDetailEntry(heavyCat, affix, supported));
+                }
+            }
+        }
         suffixEntries.sort(java.util.Comparator.comparing(a -> a.affix().getName(true).getString()));
         prefixEntries.sort(java.util.Comparator.comparing(a -> a.affix().getName(true).getString()));
         reg.addRecipes(SUFFIX_TYPE, suffixEntries);
@@ -146,7 +171,6 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         List<AffixGemEntry> gemEntries = new ArrayList<>();
         for (LootCategory cat : LootCategory.VALUES) {
             if (cat.isNone()) continue;
-            // curios:xxx 已合并到通用 curio，不单独生成条目
             if (cat.getName().startsWith("curios:") && !"curio".equals(cat.getName())) continue;
             gemEntries.addAll(AffixGemEntry.createAll(cat));
         }

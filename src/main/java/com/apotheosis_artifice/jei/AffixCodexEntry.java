@@ -11,6 +11,9 @@ import org.jetbrains.annotations.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.apotheosis_artifice.ApotheosisConfig;
+import com.apotheosis_artifice.compat.BetterCombatCompat;
+
 import dev.shadowsoffire.apotheosis.adventure.affix.Affix;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
@@ -157,7 +160,13 @@ public record AffixCodexEntry(List<LootCategory> categories) {
                     CATEGORY_ITEMS.computeIfAbsent(nativeCat.getName(), k -> new ArrayList<>()).add(stack);
                 }
             } else if (nativeCat != null && !nativeCat.isNone()) {
-                CATEGORY_ITEMS.computeIfAbsent(nativeCat.getName(), k -> new ArrayList<>()).add(stack);
+                if (ApotheosisConfig.USE_BETTERCOMBAT_HEAVY_OVERRIDE.get()
+                    && (nativeCat == LootCategory.SWORD || nativeCat == LootCategory.TRIDENT)
+                    && BetterCombatCompat.isTwoHanded(stack)) {
+                    CATEGORY_ITEMS.computeIfAbsent("heavy_weapon", k -> new ArrayList<>()).add(stack);
+                } else {
+                    CATEGORY_ITEMS.computeIfAbsent(nativeCat.getName(), k -> new ArrayList<>()).add(stack);
+                }
             }
         }
         // 扫描结果日志 + 空分类兜底
