@@ -53,6 +53,7 @@ public class ApotheosisEvents {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void curioAttributes(CurioAttributeModifierEvent event) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         ItemStack stack = event.getItemStack();
         if (stack.isEmpty()) return;
 

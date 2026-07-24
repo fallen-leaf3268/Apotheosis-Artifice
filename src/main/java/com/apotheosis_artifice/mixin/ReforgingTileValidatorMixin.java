@@ -5,6 +5,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import dev.shadowsoffire.apotheosis.Apotheosis;
 import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingTableBlock;
 import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingTableTile;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
@@ -22,6 +23,7 @@ public class ReforgingTileValidatorMixin {
 
     @Inject(method = "isValidRarityMat", at = @At("HEAD"), cancellable = true)
     private void apotheosis_artifice_allowAnyRarity(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+        if (!Apotheosis.enableAdventure) return;
         DynamicHolder<LootRarity> rarity = RarityRegistry.getMaterialRarity(stack.getItem());
         if (!rarity.isBound()) return;
 

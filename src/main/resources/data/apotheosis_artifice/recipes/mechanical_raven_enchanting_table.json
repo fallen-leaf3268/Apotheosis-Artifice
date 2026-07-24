@@ -7,11 +7,7 @@
         "EFE"
     ],
     "key": {
-        "B": {
-            "type": "forge:nbt",
-            "item": "apotheosis:gem",
-            "nbt": "{affix_data:{rarity:\"apotheosis:ancient\"},gem:\"apotheosis:overworld/royalty\"}"
-        },
+        "B": { "item": "apotheosis:ender_library" },
         "C": { "item": "minecraft:hopper_minecart" },
         "D": { "item": "apotheosis_artifice:raven_enchanting_table" },
         "E": { "item": "minecraft:redstone_block" },

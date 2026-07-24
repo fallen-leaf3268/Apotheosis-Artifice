@@ -37,6 +37,7 @@ public class GemCaseSlot extends Slot {
 
     @Override
     public ItemStack getItem() {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return ItemStack.EMPTY;
         Gem gem = this.menu.getSelectedGem();
         if (gem == null) return ItemStack.EMPTY;
         int count = this.menu.getGemCount(gem, this.rarityId);
@@ -57,6 +58,7 @@ public class GemCaseSlot extends Slot {
 
     @Override
     public ItemStack remove(int amount) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return ItemStack.EMPTY;
         Gem gem = this.menu.getSelectedGem();
         if (gem == null) return ItemStack.EMPTY;
         int count = this.menu.getGemCount(gem, this.rarityId);

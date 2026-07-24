@@ -74,6 +74,7 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, AffixGemEntry entry, IFocusGroup focuses) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         // 分类输入槽
         builder.addSlot(RecipeIngredientRole.INPUT, 2, 0)
             .addItemStacks(AffixCodexEntry.getCategoryItems(entry.category()));

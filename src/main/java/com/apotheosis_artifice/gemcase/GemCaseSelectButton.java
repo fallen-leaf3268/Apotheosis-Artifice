@@ -38,6 +38,7 @@ public class GemCaseSelectButton extends AbstractWidget {
         this.gem = this.screen.getGemAt(this.index);
         this.count = this.screen.getCountAt(this.index);
         if (this.gem == null) return;
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
 
         GemCaseMenu menu = this.screen.getMenu();
         int x = this.getX(), y = this.getY();

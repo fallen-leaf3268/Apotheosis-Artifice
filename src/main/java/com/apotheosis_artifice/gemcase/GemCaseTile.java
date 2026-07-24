@@ -208,6 +208,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
     // ---- 提取 ----
 
     public ItemStack extractGem(ResourceLocation gemId, ResourceLocation rarityId, int count) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return ItemStack.EMPTY;
         Map<ResourceLocation, Integer> rarities = this.gems.get(gemId);
         if (rarities == null) return ItemStack.EMPTY;
         int stored = rarities.getOrDefault(rarityId, 0);
@@ -242,6 +243,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
     private static final int PREV_MAT_COST = 9;
 
     public boolean upgradeGem(ResourceLocation gemId, ResourceLocation currentRarityId, Container matInv) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return false;
         RarityUpgradeMatch match = getUpgradeMatch(gemId, currentRarityId, matInv);
         if (match == null || !match.canUpgrade) return false;
 
@@ -287,6 +289,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
 
     @Nullable
     public RarityUpgradeMatch getUpgradeMatch(ResourceLocation gemId, ResourceLocation currentRarityId, Container matInv) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return null;
         Map<ResourceLocation, Integer> rarities = this.gems.get(gemId);
         if (rarities == null || rarities.getOrDefault(currentRarityId, 0) < 2) return null;
 

@@ -6,11 +6,13 @@ import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingTableBloc
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
 import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class ApotheosisArtificeReforgingTableBlock extends ReforgingTableBlock {
 
@@ -18,6 +20,12 @@ public class ApotheosisArtificeReforgingTableBlock extends ReforgingTableBlock {
         // 传 0 给父类 maxRarity 字段，因为父类 getMaxRarity() 用 byOrdinal(this.maxRarity) 取值。
         // 传一个安全的序数避免 IndexOutOfBoundsException，实际逻辑完全由我们的覆写控制。
         super(BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).lightLevel(s -> 15), 0);
+    }
+
+    @Override
+    public boolean canSurvive(BlockState state, net.minecraft.world.level.LevelReader level, BlockPos pos) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return false;
+        return super.canSurvive(state, level, pos);
     }
 
     @Override

@@ -24,8 +24,8 @@ public class ApotheosisConfig {
     static {
         BUILDER.push("Reforging");
         CLEAR_SOCKETS_ON_RARITY_CHANGE = BUILDER
-            .comment("用不同品质材料重铸时，是否清空镶孔并重新生成（设为 false 则保持原版 Apotheosis 行为，总是保留最高品质的镶孔）")
-            .define("clear_sockets_on_rarity_change", true);
+            .comment("用不同品质材料重铸时，是否清空镶孔并重新生成（设为 true 则清空原镶孔并按新品质重新生成；设为 false 则保持原版 Apotheosis 行为，总是保留最高品质的镶孔）")
+            .define("clear_sockets_on_rarity_change", false);
         BUILDER.pop();
 
         BUILDER.push("Combat_Formulas");

@@ -201,6 +201,7 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
 
     private boolean isAllowedBySearch(Gem gem) {
         if (this.filter == null || this.filter.getValue().isEmpty()) return true;
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return true;
         String search = this.filter.getValue().toLowerCase();
         ItemStack stack = new ItemStack(Adventure.Items.GEM.get());
         GemItem.setGem(stack, gem);
@@ -318,6 +319,7 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
                 if (!rarity.isAtLeast(minR) || !rarity.isAtMost(maxR)) continue;
                 int count = this.menu.getGemCount(selected, order.get(pgOff + i));
                 if (count <= 0) {
+                    if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) continue;
                     ItemStack ghost = new ItemStack(Adventure.Items.GEM.get());
                     GemItem.setGem(ghost, selected);
                     dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper.setRarity(ghost, rarity);
@@ -361,6 +363,7 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
     }
 
     private void renderGemCaseExtractTooltip(GuiGraphics gfx, int x, int y, GemCaseSlot gss) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         Gem gem = this.menu.getSelectedGem();
         int count = this.menu.getGemCount(gem, gss.rarityId);
         ItemStack stack = new ItemStack(Adventure.Items.GEM.get());
@@ -399,6 +402,7 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
             if (!btn.isHovered()) continue;
             Gem gem = btn.getCurrentGem();
             if (gem == null) continue;
+            if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) continue;
             int count = this.menu.getGemCount(gem);
             ItemStack stack = new ItemStack(Adventure.Items.GEM.get());
             GemItem.setGem(stack, gem);

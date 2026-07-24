@@ -64,6 +64,7 @@ public class GemCaseTileRenderer implements BlockEntityRenderer<GemCaseTile> {
                 }
             }
             if (bestRarity == null) continue;
+            if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) continue;
 
             ItemStack stack = new ItemStack(Adventure.Items.GEM.get());
             GemItem.setGem(stack, holder.get());
