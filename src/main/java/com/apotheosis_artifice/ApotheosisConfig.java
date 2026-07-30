@@ -75,6 +75,5 @@ public class ApotheosisConfig {
 
     public static void init() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
-        org.slf4j.LoggerFactory.getLogger(ApotheosisConfig.class).info("ApotheosisConfig initialized: max_eterna={}, max_quanta={}, max_arcana={}", MAX_ETERNA.get(), MAX_QUANTA.get(), MAX_ARCANA.get());
     }
 }

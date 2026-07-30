@@ -61,10 +61,12 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     private int[] curiosforge_maxCosts = null;
     @Unique
     private boolean curiosforge_costsInit = false;
+    @Unique
+    private long curiosforge_initialVersion = -1;
 
     @Unique
     private int[] curiosforge_getMaxCosts(net.minecraft.world.entity.player.Player player) {
-        if (curiosforge_costsInit) return curiosforge_maxCosts;
+        if (curiosforge_costsInit && com.apotheosis_artifice.ApotheosisEvents.recipeCacheVersion == this.curiosforge_initialVersion) return curiosforge_maxCosts;
         int maxS = 0, maxM = 0, maxL = 0;
         var all = player.level().getRecipeManager().getAllRecipesFor(dev.shadowsoffire.apotheosis.Apoth.RecipeTypes.REFORGING);
         for (var r : all) {
@@ -74,6 +76,7 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         }
         curiosforge_maxCosts = new int[] { maxS, maxM, maxL };
         curiosforge_costsInit = true;
+        this.curiosforge_initialVersion = com.apotheosis_artifice.ApotheosisEvents.recipeCacheVersion;
         return curiosforge_maxCosts;
     }
 
@@ -210,9 +213,11 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
 
             com.apotheosis_artifice.CatOverride.set(cat);
             try {
+                net.minecraft.resources.ResourceLocation inputId = ForgeRegistries.ITEMS.getKey(input.getItem());
+                int inputHash = inputId != null ? inputId.hashCode() : input.getItem().hashCode();
                 for (int s = 0; s < 3; s++) {
                     RandomSource r = this.random;
-                    r.setSeed(this.seed ^ ForgeRegistries.ITEMS.getKey(input.getItem()).hashCode() + s);
+                    r.setSeed(this.seed ^ inputHash + s);
                     ItemStack copy = input.copy();
                     copy.getOrCreateTagElement("affix_data").putString("curio_artifice", cat.getName());
                     if (ApotheosisConfig.CLEAR_SOCKETS_ON_RARITY_CHANGE.get()) {

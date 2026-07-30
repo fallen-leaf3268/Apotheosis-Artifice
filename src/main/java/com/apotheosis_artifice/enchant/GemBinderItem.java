@@ -146,7 +146,6 @@ public class GemBinderItem extends Item {
                 ItemStack stack = ctx.getItemInHand();
                 saveBinding(stack.getOrCreateTag(), prefix, pos, level.dimension().location(), blockId);
                 Component blockName = new ItemStack(level.getBlockState(pos).getBlock()).getHoverName();
-                ApotheosisArtificeMod.LOGGER.info("[Binder] bound {} at {}", blockName.getString(), pos);
                 ctx.getPlayer().displayClientMessage(Component.translatable("info.apotheosis_artifice.binder.bound", blockName, pos.getX(), pos.getY(), pos.getZ()).withStyle(ChatFormatting.GREEN), true);
             }
             return InteractionResult.SUCCESS;
@@ -191,7 +190,7 @@ public class GemBinderItem extends Item {
                     BlockPos libPos = getBoundPos(binder, PREFIX_LB);
                     BlockEntity libBe = libPos != null ? getBoundTile(player, binder, libPos, PREFIX_LB) : null;
                     if (libBe instanceof EnchLibraryTile lib && pickedUp.getItem() == Items.ENCHANTED_BOOK) {
-                        int count = pickedUp.getCount();
+                        int count = Math.min(pickedUp.getCount(), pickedUp.getMaxStackSize());
                         for (int c = 0; c < count; c++) {
                             lib.depositBook(pickedUp.copy());
                         }
@@ -224,7 +223,7 @@ public class GemBinderItem extends Item {
                         BlockPos gcPos = getBoundPos(binder, PREFIX_GC);
                         BlockEntity gcBe = gcPos != null ? getBoundTile(player, binder, gcPos, PREFIX_GC) : null;
                         if (isGem(pickedUp) && gcBe instanceof com.apotheosis_artifice.gemcase.GemCaseTile tile) {
-                            int count = pickedUp.getCount();
+                            int count = Math.min(pickedUp.getCount(), pickedUp.getMaxStackSize());
                             for (int c = 0; c < count; c++) {
                                 ItemStack single = pickedUp.copy();
                                 single.setCount(1);
@@ -276,7 +275,7 @@ public class GemBinderItem extends Item {
             outMax[idx] = counts[1];
         }
         int[] totals = new int[outCount];
-        int count = pickedUp.getCount();
+        int count = Math.min(pickedUp.getCount(), pickedUp.getMaxStackSize());
         var rand = player.level().random;
         for (int c = 0; c < count; c++) {
             for (int o = 0; o < outCount; o++) {
@@ -323,12 +322,10 @@ public class GemBinderItem extends Item {
         CompoundTag tag = stack.getTag();
         if (tag == null || !tag.getBoolean(prefix + "bound")) return null;
         String blockId = tag.getString(prefix + "block");
-        ApotheosisArtificeMod.LOGGER.info("[Binder] getBlockDisplayName: prefix={} blockId={}", prefix, blockId);
         if (!blockId.isEmpty()) {
             var id = ResourceLocation.tryParse(blockId);
             if (id != null) {
                 var block = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getValue(id);
-                ApotheosisArtificeMod.LOGGER.info("[Binder] lookup: id={} block={}", id, block);
                 if (block != null && block != net.minecraft.world.level.block.Blocks.AIR) {
                     return new ItemStack(block).getHoverName();
                 }

@@ -1,6 +1,5 @@
 package com.apotheosis_artifice.proxy;
 
-import com.apotheosis_artifice.ApotheosisArtificeMod;
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.ItemStack;
@@ -17,8 +16,6 @@ public class ClientProxy implements IProxy {
         if (player.containerMenu instanceof net.minecraft.world.inventory.EnchantmentMenu em) {
             em.enchantSlots.setItem(0, stack.copy());
             em.enchantSlots.setChanged();
-            ApotheosisArtificeMod.LOGGER.info("[ForceSlot0] set slot0={}x{}",
-                stack.getHoverName().getString(), stack.getCount());
         }
     }
 

@@ -145,6 +145,7 @@
     "jei.apotheosis_artifice.affix_prefix": "前缀词条",
     "jei.apotheosis_artifice.affix_gem": "可镶嵌宝石",
     "jei.apotheosis_artifice.click_for_detail": "§e右击查看词缀",
+    "jei.apotheosis_artifice.transfer.no_matching_item": "背包中没有匹配的物品。",
 
     "text.apotheosis.category.curio": "任意饰品栏位",
     "text.apotheosis.category.curio.plural": "任意饰品栏位",

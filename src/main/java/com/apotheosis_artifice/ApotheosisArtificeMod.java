@@ -185,8 +185,6 @@ public class ApotheosisArtificeMod {
                     s -> !s.isEmpty() && s.is(tag),
                     new EquipmentSlot[] { EquipmentSlot.CHEST });
             }
-
-            LOGGER.info("Registered curio + {} slot-specific LootCategories (curios:xxx)", DEFAULT_SLOTS.size());
         });
     }
 }

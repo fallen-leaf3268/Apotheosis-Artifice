@@ -1,6 +1,5 @@
 package com.apotheosis_artifice.enchant;
 
-import com.apotheosis_artifice.ApotheosisArtificeMod;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -32,22 +31,6 @@ public class MechanicalRavenEnchantScreen extends RavenEnchantScreen {
             com.apotheosis_artifice.ApotheosisNetwork.CHANNEL.sendToServer(
                 new SetRavenStatsPacket(rs.eterna(), rs.quanta(), rs.arcana()));
         }
-        if (this.menu.costs[2] > 0) {
-            ApotheosisArtificeMod.LOGGER.info("[tick] e0={}x{} r0={}x{} e1={}x{} b38={}x{} o39={}x{} g0={} ec=[{},{},{}] lv=[{},{},{}]",
-                this.menu.enchantSlots.getItem(0).getHoverName().getString(),
-                this.menu.enchantSlots.getItem(0).getCount(),
-                this.menu.getSlot(0).getItem().getHoverName().getString(),
-                this.menu.getSlot(0).getItem().getCount(),
-                this.menu.enchantSlots.getItem(1).getHoverName().getString(),
-                this.menu.enchantSlots.getItem(1).getCount(),
-                this.menu.getSlot(38).getItem().getHoverName().getString(),
-                this.menu.getSlot(38).getItem().getCount(),
-                this.menu.getSlot(39).getItem().getHoverName().getString(),
-                this.menu.getSlot(39).getItem().getCount(),
-                this.menu.getGoldCount(),
-                this.menu.enchantClue[0], this.menu.enchantClue[1], this.menu.enchantClue[2],
-                this.menu.costs[0], this.menu.costs[1], this.menu.costs[2]);
-        }
     }
 
     @Override
@@ -58,6 +41,7 @@ public class MechanicalRavenEnchantScreen extends RavenEnchantScreen {
     @Override
     public void acceptClues(int slot, java.util.List<EnchantmentInstance> clues, boolean all) {
         super.acceptClues(slot, clues, all);
+        if (slot < 0 || slot >= this.menu.enchantClue.length) return;
         if (!clues.isEmpty()) {
             this.menu.enchantClue[slot] = BuiltInRegistries.ENCHANTMENT.getId(clues.get(0).enchantment);
         }

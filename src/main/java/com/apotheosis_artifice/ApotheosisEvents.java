@@ -51,6 +51,14 @@ import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
 public class ApotheosisEvents {
 
+    /** reforging recipe 资源重载版本号:TagsUpdatedEvent 触发时递增,ReforgingMenu 缓存自动失效。 */
+    public static volatile long recipeCacheVersion = 0;
+
+    @SubscribeEvent
+    public void onTagsUpdated(net.minecraftforge.event.TagsUpdatedEvent ev) {
+        recipeCacheVersion++;
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void curioAttributes(CurioAttributeModifierEvent event) {
         if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;

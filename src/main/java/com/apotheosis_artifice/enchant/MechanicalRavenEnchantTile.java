@@ -144,18 +144,15 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
 
     private void tryAutoEnchant() {
         ItemStack input = ioInv.getStackInSlot(INPUT);
-        ApotheosisArtificeMod.LOGGER.info("[TE] tryAutoEnchant input={}", input.isEmpty() ? "EMPTY" : input.getHoverName().getString());
         if (input.isEmpty() || input.isEnchanted() || input.getItem().getEnchantmentValue() <= 0) return;
         ItemStack outNow = ioInv.getStackInSlot(OUTPUT);
-        if (!outNow.isEmpty() && outNow.getCount() >= outNow.getMaxStackSize()) { ApotheosisArtificeMod.LOGGER.info("[TE] tryAutoEnchant output FULL"); return; }
+        if (!outNow.isEmpty() && outNow.getCount() >= outNow.getMaxStackSize()) return;
 
         ItemStack toEnchant = ioInv.extractItem(INPUT, 1, false);
         if (toEnchant.isEmpty()) return;
-        ApotheosisArtificeMod.LOGGER.info("[TE] tryAutoEnchant extracted {}", toEnchant.getHoverName().getString());
 
         ItemStack result = doEnchant(toEnchant, this.ravenStats);
-        if (result.isEmpty()) { ioInv.insertItem(INPUT, toEnchant, false); ApotheosisArtificeMod.LOGGER.info("[TE] tryAutoEnchant FAILED, returned"); return; }
-        ApotheosisArtificeMod.LOGGER.info("[TE] tryAutoEnchant SUCCESS {}", result.getHoverName().getString());
+        if (result.isEmpty()) { ioInv.insertItem(INPUT, toEnchant, false); return; }
 
         // 优先直接存入绑定容器/图书馆
         if (!depositDirectToBound(result)) {

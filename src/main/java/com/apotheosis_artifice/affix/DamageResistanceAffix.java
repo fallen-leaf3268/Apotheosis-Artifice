@@ -85,7 +85,9 @@ public class DamageResistanceAffix extends Affix implements AffixTypes {
     public float onHurt(ItemStack stack, LootRarity rarity, float level, DamageSource src, LivingEntity ent, float amount) {
         ResourceLocation id = ent.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getKey(src.type());
         if (id != null && damageTypes.contains(id)) {
-            float reduction = this.values.get(rarity).get(level);
+            dev.shadowsoffire.placebo.util.StepFunction sf = this.values.get(rarity);
+            if (sf == null) return super.onHurt(stack, rarity, level, src, ent, amount);
+            float reduction = sf.get(level);
             return amount * (1 - reduction);
         }
         return super.onHurt(stack, rarity, level, src, ent, amount);
@@ -101,7 +103,8 @@ public class DamageResistanceAffix extends Affix implements AffixTypes {
                 return raw.equals(key) ? id.getPath() : raw;
             })
             .collect(Collectors.joining(", "));
-        float reduction = this.values.get(rarity).get(level);
+        dev.shadowsoffire.placebo.util.StepFunction sf = this.values.get(rarity);
+        float reduction = sf != null ? sf.get(level) : 0f;
         int pct = Math.round(reduction * 100);
         if (pct >= 100) {
             return Component.translatable("affix.apotheosis_artifice.damage_immunity", names);

@@ -178,7 +178,7 @@ public record AffixCodexEntry(List<LootCategory> categories) {
                 LOGGER.warn("[{}] empty, using BARRIER", name);
                 CATEGORY_ITEMS.put(name, List.of(new ItemStack(Items.BARRIER)));
             } else {
-                LOGGER.info("[{}] {} items", name, list.size());
+                LOGGER.debug("[{}] {} items", name, list.size());
             }
         }
         initialized = true;

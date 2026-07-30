@@ -39,6 +39,7 @@ public class LootCategoryMixin {
             boolean isLightWeapon = LootCategory.SWORD.isValid(item) || LootCategory.TRIDENT.isValid(item);
             if (isLightWeapon) {
                 cir.setReturnValue(LootCategory.HEAVY_WEAPON);
+                return;
             }
         }
     }

@@ -145,6 +145,7 @@
     "jei.apotheosis_artifice.affix_prefix": "Prefix Affixes",
     "jei.apotheosis_artifice.affix_gem": "Socketable Gems",
     "jei.apotheosis_artifice.click_for_detail": "§eRight-click for details",
+    "jei.apotheosis_artifice.transfer.no_matching_item": "No matching item in inventory.",
 
     "text.apotheosis.category.curio": "Any Curio Slot",
     "text.apotheosis.category.curio.plural": "Any Curio Slot",

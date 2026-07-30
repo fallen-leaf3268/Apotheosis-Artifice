@@ -91,11 +91,8 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
                     if (++autoTick >= 20) {
                         autoTick = 0;
                         if (this.tile.getLevel().hasNeighborSignal(this.tile.getBlockPos())) {
-                            ApotheosisArtificeMod.LOGGER.info("[MechRaven] auto-enchant triggered item={} eterna={} quanta={} arcana={}",
-                                slotItem, stats.eterna(), stats.quanta(), stats.arcana());
                             ItemStack result = this.tile.doEnchant(slotItem, stats);
                             if (!result.isEmpty()) {
-                                ApotheosisArtificeMod.LOGGER.info("[MechRaven] auto-enchant SUCCESS result={}", result);
                                 if (!this.tile.depositDirectToBound(result)) {
                                     ItemStack remaining = io.insertItem(1, result, false);
                                     if (remaining.isEmpty()) {
@@ -108,7 +105,6 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
                                 }
                                 this.enchantSlots.setChanged();
                             } else {
-                                ApotheosisArtificeMod.LOGGER.info("[MechRaven] auto-enchant FAILED no recipe or invalid item");
                                 this.enchantSlots.setItem(0, slotItem);
                                 this.enchantSlots.setChanged();
                             }

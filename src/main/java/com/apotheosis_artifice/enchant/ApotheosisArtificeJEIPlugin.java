@@ -28,6 +28,7 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
+import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
@@ -178,9 +179,12 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     }
 
     @Override public void registerRecipeTransferHandlers(IRecipeTransferRegistration reg) {
+        TRANSFER_HELPER = reg.getTransferHelper();
         reg.addRecipeTransferHandler(new MechanicalRavenTransferHandler(), EnchantingCategory.TYPE);
         reg.addRecipeTransferHandler(new RavenTransferHandler(), EnchantingCategory.TYPE);
     }
+
+    private static IRecipeTransferHandlerHelper TRANSFER_HELPER;
 
     private static class RavenTransferHandler implements IRecipeTransferHandler<RavenEnchantMenu, EnchantingRecipe> {
         @Override public Class<? extends RavenEnchantMenu> getContainerClass() { return RavenEnchantMenu.class; }
@@ -204,6 +208,13 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
                     container.slotsChanged(container.enchantSlots);
                     break;
                 }
+            }
+            if (inputItem.isEmpty()) {
+                if (TRANSFER_HELPER != null) {
+                    return TRANSFER_HELPER.createUserErrorWithTooltip(
+                        Component.translatable("jei.apotheosis_artifice.transfer.no_matching_item"));
+                }
+                return null;
             }
             float e = recipe.getRequirements().eterna();
             float q = recipe.getRequirements().quanta();

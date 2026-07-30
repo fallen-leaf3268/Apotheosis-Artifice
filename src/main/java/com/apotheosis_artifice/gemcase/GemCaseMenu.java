@@ -279,7 +279,7 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
 
         DynamicHolder<LootRarity> holder = RarityRegistry.INSTANCE.holder(currentId);
         if (!holder.isBound()) return false;
-        if (holder.get().next() == holder.get()) return false;
+        if (holder.get().next().ordinal() == holder.get().ordinal()) return false;
 
         int tries = shift ? 64 : 1;
         boolean any = false;

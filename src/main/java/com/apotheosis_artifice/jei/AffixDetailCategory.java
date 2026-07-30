@@ -118,7 +118,7 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
         } else {
             catLocalized = Component.translatable("text.apotheosis.category." + catRaw).getString();
         }
-        gfx.drawString(font, catLocalized, 22, 3, 0xFFFFFF, false);
+        gfx.drawString(font, catLocalized, 22, 3, 0xFFFFAA00, false);
 
         // 词缀名
         String name;

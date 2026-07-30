@@ -40,7 +40,7 @@ public class AffixRegistryMixin {
     @Inject(method = "beginReload", at = @At("TAIL"))
     private void apotheosis_artifice_registerSlots(CallbackInfo ci) {
         if (!com.apotheosis_artifice.ApotheosisConfig.ENABLE_CURIOS_LOOT_RARITY.get()) {
-            ApotheosisArtificeMod.LOGGER.info("Curios loot rarity is disabled, skipping curios LootCategory registration");
+            ApotheosisArtificeMod.LOGGER.debug("Curios loot rarity is disabled, skipping curios LootCategory registration");
             return;
         }
         try {
@@ -52,7 +52,7 @@ public class AffixRegistryMixin {
                         new EquipmentSlot[]{EquipmentSlot.CHEST});
                 }
             }
-            ApotheosisArtificeMod.LOGGER.info("Registered all curios LootCategories before affix reload");
+            ApotheosisArtificeMod.LOGGER.debug("Registered all curios LootCategories before affix reload");
         } catch (Exception e) {
             ApotheosisArtificeMod.LOGGER.warn("Could not register curios slot categories before reload", e);
         }

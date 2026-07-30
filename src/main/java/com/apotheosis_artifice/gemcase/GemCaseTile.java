@@ -296,7 +296,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         DynamicHolder<LootRarity> currentHolder = RarityRegistry.INSTANCE.holder(currentRarityId);
         if (!currentHolder.isBound()) return null;
         LootRarity nextRarity = currentHolder.get().next();
-        if (nextRarity == currentHolder.get()) return null;
+        if (nextRarity.ordinal() == currentHolder.get().ordinal()) return null;
         DynamicHolder<Gem> gemHolder = GemRegistry.INSTANCE.holder(gemId);
         if (gemHolder.isBound() && nextRarity.ordinal() > gemHolder.get().getMaxRarity().ordinal()) return null;
 

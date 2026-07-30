@@ -14,8 +14,6 @@ import net.minecraft.world.item.ItemStack;
 
 public class RavenEnchantScreen extends ApothEnchantScreen {
 
-    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(RavenEnchantScreen.class);
-
     private static final net.minecraft.resources.ResourceLocation CURIOS_TEX =
         new net.minecraft.resources.ResourceLocation("apotheosis_artifice", "textures/gui/enchanting_table.png");
 
@@ -36,7 +34,6 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
         this.curE = Math.min(s.eterna(), eternaMax());
         this.curQ = Mth.clamp(s.quanta(), 0, ApotheosisConfig.MAX_QUANTA.get());
         this.curA = Mth.clamp(s.arcana(), 0, ApotheosisConfig.MAX_ARCANA.get());
-        LOGGER.info("RavenEnchantScreen created: max_quanta={}, max_arcana={}, eternaMax={}", ApotheosisConfig.MAX_QUANTA.get(), ApotheosisConfig.MAX_ARCANA.get(), eternaMax());
     }
 
     @Override
@@ -67,7 +64,6 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
-        LOGGER.info("mouseClicked: mx={}, my={}, max_quanta={}, max_arcana={}", mx, my, ApotheosisConfig.MAX_QUANTA.get(), ApotheosisConfig.MAX_ARCANA.get());
         if (hoverBar(mx, my, ETERNA_Y)) { dragging = DragStat.E; updateVal(mx, eternaMax()); return true; }
         if (hoverBar(mx, my, QUANTA_Y)) { dragging = DragStat.Q; updateVal(mx, ApotheosisConfig.MAX_QUANTA.get()); return true; }
         if (hoverBar(mx, my, ARCANA_Y)) { dragging = DragStat.A; updateVal(mx, ApotheosisConfig.MAX_ARCANA.get()); return true; }
@@ -82,7 +78,6 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
                 case Q -> ApotheosisConfig.MAX_QUANTA.get();
                 case A -> ApotheosisConfig.MAX_ARCANA.get();
             };
-            LOGGER.info("mouseDragged: mx={}, max={}, dragging={}", mx, max, dragging);
             updateVal(mx, max);
             return true;
         }
@@ -106,7 +101,6 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
         double t = Mth.clamp((mx - (this.leftPos + BAR_X)) / (double)BAR_W, 0, 1);
         float v = (float)(Math.round(t * max * 2) / 2.0);
         v = Mth.clamp(v, 0, max);
-        LOGGER.info("updateVal: mx={}, max={}, t={}, v={}", mx, max, t, v);
         switch (dragging) {
             case E -> { if (v != curE) { curE = v; dirty = true; } }
             case Q -> { if (v != curQ) { curQ = v; dirty = true; } }
@@ -121,6 +115,7 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
             this.curE = Mth.clamp(jei[0], 0, eternaMax());
             this.curQ = Mth.clamp(jei[1], 0, ApotheosisConfig.MAX_QUANTA.get());
             this.curA = Mth.clamp(jei[2], 0, ApotheosisConfig.MAX_ARCANA.get());
+            this.dirty = true;
         }
         this.ravenMenu.syncStatsToSliders(this.curE, this.curQ, this.curA);
         super.render(gfx, mx, my, pt);
