@@ -27,6 +27,9 @@
         "GemInstanceMixin",
         "GemGetBonusMixin",
         "LivingEntityMixin",
+        "ApothEnchantmentMenuMixin",
+        "EnchantmentMenuEasyMagicMixin",
+        "ApothEnchantTileEasyMagicMixin",
         "TableStatsClampMixin",
         "CommonTooltipUtilMixin",
         "PowerCapEnchModuleMixin",
@@ -49,7 +52,8 @@
         "client.InventoryScreenKeyForwardMixin",
         "client.LanguageMixin",
         "client.EnchantScreenEternaMaxMixin",
-        "client.EnchantingInfoScreenMixin"
+        "client.EnchantingInfoScreenMixin",
+        "client.ApothEnchantScreenEasyMagicMixin"
     ],
     "server": []
 }

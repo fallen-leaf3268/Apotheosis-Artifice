@@ -1,18 +1,38 @@
 package com.apotheosis_artifice.enchant;
 
+import java.util.List;
+
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.ApotheosisConfig;
+import com.apotheosis_artifice.compat.EasyMagicCompat;
+import com.apotheosis_artifice.compat.EnigmaticLegacyCompat;
+
 import dev.shadowsoffire.apotheosis.Apotheosis;
+import dev.shadowsoffire.apotheosis.advancements.EnchantedTrigger;
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu;
+import dev.shadowsoffire.apotheosis.ench.table.EnchantingRecipe;
 import dev.shadowsoffire.apotheosis.ench.table.EnchantingStatRegistry;
+import dev.shadowsoffire.apotheosis.ench.table.IEnchantableItem;
+import dev.shadowsoffire.apotheosis.ench.table.RealEnchantmentHelper;
+import dev.shadowsoffire.apotheosis.util.ApothMiscUtil;
 import dev.shadowsoffire.placebo.network.PacketDistro;
+import dev.shadowsoffire.placebo.util.EnchantmentUtils;
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.stats.Stats;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class RavenEnchantMenu extends ApothEnchantmentMenu {
@@ -46,6 +66,57 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
 
     @Override
     public MenuType<?> getType() { return TYPE; }
+
+    @Override
+    public int getGoldCount() {
+        if (EnigmaticLegacyCompat.isEnchanterPearlActive(this.player)) return 64;
+        return super.getGoldCount();
+    }
+
+    @Override
+    public boolean clickMenuButton(Player player, int id) {
+        if (id == 4) return EasyMagicCompat.tryReroll(this, player);
+        if (!EnigmaticLegacyCompat.isEnchanterPearlActive(player)) return super.clickMenuButton(player, id);
+        if (id < 0 || id >= this.costs.length) return false;
+        int level = this.costs[id];
+        int levelsRequired = id + 1;
+        ItemStack input = this.enchantSlots.getItem(0);
+        if (level <= 0 || input.isEmpty()
+            || (player.experienceLevel < levelsRequired || player.experienceLevel < level) && !player.getAbilities().instabuild) return false;
+
+        this.access.execute((world, pos) -> {
+            float eterna = this.stats.eterna();
+            float quanta = this.stats.quanta();
+            float arcana = this.stats.arcana();
+            EnchantingRecipe recipe = id == 2 ? EnchantingRecipe.findMatch(world, input, eterna, quanta, arcana) : null;
+            RandomSource rollRandom = RandomSource.create(this.enchantmentSeed.get() + id);
+            List<EnchantmentInstance> enchantments = RealEnchantmentHelper.selectEnchantment(
+                rollRandom, input, level, quanta, arcana, this.stats.rectification(), this.stats.treasure(), this.stats.blacklist());
+            if (recipe == null && enchantments.isEmpty()) return;
+
+            EnchantmentUtils.chargeExperience(player, ApothMiscUtil.getExpCostForSlot(level, id));
+            player.onEnchantmentPerformed(input, 0);
+            ItemStack result;
+            if (recipe != null) {
+                result = recipe.assemble(input, eterna, quanta, arcana);
+            } else {
+                ItemStack bonus = EnchantmentHelper.enchantItem(player.getRandom(), input.copy(), Math.min(level + 7, 40), true);
+                result = ((IEnchantableItem) input.getItem()).onEnchantment(input, enchantments);
+                result = EnigmaticLegacyCompat.mergePearlEnchantments(result, bonus);
+            }
+            this.enchantSlots.setItem(0, result);
+            player.awardStat(Stats.ENCHANT_ITEM);
+            if (player instanceof ServerPlayer serverPlayer) {
+                ((EnchantedTrigger) CriteriaTriggers.ENCHANTED_ITEM).trigger(
+                    serverPlayer, result, level, eterna, quanta, arcana, this.stats.rectification());
+            }
+            this.enchantSlots.setChanged();
+            this.enchantmentSeed.set(player.getEnchantmentSeed());
+            this.slotsChanged(this.enchantSlots);
+            world.playSound(null, pos, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1.0F, world.random.nextFloat() * 0.1F + 0.9F);
+        });
+        return true;
+    }
 
     @Override
     public boolean stillValid(Player player) {

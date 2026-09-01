@@ -102,6 +102,13 @@ dependencies {
 
     // Jade (compile only, provided at runtime)
     compileOnly fg.deobf("curse.maven:jade-324717:${jade_file_id}")
+
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
 }
 
 mixin {

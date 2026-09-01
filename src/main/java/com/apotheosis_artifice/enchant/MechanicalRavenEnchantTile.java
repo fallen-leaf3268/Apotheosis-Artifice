@@ -1,6 +1,8 @@
 package com.apotheosis_artifice.enchant;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
+import com.apotheosis_artifice.compat.EasyMagicCompat;
+import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -174,6 +176,11 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     /** 关闭菜单后对附魔槽残留物品进行附魔并输出 */
     private void tryAutoEnchantSaved() {
         ItemStack saved = this.savedEnchantSlot;
+        net.minecraft.world.Container persistent = null;
+        if (EasyMagicCompat.isLoaded() && (Object) this instanceof EasyMagicEnchantingStorage storage) {
+            persistent = storage.getEasyMagicInventory();
+            saved = persistent.getItem(0);
+        }
         if (saved.isEmpty() || saved.isEnchanted() || saved.getItem().getEnchantmentValue() <= 0) return;
         ItemStack result = doEnchant(saved, this.ravenStats);
         if (result.isEmpty()) return;
@@ -185,12 +192,20 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
                 int added = Math.min(result.getCount(), output.getMaxStackSize() - output.getCount());
                 output.grow(added);
                 int remaining = result.getCount() - added;
-                if (remaining > 0) { result.setCount(remaining); this.savedEnchantSlot = result; return; }
+                if (remaining > 0) {
+                    result.setCount(remaining);
+                    if (persistent != null) persistent.setItem(0, result);
+                    else this.savedEnchantSlot = result;
+                    return;
+                }
             } else {
-                this.savedEnchantSlot = result; return;
+                if (persistent != null) persistent.setItem(0, result);
+                else this.savedEnchantSlot = result;
+                return;
             }
         }
-        this.savedEnchantSlot = ItemStack.EMPTY;
+        if (persistent != null) persistent.setItem(0, ItemStack.EMPTY);
+        else this.savedEnchantSlot = ItemStack.EMPTY;
         setChanged();
     }
 
@@ -299,7 +314,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     public void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.put("io_inv", ioInv.serializeNBT()); tag.putLong("ench_seed", this.enchantmentSeed);
-        if (!savedEnchantSlot.isEmpty()) {
+        if (!EasyMagicCompat.isLoaded() && !savedEnchantSlot.isEmpty()) {
             tag.put("ench_slot", savedEnchantSlot.save(new net.minecraft.nbt.CompoundTag()));
         }
         if (libBound && libDim != null) {
@@ -319,6 +334,12 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         if (tag.contains("ench_seed")) this.enchantmentSeed = tag.getLong("ench_seed");
         if (tag.contains("ench_slot")) {
             this.savedEnchantSlot = ItemStack.of(tag.getCompound("ench_slot"));
+            if (EasyMagicCompat.isLoaded() && !this.savedEnchantSlot.isEmpty()
+                && (Object) this instanceof EasyMagicEnchantingStorage storage
+                && storage.getEasyMagicInventory().getItem(0).isEmpty()) {
+                storage.getEasyMagicInventory().setItem(0, this.savedEnchantSlot);
+                this.savedEnchantSlot = ItemStack.EMPTY;
+            }
         }
         if (tag.contains("lb_dim")) {
             libBound = true; libDim = ResourceLocation.tryParse(tag.getString("lb_dim"));

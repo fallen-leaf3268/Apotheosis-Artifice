@@ -17,8 +17,12 @@ import net.minecraft.world.item.ItemStack;
 @Mixin(value = SocketingRecipe.class, priority = 500, remap = false)
 public class SocketingRecipeMixin {
 
-    @Overwrite
-    public ItemStack m_5874_(Container inv, RegistryAccess regs) {
+    /**
+     * @author apotheosis_artifice
+     * @reason Safely reject invalid socketing inputs before accessing missing gem slots.
+     */
+    @Overwrite(remap = true)
+    public ItemStack assemble(Container inv, RegistryAccess regs) {
         ItemStack base = inv.getItem(1);
         ItemStack gemStack = inv.getItem(2);
         if (base.isEmpty() || gemStack.isEmpty()) {

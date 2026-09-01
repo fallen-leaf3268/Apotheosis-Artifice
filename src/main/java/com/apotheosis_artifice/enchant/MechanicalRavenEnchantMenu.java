@@ -1,6 +1,8 @@
 package com.apotheosis_artifice.enchant;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
+import com.apotheosis_artifice.compat.EasyMagicCompat;
+import com.apotheosis_artifice.compat.EnigmaticLegacyCompat;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
@@ -17,7 +19,7 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
     public static MenuType<MechanicalRavenEnchantMenu> TYPE;
     private MechanicalRavenEnchantTile tile;
     public MechanicalRavenEnchantTile getTile() { return tile; }
-    private int inputIdx = -1, outputIdx = -1;
+    private int inputIdx = -1, outputIdx = -1, dedicatedCatalystIdx = -1;
     private volatile boolean broadcasting = false;
     private int lastGoldCount = 0;
     private int autoTick = 0;
@@ -28,7 +30,12 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
         addIOSlots(te.getIOInv());
         ItemStack fromSave = te.getSavedEnchantSlot();
         if (!fromSave.isEmpty()) {
-            this.enchantSlots.setItem(0, fromSave.copy());
+            if (EasyMagicCompat.isLoaded() && this.enchantSlots.getItem(0).isEmpty()) {
+                this.enchantSlots.setItem(0, fromSave.copy());
+                te.setSavedEnchantSlot(ItemStack.EMPTY);
+            } else if (!EasyMagicCompat.isLoaded()) {
+                this.enchantSlots.setItem(0, fromSave.copy());
+            }
         }
     }
 
@@ -47,6 +54,7 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
     }
 
     private void addIOSlots(ItemStackHandler ioInv) {
+        if (EasyMagicCompat.isLoaded() && EasyMagicCompat.dedicatedRerollButton()) dedicatedCatalystIdx = this.slots.size() - 1;
         inputIdx = this.slots.size();
         this.addSlot(new SlotItemHandler(ioInv, 0, 15, 17) { @Override public int getMaxStackSize() { return 64; } });
         outputIdx = this.slots.size();
@@ -58,6 +66,7 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
 
     @Override
     public int getGoldCount() {
+        if (EnigmaticLegacyCompat.isEnchanterPearlActive(this.player)) return 64;
         if (this.tile != null) { lastGoldCount = this.tile.getFuelInv().getStackInSlot(0).getCount(); return lastGoldCount; }
         int v = this.getSlot(1).getItem().getCount();
         if (v > 0) lastGoldCount = v;
@@ -134,6 +143,10 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
 
     @Override
     public void removed(Player player) {
+        if (EasyMagicCompat.isLoaded()) {
+            super.removed(player);
+            return;
+        }
         if (this.tile != null) {
             ItemStack e = this.enchantSlots.getItem(0);
             this.tile.setSavedEnchantSlot(e);
@@ -147,19 +160,26 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int idx) {
-        ItemStack stack = ItemStack.EMPTY;
+        if (idx < 0 || idx >= this.slots.size()) return ItemStack.EMPTY;
         Slot slot = this.slots.get(idx);
-        if (slot != null && slot.hasItem()) {
-            ItemStack raw = slot.getItem(); stack = raw.copy();
-            if (idx <= 1 || idx >= 38) { if (!this.moveItemStackTo(raw, 2, 38, false)) return ItemStack.EMPTY; }
-            else if (idx >= 2 && idx <= 37) {
-                if (raw.is(net.minecraftforge.common.Tags.Items.ENCHANTING_FUELS)) {
-                    if (!this.moveItemStackTo(raw, 1, 2, false)) { if (!this.moveItemStackTo(raw, 38, 39, false)) return ItemStack.EMPTY; }
-                } else if (!this.moveItemStackTo(raw, 38, 39, false)) { if (!this.moveItemStackTo(raw, 0, 1, false)) return ItemStack.EMPTY; }
-            }
-            if (raw.isEmpty()) slot.set(ItemStack.EMPTY);
-            slot.setChanged();
+        if (!slot.hasItem()) return ItemStack.EMPTY;
+        ItemStack raw = slot.getItem();
+        ItemStack stack = raw.copy();
+        int playerStart = 2;
+        int playerEnd = 38;
+        boolean tableSlot = idx == 0 || idx == 1 || idx == dedicatedCatalystIdx || idx == inputIdx || idx == outputIdx;
+        if (tableSlot) {
+            if (!this.moveItemStackTo(raw, playerStart, playerEnd, false)) return ItemStack.EMPTY;
+        } else if (idx >= playerStart && idx < playerEnd) {
+            if (dedicatedCatalystIdx >= 0 && EasyMagicCompat.isRerollCatalyst(raw)
+                && this.moveItemStackTo(raw, dedicatedCatalystIdx, dedicatedCatalystIdx + 1, false)) {
+            } else if (raw.is(net.minecraftforge.common.Tags.Items.ENCHANTING_FUELS)
+                && this.moveItemStackTo(raw, 1, 2, false)) {
+            } else if (!this.moveItemStackTo(raw, inputIdx, inputIdx + 1, false)
+                && !this.moveItemStackTo(raw, 0, 1, false)) return ItemStack.EMPTY;
         }
+        if (raw.isEmpty()) slot.set(ItemStack.EMPTY);
+        slot.setChanged();
         return stack;
     }
 
