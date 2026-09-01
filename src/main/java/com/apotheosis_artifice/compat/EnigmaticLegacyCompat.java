@@ -4,10 +4,10 @@ import java.lang.reflect.Method;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 
+import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -18,8 +18,6 @@ public final class EnigmaticLegacyCompat {
     private static boolean initialized;
     private static boolean available;
     private static Method isPresent;
-    private static Method mergeEnchantments;
-    private static Method maybeApplyEternalBinding;
 
     private EnigmaticLegacyCompat() {}
 
@@ -37,16 +35,11 @@ public final class EnigmaticLegacyCompat {
         }
     }
 
-    public static ItemStack mergePearlEnchantments(ItemStack primary, ItemStack bonus) {
-        initialize();
-        if (!available) return primary;
-        try {
-            ItemStack merged = (ItemStack) mergeEnchantments.invoke(null, primary, bonus, false, false);
-            return (ItemStack) maybeApplyEternalBinding.invoke(null, merged);
-        } catch (ReflectiveOperationException e) {
-            ApotheosisArtificeMod.LOGGER.warn("Failed to apply Enchanter's Pearl enchantments", e);
-            return primary;
-        }
+    public static ApothEnchantmentMenu.TableStats enableTreasure(ApothEnchantmentMenu.TableStats stats, Player player) {
+        if (stats == null || stats.treasure() || !isEnchanterPearlActive(player)) return stats;
+        return new ApothEnchantmentMenu.TableStats(
+            stats.eterna(), stats.quanta(), stats.arcana(),
+            stats.rectification(), stats.clues(), stats.blacklist(), true);
     }
 
     private static synchronized void initialize() {
@@ -55,14 +48,7 @@ public final class EnigmaticLegacyCompat {
         try {
             Item pearl = ForgeRegistries.ITEMS.getValue(ENCHANTER_PEARL);
             if (pearl == null) return;
-            Method resolvedIsPresent = pearl.getClass().getMethod("isPresent", Player.class);
-            Class<?> handler = Class.forName("com.aizistral.enigmaticlegacy.handlers.SuperpositionHandler");
-            Method resolvedMergeEnchantments = handler.getMethod(
-                "mergeEnchantments", ItemStack.class, ItemStack.class, boolean.class, boolean.class);
-            Method resolvedMaybeApplyEternalBinding = handler.getMethod("maybeApplyEternalBinding", ItemStack.class);
-            isPresent = resolvedIsPresent;
-            mergeEnchantments = resolvedMergeEnchantments;
-            maybeApplyEternalBinding = resolvedMaybeApplyEternalBinding;
+            isPresent = pearl.getClass().getMethod("isPresent", Player.class);
             available = true;
         } catch (ReflectiveOperationException | LinkageError e) {
             ApotheosisArtificeMod.LOGGER.warn("Failed to initialize Enigmatic Legacy compatibility", e);

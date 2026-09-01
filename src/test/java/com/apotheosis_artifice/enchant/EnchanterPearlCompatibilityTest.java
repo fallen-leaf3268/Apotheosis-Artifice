@@ -15,25 +15,22 @@ class EnchanterPearlCompatibilityTest {
     private static final Path MIXIN_CONFIG = Path.of("src", "main", "resources", "apotheosis_artifice.mixins.json");
 
     @Test
-    void manualRavenEnchantingUsesOptionalEnchanterPearlCompatibility() throws IOException {
-        String menu = read("enchant", "RavenEnchantMenu.java");
-        String mechanicalMenu = read("enchant", "MechanicalRavenEnchantMenu.java");
+    void enchanterPearlCompatibilityOnlyEnablesTreasure() throws IOException {
         String compat = read("compat", "EnigmaticLegacyCompat.java");
 
-        assertTrue(menu.contains("EnigmaticLegacyCompat.isEnchanterPearlActive(player)"));
-        assertTrue(menu.contains("EnigmaticLegacyCompat.mergePearlEnchantments"));
-        assertTrue(menu.contains("public int getGoldCount()"));
-        assertTrue(menu.contains("EnchantmentUtils.chargeExperience"));
-        assertTrue(menu.contains("ApothMiscUtil.getExpCostForSlot"));
-        assertTrue(menu.contains("((EnchantedTrigger) CriteriaTriggers.ENCHANTED_ITEM).trigger"));
-        assertTrue(mechanicalMenu.contains("EnigmaticLegacyCompat.isEnchanterPearlActive(this.player)"));
+        assertTrue(compat.contains("TableStats enableTreasure(TableStats stats, Player player)"));
+        assertTrue(compat.contains("stats.eterna(), stats.quanta(), stats.arcana()"));
+        assertTrue(compat.contains("stats.rectification(), stats.clues(), stats.blacklist(), true"));
+        assertTrue(compat.contains("stats.treasure()"));
+        assertTrue(compat.contains("isEnchanterPearlActive(player)"));
         assertTrue(compat.contains("\"enigmaticlegacy\""));
         assertTrue(compat.contains("\"enchanter_pearl\""));
         assertTrue(compat.contains("isPresent"));
-        assertTrue(compat.contains("mergeEnchantments"));
-        assertTrue(compat.contains("maybeApplyEternalBinding"));
         assertTrue(compat.contains("private static boolean available"));
         assertTrue(compat.contains("if (!available) return false"));
+        assertFalse(compat.contains("mergePearlEnchantments"));
+        assertFalse(compat.contains("mergeEnchantments"));
+        assertFalse(compat.contains("maybeApplyEternalBinding"));
     }
 
     @Test
