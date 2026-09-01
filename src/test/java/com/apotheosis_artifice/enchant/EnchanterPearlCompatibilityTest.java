@@ -39,22 +39,26 @@ class EnchanterPearlCompatibilityTest {
 
         assertFalse(tile.contains("EnigmaticLegacyCompat"));
         assertFalse(tile.contains("enchanter_pearl"));
+        assertFalse(tile.substring(tile.indexOf("doEnchant")).contains("enableTreasure"));
     }
 
     @Test
-    void ordinaryApotheosisEnchantingTableHandlesEnchanterPearlServerClick() throws IOException {
-        Path mixinPath = MAIN_JAVA.resolve("mixin").resolve("ApothEnchantmentMenuMixin.java");
-
-        assertTrue(Files.exists(mixinPath));
-        String mixin = Files.readString(mixinPath);
+    void playerOperatedMenusApplyTreasureStatsWithoutReplacingEnchanting() throws IOException {
+        String mixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+        String ravenMenu = read("enchant", "RavenEnchantMenu.java");
+        String mechanicalMenu = read("enchant", "MechanicalRavenEnchantMenu.java");
         String config = Files.readString(MIXIN_CONFIG);
+
         assertTrue(config.contains("\"ApothEnchantmentMenuMixin\""));
-        assertTrue(mixin.contains("EnigmaticLegacyCompat.isEnchanterPearlActive(player)"));
-        assertTrue(mixin.contains("EnigmaticLegacyCompat.mergePearlEnchantments"));
-        assertTrue(mixin.contains("ApothEnchantmentMenu.class"));
-        assertTrue(mixin.contains("getClass() != ApothEnchantmentMenu.class"));
-        assertTrue(mixin.contains("@Shadow(remap = false)"));
-        assertFalse(mixin.contains("MechanicalRavenEnchantTile"));
+        assertTrue(mixin.contains("EnigmaticLegacyCompat.enableTreasure(this.stats, this.artifice$menuPlayer)"));
+        assertTrue(mixin.contains("new StatsMessage(this.stats)"));
+        assertTrue(mixin.contains("level().isClientSide"));
+        assertTrue(ravenMenu.contains("EnigmaticLegacyCompat.enableTreasure("));
+        assertFalse(ravenMenu.contains("mergePearlEnchantments"));
+        assertFalse(ravenMenu.contains("public int getGoldCount()"));
+        assertFalse(mechanicalMenu.contains("EnigmaticLegacyCompat"));
+        assertFalse(mixin.contains("mergePearlEnchantments"));
+        assertFalse(mixin.contains("EnchantmentHelper.enchantItem"));
     }
 
     @Test

@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu;
+import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu.TableStats;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -35,9 +36,9 @@ public final class EnigmaticLegacyCompat {
         }
     }
 
-    public static ApothEnchantmentMenu.TableStats enableTreasure(ApothEnchantmentMenu.TableStats stats, Player player) {
+    public static TableStats enableTreasure(TableStats stats, Player player) {
         if (stats == null || stats.treasure() || !isEnchanterPearlActive(player)) return stats;
-        return new ApothEnchantmentMenu.TableStats(
+        return new TableStats(
             stats.eterna(), stats.quanta(), stats.arcana(),
             stats.rectification(), stats.clues(), stats.blacklist(), true);
     }
