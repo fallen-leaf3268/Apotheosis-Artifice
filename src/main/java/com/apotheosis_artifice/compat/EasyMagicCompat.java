@@ -35,6 +35,12 @@ public final class EasyMagicCompat {
         return getInt("rerollCatalystCost", 1);
     }
 
+    public static int rerollCatalystCost(Player player) {
+        int configuredCost = rerollCatalystCost();
+        if (!dedicatedRerollButton() && EnigmaticLegacyCompat.isEnchanterPearlActive(player)) return 0;
+        return configuredCost;
+    }
+
     public static int rerollExperienceCost() {
         return getInt("rerollExperiencePointsCost", 5);
     }
@@ -68,7 +74,7 @@ public final class EasyMagicCompat {
 
     public static boolean tryReroll(ApothEnchantmentMenu menu, Player player) {
         if (!canUseReroll(menu)) return false;
-        int catalystCost = rerollCatalystCost();
+        int catalystCost = rerollCatalystCost(player);
         int experienceCost = rerollExperienceCost();
         if (!player.getAbilities().instabuild
             && (getTotalExperience(player) < experienceCost || getRerollCatalystCount(menu) < catalystCost)) return false;

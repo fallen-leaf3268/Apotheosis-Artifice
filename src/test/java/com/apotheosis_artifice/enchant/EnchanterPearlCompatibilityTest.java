@@ -184,7 +184,9 @@ class EnchanterPearlCompatibilityTest {
         String enUs = Files.readString(Path.of("src", "main", "resources", "assets",
             "apotheosis_artifice", "lang", "en_us.json"));
 
-        assertTrue(screenMixin.contains("return this.leftPos - 38;"));
+        assertTrue(screenMixin.contains("return this.leftPos - 36;"));
+        assertTrue(screenMixin.contains("@Inject(method = \"renderBg\", at = @At(\"HEAD\"))"));
+        assertTrue(screenMixin.contains("private void artifice$renderDedicatedCatalystSlot("));
         assertFalse(screenMixin.contains("this.leftPos + (EasyMagicCompat.dedicatedRerollButton()"));
         assertTrue(screenMixin.contains("Component.translatable(\"container.enchant.reroll\")"));
         assertTrue(zhCn.contains("\"container.enchant.reroll\": \"刷新附魔选项\""));
@@ -201,6 +203,29 @@ class EnchanterPearlCompatibilityTest {
         assertTrue(screenMixin.contains("artifice$renderCostOrb("));
         assertTrue(screenMixin.contains("Math.min(2, cost / 5) * 13"));
         assertTrue(screenMixin.contains("graphics.drawString(this.font, value"));
+    }
+
+    @Test
+    void enchanterPearlWaivesOnlyOrdinaryRerollCatalystCost() throws IOException {
+        String compat = read("compat", "EasyMagicCompat.java");
+        String screenMixin = Files.readString(MAIN_JAVA.resolve("mixin").resolve("client")
+            .resolve("ApothEnchantScreenEasyMagicMixin.java"));
+
+        assertTrue(compat.contains("public static int rerollCatalystCost(Player player)"));
+        assertTrue(compat.contains("!dedicatedRerollButton() && EnigmaticLegacyCompat.isEnchanterPearlActive(player)"));
+        assertTrue(compat.contains("int catalystCost = rerollCatalystCost(player);"));
+        assertTrue(compat.contains("int experienceCost = rerollExperienceCost();"));
+        assertTrue(screenMixin.split("EasyMagicCompat.rerollCatalystCost\\(this.minecraft.player\\)", -1).length - 1 >= 2);
+    }
+
+    @Test
+    void mechanicalRavenPersistsSuccessfulRerollSeed() throws IOException {
+        String mechanicalMenu = read("enchant", "MechanicalRavenEnchantMenu.java");
+
+        assertTrue(mechanicalMenu.contains("boolean rerolled = super.clickMenuButton(player, id);"));
+        assertTrue(mechanicalMenu.contains("if (id == 4 && rerolled && !player.level().isClientSide"));
+        assertTrue(mechanicalMenu.contains("this.tile.setEnchantmentSeed(this.enchantmentSeed.get());"));
+        assertTrue(mechanicalMenu.contains("this.tile.setChanged();"));
     }
 
     private static String read(String directory, String file) throws IOException {

@@ -71,6 +71,16 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
         return lastGoldCount;
     }
 
+    @Override
+    public boolean clickMenuButton(Player player, int id) {
+        boolean rerolled = super.clickMenuButton(player, id);
+        if (id == 4 && rerolled && !player.level().isClientSide && this.tile != null) {
+            this.tile.setEnchantmentSeed(this.enchantmentSeed.get());
+            this.tile.setChanged();
+        }
+        return rerolled;
+    }
+
     private ItemStack lastS0 = ItemStack.EMPTY;
 
     @Override

@@ -32,13 +32,13 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
         super(menu, inventory, title);
     }
 
-    @Inject(method = "renderBg", at = @At("TAIL"))
+    @Inject(method = "renderBg", at = @At("HEAD"))
     private void artifice$renderRerollButton(GuiGraphics graphics, float partialTick, int mouseX, int mouseY, CallbackInfo ci) {
         if (!EasyMagicCompat.isLoaded() || !EasyMagicCompat.rerollEnchantments()) return;
         ApothEnchantmentMenu menu = (ApothEnchantmentMenu) this.menu;
         boolean usable = EasyMagicCompat.canUseReroll(menu);
         int experience = EasyMagicCompat.rerollExperienceCost();
-        int catalyst = EasyMagicCompat.rerollCatalystCost();
+        int catalyst = EasyMagicCompat.rerollCatalystCost(this.minecraft.player);
         boolean missingResources = !this.minecraft.player.getAbilities().instabuild
             && (EasyMagicCompat.getTotalExperience(this.minecraft.player) < experience
                 || EasyMagicCompat.getRerollCatalystCount(menu) < catalyst);
@@ -47,11 +47,15 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
         boolean hovered = mouseX > x && mouseX <= x + 38 && mouseY > y && mouseY <= y + 27;
         graphics.blit(ARTIFICE_REROLL_TEXTURE, x, y, 0, !usable || missingResources ? 0 : hovered ? 54 : 27, 38, 27);
         if (usable) this.artifice$renderRerollContents(graphics, x, y, missingResources, hovered, experience, catalyst);
-        if (EasyMagicCompat.dedicatedRerollButton()) {
-            graphics.blit(ARTIFICE_ENCHANTING_TEXTURE, this.leftPos + 4, this.topPos + 46, 14, 46, 18, 18);
-            graphics.blit(ARTIFICE_ENCHANTING_TEXTURE, this.leftPos + 22, this.topPos + 46, 34, 46, 18, 18);
-            graphics.blit(ARTIFICE_REROLL_TEXTURE, this.leftPos + 40, this.topPos + 46, 0, 81, 18, 18);
-        }
+    }
+
+    @Inject(method = "renderBg", at = @At("TAIL"))
+    private void artifice$renderDedicatedCatalystSlot(GuiGraphics graphics, float partialTick, int mouseX, int mouseY, CallbackInfo ci) {
+        if (!EasyMagicCompat.isLoaded() || !EasyMagicCompat.rerollEnchantments()
+            || !EasyMagicCompat.dedicatedRerollButton()) return;
+        graphics.blit(ARTIFICE_ENCHANTING_TEXTURE, this.leftPos + 4, this.topPos + 46, 14, 46, 18, 18);
+        graphics.blit(ARTIFICE_ENCHANTING_TEXTURE, this.leftPos + 22, this.topPos + 46, 34, 46, 18, 18);
+        graphics.blit(ARTIFICE_REROLL_TEXTURE, this.leftPos + 40, this.topPos + 46, 0, 81, 18, 18);
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
@@ -76,7 +80,7 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
         List<Component> tooltip = new ArrayList<>();
         tooltip.add(Component.translatable("container.enchant.reroll"));
         int experience = EasyMagicCompat.rerollExperienceCost();
-        int catalyst = EasyMagicCompat.rerollCatalystCost();
+        int catalyst = EasyMagicCompat.rerollCatalystCost(this.minecraft.player);
         if (experience > 0) tooltip.add(Component.translatable(experience == 1 ? "container.enchant.experience.one" : "container.enchant.experience.many", experience).withStyle(ChatFormatting.GREEN));
         if (catalyst > 0) tooltip.add(Component.literal(catalyst + " × ").append(Component.translatable("item.minecraft.lapis_lazuli")).withStyle(ChatFormatting.BLUE));
         graphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
@@ -120,6 +124,6 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
     }
 
     private int artifice$rerollButtonX() {
-        return this.leftPos - 38;
+        return this.leftPos - 36;
     }
 }
