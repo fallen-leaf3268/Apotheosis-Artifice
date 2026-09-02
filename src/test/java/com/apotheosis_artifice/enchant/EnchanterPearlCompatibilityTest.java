@@ -300,6 +300,19 @@ class EnchanterPearlCompatibilityTest {
         assertTrue(menuMixin.contains("cir.setReturnValue(true);"));
     }
 
+    @Test
+    void enchanterPearlWaivesManualEnchantingLapisWithoutEasyMagic() throws IOException {
+        String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+
+        assertTrue(menuMixin.contains("@ModifyVariable(method = \"clickMenuButton\""));
+        assertTrue(menuMixin.contains("ordinal = 1"));
+        assertTrue(menuMixin.contains("artifice$provideVirtualPearlFuel"));
+        assertTrue(menuMixin.contains("id < 0 || id >= 3"));
+        assertTrue(menuMixin.contains("EnigmaticLegacyCompat.isEnchanterPearlActive(player)"));
+        assertTrue(menuMixin.contains("new ItemStack(Items.LAPIS_LAZULI, 64)"));
+        assertTrue(menuMixin.contains("virtualFuel.setCount(64);"));
+    }
+
     private static String read(String directory, String file) throws IOException {
         return Files.readString(MAIN_JAVA.resolve(directory).resolve(file));
     }

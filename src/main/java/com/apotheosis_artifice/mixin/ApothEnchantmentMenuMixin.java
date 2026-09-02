@@ -5,6 +5,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -26,6 +27,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.EnchantmentMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.shapes.Shapes;
 
@@ -97,6 +99,15 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
             return;
         }
         if (data == 4) cir.setReturnValue(EasyMagicCompat.tryReroll((ApothEnchantmentMenu) (Object) this, player));
+    }
+
+    @ModifyVariable(method = "clickMenuButton", at = @At("STORE"), ordinal = 1)
+    private ItemStack artifice$provideVirtualPearlFuel(ItemStack fuel, Player player, int id) {
+        if (id < 0 || id >= 3 || !EnigmaticLegacyCompat.isEnchanterPearlActive(player)) return fuel;
+        if (fuel.isEmpty()) return new ItemStack(Items.LAPIS_LAZULI, 64);
+        ItemStack virtualFuel = fuel.copy();
+        virtualFuel.setCount(64);
+        return virtualFuel;
     }
 
     @Inject(method = "canReadStatsFrom", at = @At("HEAD"), cancellable = true, remap = false)
