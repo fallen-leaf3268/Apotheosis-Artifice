@@ -20,15 +20,14 @@
 
 ## 本地化
 
-- 新增本模组翻译键 `gui.apotheosis_artifice.enchant.reroll`。
-- `zh_cn` 显示“刷新附魔选项”。
-- `en_us` 显示“Reroll Enchantments”。
-- 工具提示不再依赖 EasyMagic 缺失的中文语言文件。
+- 工具提示继续使用 EasyMagic 的原生翻译键 `container.enchant.reroll`。
+- 本模组仅在 `zh_cn` 中补充 `"container.enchant.reroll": "刷新附魔选项"`，填补 EasyMagic 8.0.1 缺失的中文语言资源。
+- `en_us` 继续由 EasyMagic 提供，本模组不重复定义。
 
 ## 验证
 
 - 源码回归测试确认所有神化附魔界面均使用外置坐标。
-- 测试确认工具提示引用本模组翻译键，且中英文资源均包含该键。
+- 测试确认工具提示引用 EasyMagic 原生翻译键，且本模组中文资源包含对应补充翻译、英文资源不重复定义。
 - 全量运行 `clean test build`，确认 Mixin 编译、测试和重混淆 JAR 构建成功。
 - 游戏内检查普通神化、渡鸦和机械渡鸦界面：按钮无重叠、提示已翻译、点击后附魔选项刷新。
 
