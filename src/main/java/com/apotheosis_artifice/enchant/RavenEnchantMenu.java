@@ -33,11 +33,17 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
     public RavenEnchantMenu(int id, Inventory inv, float e, float q, float a) {
         super(id, inv);
         this.ravenStats = new RavenTableStats(e, q, a);
+        this.refreshEasyMagicStats();
     }
 
     public RavenEnchantMenu(int id, Inventory inv, ContainerLevelAccess access, RavenEnchantTile te, BlockPos pos, RavenTableStats stats) {
         super(id, inv, access, te);
         this.ravenStats = stats;
+        this.refreshEasyMagicStats();
+    }
+
+    private void refreshEasyMagicStats() {
+        if (EasyMagicCompat.isLoaded()) this.slotsChanged(this.enchantSlots);
     }
 
     public RavenTableStats getRavenStats() { return ravenStats; }
@@ -68,6 +74,7 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
 
     @Override
     public void gatherStats() {
+        if (this.ravenStats == null) return;
         this.access.evaluate((world, bp) -> {
             int ench = this.enchantSlots.getItem(0).getEnchantmentValue();
             var blockStats = ApothEnchantmentMenu.gatherStats(world, bp, ench);

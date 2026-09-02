@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.apotheosis_artifice.compat.EasyMagicCompat;
-import com.apotheosis_artifice.enchant.MechanicalRavenEnchantScreen;
 
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantScreen;
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu;
@@ -81,7 +80,6 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
     }
 
     private int artifice$rerollButtonX() {
-        if ((Object) this instanceof MechanicalRavenEnchantScreen) return this.leftPos - 40;
-        return this.leftPos + (EasyMagicCompat.dedicatedRerollButton() ? 12 : 14);
+        return this.leftPos - 40;
     }
 }

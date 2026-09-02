@@ -39,7 +39,13 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
     @Inject(method = "<init>(ILnet/minecraft/world/entity/player/Inventory;)V", at = @At("TAIL"))
     private void artifice$bindClientEasyMagicInventory(int id, Inventory inventory, CallbackInfo ci) {
         this.artifice$rememberPlayer(inventory);
-        if (EasyMagicCompat.isLoaded()) this.artifice$bindEasyMagicInventory(new SimpleContainer(2));
+        if (EasyMagicCompat.isLoaded()) this.artifice$bindEasyMagicInventory(new SimpleContainer(3) {
+            @Override
+            public void setChanged() {
+                super.setChanged();
+                ApothEnchantmentMenuMixin.this.slotsChanged(this);
+            }
+        });
     }
 
     @Inject(method = "<init>(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/inventory/ContainerLevelAccess;Ldev/shadowsoffire/apotheosis/ench/table/ApothEnchantTile;)V", at = @At("TAIL"), remap = false)
@@ -62,7 +68,7 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
         input.index = 0;
         this.slots.set(0, input);
         Slot oldFuel = this.slots.get(1);
-        Slot fuel = new Slot(oldFuel.container, oldFuel.getContainerSlot(), EasyMagicCompat.dedicatedRerollButton() ? 23 : 35, 47) {
+        Slot fuel = new Slot(inventory, 1, EasyMagicCompat.dedicatedRerollButton() ? 23 : 35, 47) {
             @Override public boolean mayPlace(ItemStack stack) {
                 return oldFuel.mayPlace(stack) || EasyMagicCompat.isEnchantingCatalyst(stack);
             }
@@ -70,11 +76,13 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
         fuel.index = 1;
         this.slots.set(1, fuel);
         if (EasyMagicCompat.dedicatedRerollButton()) {
-            this.addSlot(new Slot(inventory, 1, 41, 47) {
+            this.addSlot(new Slot(inventory, 2, 41, 47) {
                 @Override public boolean mayPlace(ItemStack stack) { return EasyMagicCompat.isRerollCatalyst(stack); }
             });
         }
-        this.slotsChanged(this.enchantSlots);
+        if (((Object) this).getClass() == ApothEnchantmentMenu.class) {
+            this.slotsChanged(this.enchantSlots);
+        }
     }
 
     @Inject(method = "clickMenuButton", at = @At("HEAD"), cancellable = true)

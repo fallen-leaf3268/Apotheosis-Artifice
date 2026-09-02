@@ -117,6 +117,80 @@ class EnchanterPearlCompatibilityTest {
         assertTrue(mixinConfig.contains("EnchantmentMenuEasyMagicMixin"));
     }
 
+    @Test
+    void easyMagicInventoryKeepsItsFixedSizeWhenTileDataLoads() throws IOException {
+        String tileMixin = read("mixin", "ApothEnchantTileEasyMagicMixin.java");
+
+        assertFalse(tileMixin.contains("artifice$easyMagicInventory.clearContent()"));
+        assertTrue(tileMixin.contains("artifice$easyMagicInventory.setItem(0, ItemStack.EMPTY)"));
+        assertTrue(tileMixin.contains("artifice$easyMagicInventory.setItem(1, ItemStack.EMPTY)"));
+    }
+
+    @Test
+    void easyMagicBindingDoesNotRefreshOverriddenMenuDuringSuperclassConstruction() throws IOException {
+        String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+        String ravenMenu = read("enchant", "RavenEnchantMenu.java");
+
+        assertTrue(menuMixin.contains("getClass() == ApothEnchantmentMenu.class"));
+        assertTrue(menuMixin.contains("ApothEnchantmentMenuMixin.this.slotsChanged(this)"));
+        assertTrue(ravenMenu.contains("if (this.ravenStats == null) return;"));
+    }
+
+    @Test
+    void easyMagicFuelAndRerollSlotsUseTheSameInventoryAsEnchantingLogic() throws IOException {
+        String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+        String tileMixin = read("mixin", "ApothEnchantTileEasyMagicMixin.java");
+        String compat = read("compat", "EasyMagicCompat.java");
+
+        assertFalse(menuMixin.contains("new Slot(oldFuel.container"));
+        assertTrue(menuMixin.contains("new Slot(inventory, 1,"));
+        assertTrue(menuMixin.contains("new Slot(inventory, 2, 41, 47)"));
+        assertTrue(tileMixin.contains("new SimpleContainer(3)"));
+        assertTrue(tileMixin.contains("ItemStack fuel = this.artifice$easyMagicInventory.getItem(1)"));
+        assertTrue(tileMixin.contains("ItemStack catalyst = this.artifice$easyMagicInventory.getItem(2)"));
+        assertTrue(compat.contains("return menu.enchantSlots.getItem(2).getCount()"));
+    }
+
+    @Test
+    void easyMagicInventoryChangesRefreshTheMenuWithoutRetainingClosedMenus() throws IOException {
+        String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+        String tileMixin = read("mixin", "ApothEnchantTileEasyMagicMixin.java");
+
+        assertTrue(menuMixin.contains("new SimpleContainer(3) {"));
+        assertTrue(menuMixin.contains("ApothEnchantmentMenuMixin.this.slotsChanged(this)"));
+        assertTrue(tileMixin.contains("menu.enchantSlots == this"));
+        assertTrue(tileMixin.contains("menu.slotsChanged(this)"));
+        assertFalse(menuMixin.contains("ContainerListener"));
+    }
+
+    @Test
+    void easyMagicPersistentInputInitializesApotheosisStatsAfterMenuConstruction() throws IOException {
+        String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+        String ravenMenu = read("enchant", "RavenEnchantMenu.java");
+
+        assertTrue(menuMixin.contains("getClass() == ApothEnchantmentMenu.class"));
+        assertTrue(menuMixin.contains("this.slotsChanged(this.enchantSlots)"));
+        assertTrue(ravenMenu.contains("private void refreshEasyMagicStats()"));
+        assertTrue(ravenMenu.contains("if (EasyMagicCompat.isLoaded()) this.slotsChanged(this.enchantSlots)"));
+        assertTrue(ravenMenu.split("refreshEasyMagicStats\\(\\);", -1).length - 1 >= 2);
+    }
+
+    @Test
+    void easyMagicRerollButtonUsesExternalApotheosisLayoutAndNativeTranslationKey() throws IOException {
+        String screenMixin = Files.readString(MAIN_JAVA.resolve("mixin").resolve("client")
+            .resolve("ApothEnchantScreenEasyMagicMixin.java"));
+        String zhCn = Files.readString(Path.of("src", "main", "resources", "assets",
+            "apotheosis_artifice", "lang", "zh_cn.json"));
+        String enUs = Files.readString(Path.of("src", "main", "resources", "assets",
+            "apotheosis_artifice", "lang", "en_us.json"));
+
+        assertTrue(screenMixin.contains("return this.leftPos - 40;"));
+        assertFalse(screenMixin.contains("this.leftPos + (EasyMagicCompat.dedicatedRerollButton()"));
+        assertTrue(screenMixin.contains("Component.translatable(\"container.enchant.reroll\")"));
+        assertTrue(zhCn.contains("\"container.enchant.reroll\": \"刷新附魔选项\""));
+        assertFalse(enUs.contains("\"container.enchant.reroll\""));
+    }
+
     private static String read(String directory, String file) throws IOException {
         return Files.readString(MAIN_JAVA.resolve(directory).resolve(file));
     }

@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
 
+import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu;
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantTile;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Container;
@@ -18,11 +19,18 @@ import net.minecraft.world.item.ItemStack;
 public abstract class ApothEnchantTileEasyMagicMixin implements EasyMagicEnchantingStorage {
 
     @Unique private static final String ARTIFICE_EASY_MAGIC_INVENTORY = "artifice_easy_magic_inventory";
-    @Unique private final SimpleContainer artifice$easyMagicInventory = new SimpleContainer(2) {
+    @Unique private final SimpleContainer artifice$easyMagicInventory = new SimpleContainer(3) {
         @Override
         public void setChanged() {
             super.setChanged();
-            ((ApothEnchantTile) (Object) ApothEnchantTileEasyMagicMixin.this).setChanged();
+            ApothEnchantTile tile = (ApothEnchantTile) (Object) ApothEnchantTileEasyMagicMixin.this;
+            tile.setChanged();
+            if (tile.getLevel() == null || tile.getLevel().isClientSide) return;
+            tile.getLevel().players().forEach(player -> {
+                if (player.containerMenu instanceof ApothEnchantmentMenu menu && menu.enchantSlots == this) {
+                    menu.slotsChanged(this);
+                }
+            });
         }
     };
 
@@ -35,18 +43,23 @@ public abstract class ApothEnchantTileEasyMagicMixin implements EasyMagicEnchant
     private void artifice$saveEasyMagicInventory(CompoundTag tag, CallbackInfo ci) {
         CompoundTag inventory = new CompoundTag();
         ItemStack input = this.artifice$easyMagicInventory.getItem(0);
-        ItemStack catalyst = this.artifice$easyMagicInventory.getItem(1);
+        ItemStack fuel = this.artifice$easyMagicInventory.getItem(1);
+        ItemStack catalyst = this.artifice$easyMagicInventory.getItem(2);
         if (!input.isEmpty()) inventory.put("input", input.save(new CompoundTag()));
+        if (!fuel.isEmpty()) inventory.put("fuel", fuel.save(new CompoundTag()));
         if (!catalyst.isEmpty()) inventory.put("catalyst", catalyst.save(new CompoundTag()));
         tag.put(ARTIFICE_EASY_MAGIC_INVENTORY, inventory);
     }
 
     @Inject(method = "load", at = @At("TAIL"))
     private void artifice$loadEasyMagicInventory(CompoundTag tag, CallbackInfo ci) {
-        this.artifice$easyMagicInventory.clearContent();
+        this.artifice$easyMagicInventory.setItem(0, ItemStack.EMPTY);
+        this.artifice$easyMagicInventory.setItem(1, ItemStack.EMPTY);
+        this.artifice$easyMagicInventory.setItem(2, ItemStack.EMPTY);
         if (!tag.contains(ARTIFICE_EASY_MAGIC_INVENTORY)) return;
         CompoundTag inventory = tag.getCompound(ARTIFICE_EASY_MAGIC_INVENTORY);
         if (inventory.contains("input")) this.artifice$easyMagicInventory.setItem(0, ItemStack.of(inventory.getCompound("input")));
-        if (inventory.contains("catalyst")) this.artifice$easyMagicInventory.setItem(1, ItemStack.of(inventory.getCompound("catalyst")));
+        if (inventory.contains("fuel")) this.artifice$easyMagicInventory.setItem(1, ItemStack.of(inventory.getCompound("fuel")));
+        if (inventory.contains("catalyst")) this.artifice$easyMagicInventory.setItem(2, ItemStack.of(inventory.getCompound("catalyst")));
     }
 }

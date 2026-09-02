@@ -62,7 +62,7 @@ public final class EasyMagicCompat {
     }
 
     public static int getRerollCatalystCount(ApothEnchantmentMenu menu) {
-        if (dedicatedRerollButton()) return menu.enchantSlots.getItem(1).getCount();
+        if (dedicatedRerollButton()) return menu.enchantSlots.getItem(2).getCount();
         return menu.getSlot(1).getItem().getCount();
     }
 
@@ -80,9 +80,9 @@ public final class EasyMagicCompat {
         if (!player.getAbilities().instabuild) {
             if (catalystCost > 0) {
                 if (dedicatedRerollButton()) {
-                    ItemStack catalyst = menu.enchantSlots.getItem(1);
+                    ItemStack catalyst = menu.enchantSlots.getItem(2);
                     catalyst.shrink(catalystCost);
-                    if (catalyst.isEmpty()) menu.enchantSlots.setItem(1, ItemStack.EMPTY);
+                    if (catalyst.isEmpty()) menu.enchantSlots.setItem(2, ItemStack.EMPTY);
                 } else {
                     ItemStack catalyst = menu.getSlot(1).getItem();
                     catalyst.shrink(catalystCost);
