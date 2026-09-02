@@ -184,11 +184,23 @@ class EnchanterPearlCompatibilityTest {
         String enUs = Files.readString(Path.of("src", "main", "resources", "assets",
             "apotheosis_artifice", "lang", "en_us.json"));
 
-        assertTrue(screenMixin.contains("return this.leftPos - 40;"));
+        assertTrue(screenMixin.contains("return this.leftPos - 38;"));
         assertFalse(screenMixin.contains("this.leftPos + (EasyMagicCompat.dedicatedRerollButton()"));
         assertTrue(screenMixin.contains("Component.translatable(\"container.enchant.reroll\")"));
         assertTrue(zhCn.contains("\"container.enchant.reroll\": \"刷新附魔选项\""));
         assertFalse(enUs.contains("\"container.enchant.reroll\""));
+    }
+
+    @Test
+    void easyMagicRerollButtonRestoresNativeIconAndCostLayers() throws IOException {
+        String screenMixin = Files.readString(MAIN_JAVA.resolve("mixin").resolve("client")
+            .resolve("ApothEnchantScreenEasyMagicMixin.java"));
+
+        assertTrue(screenMixin.contains("artifice$renderRerollContents(graphics"));
+        assertTrue(screenMixin.contains("graphics.blit(ARTIFICE_REROLL_TEXTURE, x + 12, y + 6, 64"));
+        assertTrue(screenMixin.contains("artifice$renderCostOrb("));
+        assertTrue(screenMixin.contains("Math.min(2, cost / 5) * 13"));
+        assertTrue(screenMixin.contains("graphics.drawString(this.font, value"));
     }
 
     private static String read(String directory, String file) throws IOException {
