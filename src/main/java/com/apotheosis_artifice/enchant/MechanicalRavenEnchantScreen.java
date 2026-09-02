@@ -16,21 +16,8 @@ public class MechanicalRavenEnchantScreen extends RavenEnchantScreen {
     private static final int INPUT_X = 15, INPUT_Y = 17;
     private static final int OUTPUT_X = 35, OUTPUT_Y = 17;
 
-    private boolean initSyncDone = false;
-
     public MechanicalRavenEnchantScreen(EnchantmentMenu container, Inventory inv, Component title) {
         super(container, inv, title);
-    }
-
-    @Override
-    public void containerTick() {
-        super.containerTick();
-        if (!initSyncDone) {
-            initSyncDone = true;
-            var rs = ((MechanicalRavenEnchantMenu) this.menu).getRavenStats();
-            com.apotheosis_artifice.ApotheosisNetwork.CHANNEL.sendToServer(
-                new SetRavenStatsPacket(rs.eterna(), rs.quanta(), rs.arcana()));
-        }
     }
 
     @Override

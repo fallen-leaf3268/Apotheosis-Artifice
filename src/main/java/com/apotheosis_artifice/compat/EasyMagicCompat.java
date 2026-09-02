@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
+import com.apotheosis_artifice.enchant.MechanicalRavenEnchantMenu;
 
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu;
 import net.minecraft.core.registries.Registries;
@@ -29,6 +30,12 @@ public final class EasyMagicCompat {
 
     public static boolean rerollEnchantments() {
         return getBoolean("rerollEnchantments", true);
+    }
+
+    public static boolean lenientBookshelves() {
+        if (!isLoaded()) return false;
+        boolean enabled = getBoolean("lenientBookshelves", true);
+        return available && enabled;
     }
 
     public static int rerollCatalystCost() {
@@ -82,7 +89,11 @@ public final class EasyMagicCompat {
 
         ItemStack input = menu.enchantSlots.getItem(0);
         player.onEnchantmentPerformed(input, 0);
-        menu.enchantmentSeed.set(player.getEnchantmentSeed());
+        int newSeed = player.getEnchantmentSeed();
+        menu.enchantmentSeed.set(newSeed);
+        if (menu instanceof MechanicalRavenEnchantMenu mechanical) {
+            mechanical.persistEnchantmentSeed(newSeed);
+        }
         if (!player.getAbilities().instabuild) {
             if (catalystCost > 0) {
                 if (dedicatedRerollButton()) {

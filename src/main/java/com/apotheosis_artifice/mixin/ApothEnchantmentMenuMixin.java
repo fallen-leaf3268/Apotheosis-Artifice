@@ -17,6 +17,7 @@ import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu;
 import dev.shadowsoffire.apotheosis.ench.table.StatsMessage;
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantTile;
 import dev.shadowsoffire.placebo.network.PacketDistro;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.Container;
@@ -25,6 +26,8 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.EnchantmentMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.shapes.Shapes;
 
 @Mixin(ApothEnchantmentMenu.class)
 public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
@@ -87,7 +90,24 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
 
     @Inject(method = "clickMenuButton", at = @At("HEAD"), cancellable = true)
     private void artifice$handleEasyMagicReroll(Player player, int data, CallbackInfoReturnable<Boolean> cir) {
+        if (data == 5) {
+            ApothEnchantmentMenu menu = (ApothEnchantmentMenu) (Object) this;
+            if (!player.level().isClientSide) menu.slotsChanged(menu.enchantSlots);
+            cir.setReturnValue(true);
+            return;
+        }
         if (data == 4) cir.setReturnValue(EasyMagicCompat.tryReroll((ApothEnchantmentMenu) (Object) this, player));
+    }
+
+    @Inject(method = "canReadStatsFrom", at = @At("HEAD"), cancellable = true, remap = false)
+    private static void artifice$allowLenientBookshelfPath(Level level, BlockPos tablePos,
+        BlockPos shelfOffset, CallbackInfoReturnable<Boolean> cir) {
+        if (!EasyMagicCompat.lenientBookshelves()) return;
+        BlockPos between = tablePos.offset(
+            shelfOffset.getX() / 2, shelfOffset.getY(), shelfOffset.getZ() / 2);
+        if (level.getBlockState(between).getCollisionShape(level, between) != Shapes.block()) {
+            cir.setReturnValue(true);
+        }
     }
 
     @Inject(method = "gatherStats", at = @At("TAIL"), remap = false)

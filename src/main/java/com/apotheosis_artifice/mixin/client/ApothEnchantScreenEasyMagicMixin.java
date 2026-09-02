@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -27,9 +28,18 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
 
     private static final ResourceLocation ARTIFICE_REROLL_TEXTURE = new ResourceLocation("easymagic", "textures/gui/container/enchanting_table_reroll.png");
     private static final ResourceLocation ARTIFICE_ENCHANTING_TEXTURE = new ResourceLocation("textures/gui/container/enchanting_table.png");
+    @Unique private boolean artifice$previewSyncPending = true;
 
     public ApothEnchantScreenEasyMagicMixin(ApothEnchantmentMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
+    }
+
+    @Inject(method = "containerTick", at = @At("TAIL"))
+    private void artifice$refreshPersistentPreview(CallbackInfo ci) {
+        if (!this.artifice$previewSyncPending) return;
+        this.artifice$previewSyncPending = false;
+        if (!EasyMagicCompat.isLoaded()) return;
+        this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, 5);
     }
 
     @Inject(method = "renderBg", at = @At("HEAD"))
@@ -45,8 +55,21 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
         int x = this.artifice$rerollButtonX();
         int y = this.topPos + 16;
         boolean hovered = mouseX > x && mouseX <= x + 38 && mouseY > y && mouseY <= y + 27;
+        this.artifice$renderAttachedFrame(graphics, x, y);
         graphics.blit(ARTIFICE_REROLL_TEXTURE, x, y, 0, !usable || missingResources ? 0 : hovered ? 54 : 27, 38, 27);
         if (usable) this.artifice$renderRerollContents(graphics, x, y, missingResources, hovered, experience, catalyst);
+    }
+
+    private void artifice$renderAttachedFrame(GuiGraphics graphics, int x, int y) {
+        graphics.fill(x - 5, y - 5, x + 42, y + 32, 0xFF373737);
+        graphics.fill(x - 4, y - 4, x + 42, y + 31, 0xFFC6C6C6);
+        graphics.fill(x - 4, y - 4, x + 42, y - 3, 0xFFFFFFFF);
+        graphics.fill(x - 4, y - 3, x - 3, y + 31, 0xFFFFFFFF);
+        graphics.fill(x - 3, y + 30, x + 42, y + 31, 0xFF555555);
+        graphics.fill(x - 1, y - 1, x + 39, y + 28, 0xFF555555);
+        graphics.fill(x, y, x + 39, y + 28, 0xFF8B8B8B);
+        graphics.fill(x, y + 27, x + 39, y + 28, 0xFFFFFFFF);
+        graphics.fill(x + 38, y, x + 39, y + 28, 0xFFFFFFFF);
     }
 
     @Inject(method = "renderBg", at = @At("TAIL"))
@@ -124,6 +147,6 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
     }
 
     private int artifice$rerollButtonX() {
-        return this.leftPos - 36;
+        return this.leftPos - 41;
     }
 }

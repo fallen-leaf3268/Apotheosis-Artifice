@@ -176,6 +176,25 @@ class EnchanterPearlCompatibilityTest {
     }
 
     @Test
+    void persistentInputRefreshesPreviewAfterClientScreenIsReady() throws IOException {
+        String screenMixin = Files.readString(MAIN_JAVA.resolve("mixin").resolve("client")
+            .resolve("ApothEnchantScreenEasyMagicMixin.java"));
+        String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+        String ravenScreen = read("enchant", "RavenEnchantScreen.java");
+        String mechanicalScreen = read("enchant", "MechanicalRavenEnchantScreen.java");
+        String statsPacket = read("enchant", "SetRavenStatsPacket.java");
+
+        assertTrue(screenMixin.contains("private boolean artifice$previewSyncPending = true;"));
+        assertTrue(screenMixin.contains("if (!this.artifice$previewSyncPending) return;"));
+        assertTrue(screenMixin.contains("handleInventoryButtonClick(this.menu.containerId, 5)"));
+        assertTrue(menuMixin.contains("if (data == 5)"));
+        assertTrue(menuMixin.contains("menu.slotsChanged(menu.enchantSlots);"));
+        assertFalse(ravenScreen.contains("previewSyncPending"));
+        assertFalse(mechanicalScreen.contains("initSyncDone"));
+        assertFalse(statsPacket.contains("boolean refreshPreview"));
+    }
+
+    @Test
     void easyMagicRerollButtonUsesExternalApotheosisLayoutAndNativeTranslationKey() throws IOException {
         String screenMixin = Files.readString(MAIN_JAVA.resolve("mixin").resolve("client")
             .resolve("ApothEnchantScreenEasyMagicMixin.java"));
@@ -184,7 +203,7 @@ class EnchanterPearlCompatibilityTest {
         String enUs = Files.readString(Path.of("src", "main", "resources", "assets",
             "apotheosis_artifice", "lang", "en_us.json"));
 
-        assertTrue(screenMixin.contains("return this.leftPos - 36;"));
+        assertTrue(screenMixin.contains("return this.leftPos - 41;"));
         assertTrue(screenMixin.contains("@Inject(method = \"renderBg\", at = @At(\"HEAD\"))"));
         assertTrue(screenMixin.contains("private void artifice$renderDedicatedCatalystSlot("));
         assertFalse(screenMixin.contains("this.leftPos + (EasyMagicCompat.dedicatedRerollButton()"));
@@ -206,6 +225,26 @@ class EnchanterPearlCompatibilityTest {
     }
 
     @Test
+    void easyMagicRerollButtonUsesAttachedVanillaStyleFrame() throws IOException {
+        String screenMixin = Files.readString(MAIN_JAVA.resolve("mixin").resolve("client")
+            .resolve("ApothEnchantScreenEasyMagicMixin.java"));
+
+        int frame = screenMixin.indexOf("this.artifice$renderAttachedFrame(graphics, x, y);");
+        int button = screenMixin.indexOf("graphics.blit(ARTIFICE_REROLL_TEXTURE, x, y");
+        assertTrue(frame >= 0);
+        assertTrue(button >= 0);
+        assertTrue(frame < button);
+        assertTrue(screenMixin.contains("private void artifice$renderAttachedFrame("));
+        assertTrue(screenMixin.contains("0xFFC6C6C6"));
+        assertTrue(screenMixin.contains("0xFFFFFFFF"));
+        assertTrue(screenMixin.contains("0xFF555555"));
+        assertTrue(screenMixin.contains("0xFF373737"));
+        assertTrue(screenMixin.contains("graphics.fill(x - 5, y - 5"));
+        assertTrue(screenMixin.contains("graphics.fill(x - 1, y - 1"));
+        assertTrue(screenMixin.contains("0xFF8B8B8B"));
+    }
+
+    @Test
     void enchanterPearlWaivesOnlyOrdinaryRerollCatalystCost() throws IOException {
         String compat = read("compat", "EasyMagicCompat.java");
         String screenMixin = Files.readString(MAIN_JAVA.resolve("mixin").resolve("client")
@@ -219,13 +258,46 @@ class EnchanterPearlCompatibilityTest {
     }
 
     @Test
-    void mechanicalRavenPersistsSuccessfulRerollSeed() throws IOException {
+    void mechanicalRavenPersistsRerollSeedBeforeOfferRecalculation() throws IOException {
+        String mechanicalMenu = read("enchant", "MechanicalRavenEnchantMenu.java");
+        String compat = read("compat", "EasyMagicCompat.java");
+
+        assertTrue(mechanicalMenu.contains("public void persistEnchantmentSeed(int seed)"));
+        assertTrue(mechanicalMenu.contains("this.tile.setEnchantmentSeed(seed);"));
+        assertTrue(mechanicalMenu.contains("this.tile.setChanged();"));
+        int persistSeed = compat.indexOf("mechanical.persistEnchantmentSeed(newSeed);");
+        int recalculateOffers = compat.indexOf("menu.slotsChanged(menu.enchantSlots);");
+        assertTrue(persistSeed >= 0);
+        assertTrue(recalculateOffers >= 0);
+        assertTrue(persistSeed < recalculateOffers);
+        assertFalse(mechanicalMenu.contains("boolean rerolled = super.clickMenuButton(player, id);"));
+    }
+
+    @Test
+    void mechanicalRavenPreservesManualEnchantSeedDuringNestedBroadcast() throws IOException {
         String mechanicalMenu = read("enchant", "MechanicalRavenEnchantMenu.java");
 
-        assertTrue(mechanicalMenu.contains("boolean rerolled = super.clickMenuButton(player, id);"));
-        assertTrue(mechanicalMenu.contains("if (id == 4 && rerolled && !player.level().isClientSide"));
-        assertTrue(mechanicalMenu.contains("this.tile.setEnchantmentSeed(this.enchantmentSeed.get());"));
-        assertTrue(mechanicalMenu.contains("this.tile.setChanged();"));
+        assertTrue(mechanicalMenu.contains("private boolean manualEnchantInProgress;"));
+        assertTrue(mechanicalMenu.contains("id >= 0 && id < 3"));
+        assertTrue(mechanicalMenu.contains("this.manualEnchantInProgress = true;"));
+        assertTrue(mechanicalMenu.contains("this.persistEnchantmentSeed(this.enchantmentSeed.get());"));
+        assertTrue(mechanicalMenu.contains("this.manualEnchantInProgress = false;"));
+        assertTrue(mechanicalMenu.contains("if (!this.manualEnchantInProgress)"));
+    }
+
+    @Test
+    void easyMagicLenientBookshelvesRemainOptionalForApotheosisTables() throws IOException {
+        String compat = read("compat", "EasyMagicCompat.java");
+        String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+
+        assertTrue(compat.contains("public static boolean lenientBookshelves()"));
+        assertTrue(compat.contains("getBoolean(\"lenientBookshelves\", true)"));
+        assertTrue(compat.contains("return available && enabled;"));
+        assertFalse(compat.contains("import fuzs.easymagic"));
+        assertTrue(menuMixin.contains("method = \"canReadStatsFrom\""));
+        assertTrue(menuMixin.contains("EasyMagicCompat.lenientBookshelves()"));
+        assertTrue(menuMixin.contains("getCollisionShape(level, between) != Shapes.block()"));
+        assertTrue(menuMixin.contains("cir.setReturnValue(true);"));
     }
 
     private static String read(String directory, String file) throws IOException {

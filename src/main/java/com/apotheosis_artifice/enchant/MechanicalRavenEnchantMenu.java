@@ -20,6 +20,7 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
     public MechanicalRavenEnchantTile getTile() { return tile; }
     private int inputIdx = -1, outputIdx = -1, dedicatedCatalystIdx = -1;
     private volatile boolean broadcasting = false;
+    private boolean manualEnchantInProgress;
     private int lastGoldCount = 0;
     private int autoTick = 0;
 
@@ -71,14 +72,25 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
         return lastGoldCount;
     }
 
-    @Override
-    public boolean clickMenuButton(Player player, int id) {
-        boolean rerolled = super.clickMenuButton(player, id);
-        if (id == 4 && rerolled && !player.level().isClientSide && this.tile != null) {
-            this.tile.setEnchantmentSeed(this.enchantmentSeed.get());
+    public void persistEnchantmentSeed(int seed) {
+        if (this.tile != null) {
+            this.tile.setEnchantmentSeed(seed);
             this.tile.setChanged();
         }
-        return rerolled;
+    }
+
+    @Override
+    public boolean clickMenuButton(Player player, int id) {
+        boolean manualEnchant = id >= 0 && id < 3 && !player.level().isClientSide && this.tile != null;
+        if (!manualEnchant) return super.clickMenuButton(player, id);
+        this.manualEnchantInProgress = true;
+        try {
+            boolean enchanted = super.clickMenuButton(player, id);
+            if (enchanted) this.persistEnchantmentSeed(this.enchantmentSeed.get());
+            return enchanted;
+        } finally {
+            this.manualEnchantInProgress = false;
+        }
     }
 
     private ItemStack lastS0 = ItemStack.EMPTY;
@@ -88,7 +100,9 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
         if (this.tile != null && inputIdx >= 0 && !broadcasting) {
             broadcasting = true;
             try {
-                this.enchantmentSeed.set((int) this.tile.getEnchantmentSeed());
+                if (!this.manualEnchantInProgress) {
+                    this.enchantmentSeed.set((int) this.tile.getEnchantmentSeed());
+                }
                 var io = this.tile.getIOInv();
                 var stats = this.tile.getRavenStats();
 
