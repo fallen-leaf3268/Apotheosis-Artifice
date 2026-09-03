@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.apotheosis_artifice.compat.EasyMagicCompat;
 import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
 import com.apotheosis_artifice.compat.EasyMagicInventoryMigration;
+import com.apotheosis_artifice.compat.EasyMagicInventoryMigrator;
 import com.apotheosis_artifice.compat.EnigmaticLegacyCompat;
 
 import dev.shadowsoffire.apotheosis.Apotheosis;
@@ -82,9 +83,18 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
         Container source = this.artifice$pendingEasyMagicInventory;
         if (source == null) return;
         this.artifice$pendingEasyMagicInventory = null;
-        this.artifice$moveOrReturnEasyMagicStack(source, 0, 0);
-        this.artifice$moveOrReturnEasyMagicStack(source, 1, 1);
-        this.artifice$returnEasyMagicStack(source, 2);
+        EasyMagicInventoryMigrator.migrate(new EasyMagicInventoryMigrator.Source<ItemStack>() {
+            @Override public ItemStack get(int slot) { return source.getItem(slot); }
+            @Override public void clear(int slot) { source.setItem(slot, ItemStack.EMPTY); }
+        }, new EasyMagicInventoryMigrator.Target<ItemStack>() {
+            @Override public boolean hasItem() { return ApothEnchantmentMenuMixin.this.slots.get(0).hasItem(); }
+            @Override public boolean mayPlace(ItemStack stack) { return ApothEnchantmentMenuMixin.this.slots.get(0).mayPlace(stack); }
+            @Override public void set(ItemStack stack) { ApothEnchantmentMenuMixin.this.slots.get(0).set(stack); }
+        }, new EasyMagicInventoryMigrator.Target<ItemStack>() {
+            @Override public boolean hasItem() { return ApothEnchantmentMenuMixin.this.slots.get(1).hasItem(); }
+            @Override public boolean mayPlace(ItemStack stack) { return ApothEnchantmentMenuMixin.this.slots.get(1).mayPlace(stack); }
+            @Override public void set(ItemStack stack) { ApothEnchantmentMenuMixin.this.slots.get(1).set(stack); }
+        }, this.artifice$playerInventory::placeItemBackInInventory, ItemStack::copy, ItemStack::isEmpty);
     }
 
     @Unique

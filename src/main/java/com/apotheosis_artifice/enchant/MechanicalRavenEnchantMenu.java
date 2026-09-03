@@ -75,10 +75,22 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
 
     @Override
     public int getGoldCount() {
-        if (EnigmaticLegacyCompat.isEnchanterPearlActive(this.player)) return 64;
-        if (this.tile != null) { lastGoldCount = this.tile.getFuelInv().getStackInSlot(0).getCount(); return lastGoldCount; }
+        boolean pearlActive = EnigmaticLegacyCompat.isEnchanterPearlActive(this.player);
+        if (this.tile != null) {
+            int v = this.tile.getFuelInv().getStackInSlot(0).getCount();
+            int result = resolveGoldCount(pearlActive, v, lastGoldCount);
+            if (!pearlActive && v > 0) lastGoldCount = result;
+            return result;
+        }
         int v = this.getSlot(1).getItem().getCount();
-        if (v > 0) lastGoldCount = v;
+        int result = resolveGoldCount(pearlActive, v, lastGoldCount);
+        if (!pearlActive && v > 0) lastGoldCount = result;
+        return result;
+    }
+
+    static int resolveGoldCount(boolean pearlActive, int fuelCount, int lastGoldCount) {
+        if (pearlActive) return 64;
+        if (fuelCount > 0) return fuelCount;
         return lastGoldCount;
     }
 

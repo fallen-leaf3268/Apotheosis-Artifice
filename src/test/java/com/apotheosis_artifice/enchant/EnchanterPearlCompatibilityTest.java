@@ -1,18 +1,23 @@
 package com.apotheosis_artifice.enchant;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
+import com.apotheosis_artifice.compat.EasyMagicInventoryMigrator;
 import org.junit.jupiter.api.Test;
 
 class EnchanterPearlCompatibilityTest {
 
     private static final Path MAIN_JAVA = Path.of("src", "main", "java", "com", "apotheosis_artifice");
     private static final Path MIXIN_CONFIG = Path.of("src", "main", "resources", "apotheosis_artifice.mixins.json");
+
 
     @Test
     void enchanterPearlCompatibilityOnlyEnablesTreasure() throws IOException {
@@ -68,15 +73,17 @@ class EnchanterPearlCompatibilityTest {
         int pearlCheck = mechanicalMenu.indexOf(
             "EnigmaticLegacyCompat.isEnchanterPearlActive(this.player)", method);
         int fuelRead = mechanicalMenu.indexOf("this.tile.getFuelInv()", method);
+        int decision = mechanicalMenu.indexOf("resolveGoldCount(pearlActive", method);
         assertTrue(method >= 0);
         assertTrue(pearlCheck > method);
         assertTrue(fuelRead > pearlCheck);
-        assertTrue(mechanicalMenu.substring(pearlCheck, fuelRead).contains("return 64;"));
+        assertTrue(decision > pearlCheck);
     }
 
     @Test
     void removingEasyMagicMigratesPersistentItemsAfterMenuConstruction() throws IOException {
         String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+        String migrator = read("compat", "EasyMagicInventoryMigrator.java");
         String migrationMixin = read("mixin", "AbstractContainerMenuEasyMagicMigrationMixin.java");
         String migrationInterface = read("compat", "EasyMagicInventoryMigration.java");
         String mechanicalMenu = read("enchant", "MechanicalRavenEnchantMenu.java");
@@ -94,14 +101,71 @@ class EnchanterPearlCompatibilityTest {
         assertTrue(migrationInterface.contains("artifice$migrateEasyMagicInventory"));
         assertTrue(mixinConfig.contains("AbstractContainerMenuEasyMagicMigrationMixin"));
         assertTrue(menuMixin.contains("if (EasyMagicCompat.isLoaded())"));
-        assertTrue(menuMixin.contains("this.artifice$moveOrReturnEasyMagicStack(source, 0, 0)"));
-        assertTrue(menuMixin.contains("this.artifice$moveOrReturnEasyMagicStack(source, 1, 1)"));
-        assertTrue(menuMixin.contains("this.artifice$returnEasyMagicStack(source, 2)"));
-        assertTrue(menuMixin.contains("target.mayPlace(stack)"));
-        assertTrue(menuMixin.contains("placeItemBackInInventory(stack)"));
-        assertTrue(menuMixin.contains("source.setItem(sourceSlot, ItemStack.EMPTY)"));
+        assertTrue(menuMixin.contains("EasyMagicInventoryMigrator.migrate(new EasyMagicInventoryMigrator.Source<ItemStack>()"));
+        assertTrue(migrator.contains("target.mayPlace(moved)"));
+        assertTrue(migrator.contains("returnStack.accept(moved)"));
+        assertTrue(migrator.contains("source.clear(sourceSlot)"));
         assertTrue(mechanicalMenu.contains("pendingEasyMagicInput"));
         assertTrue(mechanicalMenu.contains("placeItemBackInInventory(fromSave.copy())"));
+    }
+
+    @Test
+    void easyMagicInventoryMigratorMovesStacksAndIsIdempotent() {
+        MemorySource source = new MemorySource("input", "fuel", "catalyst");
+        MemoryTarget input = new MemoryTarget();
+        MemoryTarget fuel = new MemoryTarget();
+        List<String> returned = new ArrayList<>();
+
+        EasyMagicInventoryMigrator.migrate(source, input, fuel, returned::add, String::new, String::isEmpty);
+
+        assertEquals("input", input.value);
+        assertEquals("fuel", fuel.value);
+        assertEquals(List.of("catalyst"), returned);
+        assertTrue(source.isEmpty());
+
+        EasyMagicInventoryMigrator.migrate(source, input, fuel, returned::add, String::new, String::isEmpty);
+        assertEquals(List.of("catalyst"), returned);
+    }
+
+    @Test
+    void easyMagicInventoryMigratorReturnsOccupiedOrInvalidTargets() {
+        MemorySource source = new MemorySource("input", "fuel", "");
+        MemoryTarget occupied = new MemoryTarget("existing");
+        MemoryTarget invalid = new MemoryTarget();
+        invalid.accepts = false;
+        List<String> returned = new ArrayList<>();
+
+        EasyMagicInventoryMigrator.migrate(source, occupied, invalid, returned::add, String::new, String::isEmpty);
+
+        assertEquals(List.of("input", "fuel"), returned);
+        assertEquals("existing", occupied.value);
+        assertTrue(source.isEmpty());
+    }
+
+    @Test
+    void mechanicalRavenGoldCountDecisionUsesPearlOrRealFuel() {
+        assertEquals(64, MechanicalRavenEnchantMenu.resolveGoldCount(true, 0, 0));
+        assertEquals(7, MechanicalRavenEnchantMenu.resolveGoldCount(false, 7, 0));
+    }
+
+    private static final class MemorySource implements EasyMagicInventoryMigrator.Source<String> {
+        private final String[] values;
+
+        private MemorySource(String... values) { this.values = values; }
+        @Override public String get(int slot) { return values[slot]; }
+        @Override public void clear(int slot) { values[slot] = ""; }
+        private boolean isEmpty() { return List.of(values).stream().allMatch(String::isEmpty); }
+    }
+
+    private static final class MemoryTarget implements EasyMagicInventoryMigrator.Target<String> {
+        private String value = "";
+        private boolean accepts = true;
+
+        private MemoryTarget() {}
+        private MemoryTarget(String value) { this.value = value; }
+        @Override public boolean hasItem() { return !value.isEmpty(); }
+        @Override public boolean mayPlace(String stack) { return accepts; }
+        @Override public void set(String stack) { value = stack; }
     }
 
     @Test
