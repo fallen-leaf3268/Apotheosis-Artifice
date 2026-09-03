@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.apotheosis_artifice.compat.EasyMagicCompat;
 import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
+import com.apotheosis_artifice.compat.EasyMagicInventoryMigration;
 import com.apotheosis_artifice.compat.EnigmaticLegacyCompat;
 
 import dev.shadowsoffire.apotheosis.Apotheosis;
@@ -32,7 +33,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.shapes.Shapes;
 
 @Mixin(ApothEnchantmentMenu.class)
-public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
+public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implements EasyMagicInventoryMigration {
 
     @Shadow(remap = false) protected ApothEnchantmentMenu.TableStats stats;
     @Unique private Player artifice$menuPlayer;
@@ -62,7 +63,7 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
         if (EasyMagicCompat.isLoaded()) {
             this.artifice$bindEasyMagicInventory(storage.getEasyMagicInventory());
         } else {
-            this.artifice$pendingEasyMagicInventory = storage.getEasyMagicInventory();
+            this.artifice$queueEasyMagicInventoryMigration(storage.getEasyMagicInventory());
         }
     }
 
@@ -71,8 +72,13 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
         this.artifice$playerInventory = inventory;
     }
 
-    @Inject(method = "broadcastChanges", at = @At("HEAD"))
-    private void artifice$migrateEasyMagicInventory(CallbackInfo ci) {
+    @Unique
+    private void artifice$queueEasyMagicInventoryMigration(Container inventory) {
+        this.artifice$pendingEasyMagicInventory = inventory;
+    }
+
+    @Override
+    public void artifice$migrateEasyMagicInventory() {
         Container source = this.artifice$pendingEasyMagicInventory;
         if (source == null) return;
         this.artifice$pendingEasyMagicInventory = null;

@@ -28,6 +28,7 @@
         "GemGetBonusMixin",
         "LivingEntityMixin",
         "ApothEnchantmentMenuMixin",
+        "AbstractContainerMenuEasyMagicMigrationMixin",
         "EnchantmentMenuEasyMagicMixin",
         "ApothEnchantTileEasyMagicMixin",
         "TableStatsClampMixin",

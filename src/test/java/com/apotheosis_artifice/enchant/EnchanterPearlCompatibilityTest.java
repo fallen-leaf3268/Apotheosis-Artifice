@@ -77,10 +77,22 @@ class EnchanterPearlCompatibilityTest {
     @Test
     void removingEasyMagicMigratesPersistentItemsAfterMenuConstruction() throws IOException {
         String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+        String migrationMixin = read("mixin", "AbstractContainerMenuEasyMagicMigrationMixin.java");
+        String migrationInterface = read("compat", "EasyMagicInventoryMigration.java");
         String mechanicalMenu = read("enchant", "MechanicalRavenEnchantMenu.java");
+        String mixinConfig = Files.readString(MIXIN_CONFIG);
 
         assertTrue(menuMixin.contains("artifice$pendingEasyMagicInventory"));
-        assertTrue(menuMixin.contains("@Inject(method = \"broadcastChanges\", at = @At(\"HEAD\"))"));
+        assertTrue(menuMixin.contains("implements EasyMagicInventoryMigration"));
+        assertTrue(menuMixin.contains("artifice$queueEasyMagicInventoryMigration"));
+        assertFalse(menuMixin.contains("@Inject(method = \"broadcastChanges\""));
+        assertTrue(migrationMixin.contains("@Mixin(AbstractContainerMenu.class)"));
+        assertTrue(migrationMixin.contains("broadcastChanges"));
+        assertTrue(migrationMixin.contains("instanceof EasyMagicInventoryMigration migration"));
+        assertTrue(migrationMixin.contains("migration.artifice$migrateEasyMagicInventory()"));
+        assertTrue(migrationInterface.contains("interface EasyMagicInventoryMigration"));
+        assertTrue(migrationInterface.contains("artifice$migrateEasyMagicInventory"));
+        assertTrue(mixinConfig.contains("AbstractContainerMenuEasyMagicMigrationMixin"));
         assertTrue(menuMixin.contains("if (EasyMagicCompat.isLoaded())"));
         assertTrue(menuMixin.contains("this.artifice$moveOrReturnEasyMagicStack(source, 0, 0)"));
         assertTrue(menuMixin.contains("this.artifice$moveOrReturnEasyMagicStack(source, 1, 1)"));
