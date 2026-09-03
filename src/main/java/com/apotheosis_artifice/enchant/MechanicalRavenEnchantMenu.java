@@ -3,6 +3,7 @@ package com.apotheosis_artifice.enchant;
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.compat.EnigmaticLegacyCompat;
 import com.apotheosis_artifice.compat.EasyMagicCompat;
+import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
@@ -35,7 +36,14 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
                 this.enchantSlots.setItem(0, fromSave.copy());
                 te.setSavedEnchantSlot(ItemStack.EMPTY);
             } else if (!EasyMagicCompat.isLoaded()) {
-                this.enchantSlots.setItem(0, fromSave.copy());
+                boolean pendingEasyMagicInput = te instanceof EasyMagicEnchantingStorage storage
+                    && !storage.getEasyMagicInventory().getItem(0).isEmpty();
+                if (pendingEasyMagicInput || !this.enchantSlots.getItem(0).isEmpty()) {
+                    inv.placeItemBackInInventory(fromSave.copy());
+                    te.setSavedEnchantSlot(ItemStack.EMPTY);
+                } else {
+                    this.enchantSlots.setItem(0, fromSave.copy());
+                }
             }
         }
     }

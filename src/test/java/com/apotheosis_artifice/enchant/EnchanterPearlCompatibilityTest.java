@@ -75,6 +75,24 @@ class EnchanterPearlCompatibilityTest {
     }
 
     @Test
+    void removingEasyMagicMigratesPersistentItemsAfterMenuConstruction() throws IOException {
+        String menuMixin = read("mixin", "ApothEnchantmentMenuMixin.java");
+        String mechanicalMenu = read("enchant", "MechanicalRavenEnchantMenu.java");
+
+        assertTrue(menuMixin.contains("artifice$pendingEasyMagicInventory"));
+        assertTrue(menuMixin.contains("@Inject(method = \"broadcastChanges\", at = @At(\"HEAD\"))"));
+        assertTrue(menuMixin.contains("if (EasyMagicCompat.isLoaded())"));
+        assertTrue(menuMixin.contains("this.artifice$moveOrReturnEasyMagicStack(source, 0, 0)"));
+        assertTrue(menuMixin.contains("this.artifice$moveOrReturnEasyMagicStack(source, 1, 1)"));
+        assertTrue(menuMixin.contains("this.artifice$returnEasyMagicStack(source, 2)"));
+        assertTrue(menuMixin.contains("target.mayPlace(stack)"));
+        assertTrue(menuMixin.contains("placeItemBackInInventory(stack)"));
+        assertTrue(menuMixin.contains("source.setItem(sourceSlot, ItemStack.EMPTY)"));
+        assertTrue(mechanicalMenu.contains("pendingEasyMagicInput"));
+        assertTrue(mechanicalMenu.contains("placeItemBackInInventory(fromSave.copy())"));
+    }
+
+    @Test
     void socketingRecipeOverwriteUsesMappedDevelopmentName() throws IOException {
         String mixin = read("mixin", "SocketingRecipeMixin.java");
 

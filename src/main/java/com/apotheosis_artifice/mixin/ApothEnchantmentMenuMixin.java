@@ -36,6 +36,8 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
 
     @Shadow(remap = false) protected ApothEnchantmentMenu.TableStats stats;
     @Unique private Player artifice$menuPlayer;
+    @Unique private Inventory artifice$playerInventory;
+    @Unique private Container artifice$pendingEasyMagicInventory;
 
     protected ApothEnchantmentMenuMixin(int id, Inventory inventory) {
         super(id, inventory);
@@ -56,13 +58,48 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu {
     @Inject(method = "<init>(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/inventory/ContainerLevelAccess;Ldev/shadowsoffire/apotheosis/ench/table/ApothEnchantTile;)V", at = @At("TAIL"), remap = false)
     private void artifice$bindServerEasyMagicInventory(int id, Inventory inventory, ContainerLevelAccess access, ApothEnchantTile tile, CallbackInfo ci) {
         this.artifice$rememberPlayer(inventory);
-        if (EasyMagicCompat.isLoaded() && tile instanceof EasyMagicEnchantingStorage storage) {
+        if (!(tile instanceof EasyMagicEnchantingStorage storage)) return;
+        if (EasyMagicCompat.isLoaded()) {
             this.artifice$bindEasyMagicInventory(storage.getEasyMagicInventory());
+        } else {
+            this.artifice$pendingEasyMagicInventory = storage.getEasyMagicInventory();
         }
     }
 
     private void artifice$rememberPlayer(Inventory inventory) {
         this.artifice$menuPlayer = inventory.player;
+        this.artifice$playerInventory = inventory;
+    }
+
+    @Inject(method = "broadcastChanges", at = @At("HEAD"))
+    private void artifice$migrateEasyMagicInventory(CallbackInfo ci) {
+        Container source = this.artifice$pendingEasyMagicInventory;
+        if (source == null) return;
+        this.artifice$pendingEasyMagicInventory = null;
+        this.artifice$moveOrReturnEasyMagicStack(source, 0, 0);
+        this.artifice$moveOrReturnEasyMagicStack(source, 1, 1);
+        this.artifice$returnEasyMagicStack(source, 2);
+    }
+
+    @Unique
+    private void artifice$moveOrReturnEasyMagicStack(Container source, int sourceSlot, int targetSlot) {
+        ItemStack stack = source.getItem(sourceSlot).copy();
+        if (stack.isEmpty()) return;
+        Slot target = this.slots.get(targetSlot);
+        if (!target.hasItem() && target.mayPlace(stack)) {
+            target.set(stack);
+        } else {
+            this.artifice$playerInventory.placeItemBackInInventory(stack);
+        }
+        source.setItem(sourceSlot, ItemStack.EMPTY);
+    }
+
+    @Unique
+    private void artifice$returnEasyMagicStack(Container source, int sourceSlot) {
+        ItemStack stack = source.getItem(sourceSlot).copy();
+        if (stack.isEmpty()) return;
+        this.artifice$playerInventory.placeItemBackInInventory(stack);
+        source.setItem(sourceSlot, ItemStack.EMPTY);
     }
 
     private void artifice$bindEasyMagicInventory(Container inventory) {
