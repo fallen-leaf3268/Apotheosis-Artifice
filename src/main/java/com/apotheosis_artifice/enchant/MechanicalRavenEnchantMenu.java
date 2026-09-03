@@ -1,6 +1,7 @@
 package com.apotheosis_artifice.enchant;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
+import com.apotheosis_artifice.compat.EnigmaticLegacyCompat;
 import com.apotheosis_artifice.compat.EasyMagicCompat;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -66,6 +67,7 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
 
     @Override
     public int getGoldCount() {
+        if (EnigmaticLegacyCompat.isEnchanterPearlActive(this.player)) return 64;
         if (this.tile != null) { lastGoldCount = this.tile.getFuelInv().getStackInSlot(0).getCount(); return lastGoldCount; }
         int v = this.getSlot(1).getItem().getCount();
         if (v > 0) lastGoldCount = v;

@@ -56,9 +56,22 @@ class EnchanterPearlCompatibilityTest {
         assertTrue(ravenMenu.contains("EnigmaticLegacyCompat.enableTreasure("));
         assertFalse(ravenMenu.contains("mergePearlEnchantments"));
         assertFalse(ravenMenu.contains("public int getGoldCount()"));
-        assertFalse(mechanicalMenu.contains("EnigmaticLegacyCompat"));
         assertFalse(mixin.contains("mergePearlEnchantments"));
         assertFalse(mixin.contains("EnchantmentHelper.enchantItem"));
+    }
+
+    @Test
+    void mechanicalRavenShowsPearlEnchantmentsAsAvailableWithoutLapis() throws IOException {
+        String mechanicalMenu = read("enchant", "MechanicalRavenEnchantMenu.java");
+
+        int method = mechanicalMenu.indexOf("public int getGoldCount()");
+        int pearlCheck = mechanicalMenu.indexOf(
+            "EnigmaticLegacyCompat.isEnchanterPearlActive(this.player)", method);
+        int fuelRead = mechanicalMenu.indexOf("this.tile.getFuelInv()", method);
+        assertTrue(method >= 0);
+        assertTrue(pearlCheck > method);
+        assertTrue(fuelRead > pearlCheck);
+        assertTrue(mechanicalMenu.substring(pearlCheck, fuelRead).contains("return 64;"));
     }
 
     @Test
