@@ -18,3 +18,7 @@ src_backup_before_gemcase/
 
 # local worktrees
 .worktrees/
+
+# local-only project materials
+/docs/
+/src/test/
