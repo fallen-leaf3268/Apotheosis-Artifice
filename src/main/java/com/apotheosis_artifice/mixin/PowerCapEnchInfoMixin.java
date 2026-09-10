@@ -19,6 +19,6 @@ public class PowerCapEnchInfoMixin {
             remap = false),
         remap = false)
     private static float artifice_powerCap() {
-        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.MAX_ETERNA.get());
+        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
     }
 }

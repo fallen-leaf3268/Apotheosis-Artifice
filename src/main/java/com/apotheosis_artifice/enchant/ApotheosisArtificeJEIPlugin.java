@@ -19,12 +19,17 @@ import com.apotheosis_artifice.jei.AffixGemEntry;
 import dev.shadowsoffire.apotheosis.adventure.affix.Affix;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixType;
 import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingTableBlock;
+import dev.shadowsoffire.apotheosis.adventure.compat.ApothSmithingCategory;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
+import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
 import dev.shadowsoffire.apotheosis.ench.compat.EnchantingCategory;
 import dev.shadowsoffire.apotheosis.ench.table.EnchantingRecipe;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
@@ -34,12 +39,16 @@ import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -53,6 +62,10 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
 
     private AffixDetailCategory suffixCategory;
     private AffixDetailCategory prefixCategory;
+
+    public ApotheosisArtificeJEIPlugin() {
+        ApothSmithingCategory.registerExtension(CleansingRecipe.class, new CleansingExtension());
+    }
 
     @Override public ResourceLocation getPluginUid() { return new ResourceLocation(ApotheosisArtificeMod.MODID, "enchant"); }
 
@@ -186,6 +199,30 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
 
     private static IRecipeTransferHandlerHelper TRANSFER_HELPER;
 
+    private static class CleansingExtension implements ApothSmithingCategory.Extension<CleansingRecipe> {
+        @Override
+        public void setRecipe(IRecipeLayoutBuilder builder, CleansingRecipe recipe, IFocusGroup focuses) {
+            List<ItemStack> inputs = List.of(Items.GOLDEN_SWORD, Items.DIAMOND_PICKAXE, Items.IRON_CHESTPLATE, Items.BOW)
+                .stream().map(ItemStack::new).map(stack -> {
+                    SocketHelper.setSockets(stack, 1);
+                    return stack;
+                }).toList();
+            List<ItemStack> outputs = inputs.stream().map(stack ->
+                recipe.assemble(new SimpleContainer(ItemStack.EMPTY, stack, ItemStack.EMPTY), RegistryAccess.EMPTY)).toList();
+            builder.addSlot(RecipeIngredientRole.INPUT, 35, 1).addItemStacks(inputs);
+            builder.addSlot(RecipeIngredientRole.INPUT, 53, 1)
+                .addItemStack(new ItemStack(ApotheosisArtificeMod.SIGIL_OF_CLEANSING.get()));
+            builder.addSlot(RecipeIngredientRole.OUTPUT, 107, 1).addItemStacks(outputs);
+        }
+
+        @Override
+        public void draw(CleansingRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics gfx, double mouseX, double mouseY) {
+            Component text = Component.translatable("text.apotheosis.gems_returned");
+            var font = Minecraft.getInstance().font;
+            gfx.drawString(font, text, 70 - font.width(text) / 2, 23, 0, false);
+        }
+    }
+
     private static class RavenTransferHandler implements IRecipeTransferHandler<RavenEnchantMenu, EnchantingRecipe> {
         @Override public Class<? extends RavenEnchantMenu> getContainerClass() { return RavenEnchantMenu.class; }
         @Override public Optional<MenuType<RavenEnchantMenu>> getMenuType() {
@@ -197,15 +234,12 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         public IRecipeTransferError transferRecipe(RavenEnchantMenu container, EnchantingRecipe recipe,
             IRecipeSlotsView recipeSlots, Player player, boolean maxTransfer, boolean doTransfer) {
             if (container instanceof MechanicalRavenEnchantMenu) return null;
-            if (!doTransfer) return null;
             Inventory inv = player.getInventory();
             ItemStack inputItem = ItemStack.EMPTY;
             for (int i = 0; i < inv.getContainerSize(); i++) {
                 ItemStack stack = inv.getItem(i);
                 if (!stack.isEmpty() && recipe.getInput().test(stack)) {
-                    inputItem = stack.copy(); inputItem.setCount(1); stack.shrink(1);
-                    container.getSlot(0).set(inputItem.copy());
-                    container.slotsChanged(container.enchantSlots);
+                    inputItem = stack.copy(); inputItem.setCount(1);
                     break;
                 }
             }
@@ -216,6 +250,7 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
                 }
                 return null;
             }
+            if (!doTransfer) return null;
             float e = recipe.getRequirements().eterna();
             float q = recipe.getRequirements().quanta();
             float a = recipe.getRequirements().arcana();
@@ -238,7 +273,6 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         @Override @Nullable
         public IRecipeTransferError transferRecipe(MechanicalRavenEnchantMenu container, EnchantingRecipe recipe,
             IRecipeSlotsView recipeSlots, Player player, boolean maxTransfer, boolean doTransfer) {
-            if (!doTransfer) return null;
             Inventory inv = player.getInventory();
             ItemStack inputItem = ItemStack.EMPTY;
             for (int i = 0; i < inv.getContainerSize(); i++) {
@@ -249,7 +283,11 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
                     break;
                 }
             }
-            if (inputItem.isEmpty()) return null;
+            if (inputItem.isEmpty()) {
+                return TRANSFER_HELPER == null ? null : TRANSFER_HELPER.createUserErrorWithTooltip(
+                    Component.translatable("jei.apotheosis_artifice.transfer.no_matching_item"));
+            }
+            if (!doTransfer) return null;
             ItemStack sendItem = inputItem;
             float e = recipe.getRequirements().eterna();
             float q = recipe.getRequirements().quanta();

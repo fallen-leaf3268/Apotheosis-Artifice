@@ -26,7 +26,8 @@ public abstract class EnchantmentMenuEasyMagicMixin extends AbstractContainerMen
 
     @Inject(method = "removed", at = @At("HEAD"), cancellable = true)
     private void artifice$keepEasyMagicInventory(Player player, CallbackInfo ci) {
-        if (!EasyMagicCompat.isLoaded() || !((Object) this instanceof ApothEnchantmentMenu)) return;
+        if (!((Object) this instanceof ApothEnchantmentMenu)
+            || (!EasyMagicCompat.isLoaded() && !((Object) this instanceof MechanicalRavenEnchantMenu))) return;
         EnchantmentMenu menu = (EnchantmentMenu) (Object) this;
         if (player instanceof ServerPlayer serverPlayer) {
             ItemStack carried = menu.getCarried();

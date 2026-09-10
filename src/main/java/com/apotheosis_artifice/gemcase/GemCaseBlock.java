@@ -140,7 +140,7 @@ public class GemCaseBlock extends HorizontalDirectionalBlock implements EntityBl
         return true;
     }
 
-    public static String formatCount(int n) {
+    public static String formatCount(long n) {
         if (n <= 9999) return String.valueOf(n);
         int log = (int) Math.log10(n);
         if (log <= 6) {

@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.apotheosis_artifice.compat.EasyMagicCompat;
+import com.apotheosis_artifice.enchant.MechanicalRavenEnchantMenu;
 
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantScreen;
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu;
@@ -38,7 +39,7 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
     private void artifice$refreshPersistentPreview(CallbackInfo ci) {
         if (!this.artifice$previewSyncPending) return;
         this.artifice$previewSyncPending = false;
-        if (!EasyMagicCompat.isLoaded()) return;
+        if (!EasyMagicCompat.isLoaded() && !(this.menu instanceof MechanicalRavenEnchantMenu)) return;
         this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, 5);
     }
 

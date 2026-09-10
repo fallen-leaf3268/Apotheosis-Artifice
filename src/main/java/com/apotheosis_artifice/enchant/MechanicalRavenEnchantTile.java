@@ -1,11 +1,11 @@
 package com.apotheosis_artifice.enchant;
 
-import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.compat.EasyMagicCompat;
 import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
@@ -41,10 +41,31 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     private String contName = "";
 
     private long enchantmentSeed = 0;
-    private ItemStack savedEnchantSlot = ItemStack.EMPTY;
+    private ItemStack pendingOutput = ItemStack.EMPTY;
+    private final SimpleContainer enchantInventory = new SimpleContainer(2) {
+        @Override
+        public void setChanged() {
+            super.setChanged();
+            MechanicalRavenEnchantTile.this.setChanged();
+            if (level == null || level.isClientSide) return;
+            level.players().forEach(player -> {
+                if (player.containerMenu instanceof MechanicalRavenEnchantMenu menu && menu.enchantSlots == this) {
+                    menu.slotsChanged(this);
+                }
+            });
+        }
+    };
 
-    public ItemStack getSavedEnchantSlot() { return savedEnchantSlot; }
-    public void setSavedEnchantSlot(ItemStack stack) { this.savedEnchantSlot = stack.copy(); setChanged(); }
+    public Container getEnchantInventory() { return this.enchantInventory; }
+    public ItemStack getSavedEnchantSlot() { return this.enchantInventory.getItem(0); }
+    public void setSavedEnchantSlot(ItemStack stack) { this.enchantInventory.setItem(0, stack.copy()); }
+
+    private Container getActiveEnchantInventory() {
+        if ((Object) this instanceof EasyMagicEnchantingStorage storage && EasyMagicCompat.isLoaded()) {
+            return storage.getEasyMagicInventory();
+        }
+        return this.enchantInventory;
+    }
 
     private final ItemStackHandler ioInv = new ItemStackHandler(2) {
         @Override
@@ -56,20 +77,21 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         }
     };
 
-    private LazyOptional<IItemHandler> ioCap = LazyOptional.of(() -> new IItemHandler() {
-        private int fuelSlots() { return inv != null ? inv.getSlots() : 0; }
+    private LazyOptional<IItemHandler> ioCap = LazyOptional.of(this::createIOHandler);
+
+    private IItemHandler createIOHandler() {
+        return new IItemHandler() {
         @Override public int getSlots() { return 3; }
         @Override public ItemStack getStackInSlot(int slot) {
             if (slot == 0) return ioInv.getStackInSlot(0);
-            if (slot == 1) return inv != null && fuelSlots() > 0 ? inv.getStackInSlot(0) : ItemStack.EMPTY;
+            if (slot == 1) return getFuelInv().getStackInSlot(0);
             if (slot == 2) return ioInv.getStackInSlot(1);
             return ItemStack.EMPTY;
         }
         @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             if (stack.isEmpty()) return stack;
             if (slot == 0) return ioInv.insertItem(0, stack, simulate);
-            if (slot == 1 && stack.getItem() == Items.LAPIS_LAZULI && inv != null && fuelSlots() > 0)
-                return inv.insertItem(0, stack, simulate);
+            if (slot == 1) return getFuelInv().insertItem(0, stack, simulate);
             return stack;
         }
         @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
@@ -79,10 +101,11 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         @Override public int getSlotLimit(int slot) { return 64; }
         @Override public boolean isItemValid(int slot, ItemStack stack) {
             if (slot == 0) return !stack.isEmpty() && stack.getItem().getEnchantmentValue() > 0;
-            if (slot == 1) return stack.getItem() == Items.LAPIS_LAZULI;
+            if (slot == 1) return getFuelInv().isItemValid(0, stack);
             return false;
         }
-    });
+        };
+    }
     private int tickCounter = 0;
 
     public MechanicalRavenEnchantTile(BlockPos pos, BlockState state) { super(pos, state); }
@@ -97,116 +120,99 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     public String getContName() { return contName; }
 
     /** 直接存入绑定的容器/图书馆，不经过输出槽 */
-    public boolean depositDirectToBound(ItemStack stack) {
-        if (stack.isEmpty()) return false;
+    public ItemStack depositDirectToBound(ItemStack stack) {
+        if (stack.isEmpty()) return ItemStack.EMPTY;
         if (libBound && libDim != null && stack.getItem() == Items.ENCHANTED_BOOK) {
-            if (this.level == null || this.level.getServer() == null) return false;
+            if (this.level == null || this.level.getServer() == null) return stack;
             var dimKey = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, libDim);
             var libLevel = this.level.getServer().getLevel(dimKey);
-            if (libLevel == null) return false;
+            if (libLevel == null) return stack;
             var be = libLevel.getBlockEntity(new BlockPos(libX, libY, libZ));
-            if (!(be instanceof dev.shadowsoffire.apotheosis.ench.library.EnchLibraryTile lib)) return false;
+            if (!(be instanceof dev.shadowsoffire.apotheosis.ench.library.EnchLibraryTile lib)) return stack;
             int count = stack.getCount();
             for (int c = 0; c < count; c++) {
                 ItemStack single = stack.copy(); single.setCount(1);
                 lib.depositBook(single);
             }
-            return true;
+            return ItemStack.EMPTY;
         }
         if (contBound && contDim != null) {
-            if (this.level == null || this.level.getServer() == null) return false;
+            if (this.level == null || this.level.getServer() == null) return stack;
             var dimKey = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, contDim);
             var contLevel = this.level.getServer().getLevel(dimKey);
-            if (contLevel == null) return false;
+            if (contLevel == null) return stack;
             var be = contLevel.getBlockEntity(new BlockPos(contX, contY, contZ));
-            if (be == null) return false;
+            if (be == null || be == this) return stack;
             var cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER).resolve();
-            if (cap.isEmpty()) return false;
+            if (cap.isEmpty()) return stack;
             IItemHandler handler = cap.get();
-            ItemStack remaining = stack.copy();
-            for (int s = 0; s < handler.getSlots() && !remaining.isEmpty(); s++)
-                remaining = ItemHandlerHelper.insertItem(handler, remaining, false);
-            return remaining.getCount() < stack.getCount();
+            return ItemHandlerHelper.insertItem(handler, stack.copy(), false);
         }
-        return false;
+        return stack;
+    }
+
+    public ItemStack storeOutput(ItemStack stack) {
+        ItemStack remaining = this.depositDirectToBound(stack);
+        return this.ioInv.insertItem(OUTPUT, remaining, false);
+    }
+
+    public void flushEnchantedInput() {
+        Container input = this.getActiveEnchantInventory();
+        ItemStack stack = input.getItem(0);
+        if (!stack.isEnchanted() && !(stack.getItem() instanceof EnchantedBookItem)) return;
+        ItemStack remaining = this.storeOutput(stack.copy());
+        if (remaining.getCount() != stack.getCount()) input.setItem(0, remaining);
+    }
+
+    private void flushPendingOutput() {
+        if (this.pendingOutput.isEmpty()) return;
+        this.pendingOutput = this.storeOutput(this.pendingOutput);
+        this.setChanged();
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, MechanicalRavenEnchantTile tile) {
         if (level.isClientSide) return;
         if (++tile.tickCounter < 20) return;
         tile.tickCounter = 0;
+        tile.tryDepositOutput();
+        tile.flushPendingOutput();
+        tile.flushEnchantedInput();
         if (level.hasNeighborSignal(pos)) {
-            if (level.players().stream().noneMatch(p -> p.containerMenu instanceof MechanicalRavenEnchantMenu)) {
-                tile.tryAutoEnchant();
-                tile.tryAutoEnchantSaved();
-            }
+            tile.tryAutoEnchant();
         }
         tile.tryDepositOutput();
     }
 
     private void tryAutoEnchant() {
+        if (!this.pendingOutput.isEmpty()) return;
+        if (this.tryAutoEnchantSaved()) return;
         ItemStack input = ioInv.getStackInSlot(INPUT);
         if (input.isEmpty() || input.isEnchanted() || input.getItem().getEnchantmentValue() <= 0) return;
-        ItemStack outNow = ioInv.getStackInSlot(OUTPUT);
-        if (!outNow.isEmpty() && outNow.getCount() >= outNow.getMaxStackSize()) return;
-
-        ItemStack toEnchant = ioInv.extractItem(INPUT, 1, false);
+        ItemStack toEnchant = ioInv.extractItem(INPUT, 1, true);
         if (toEnchant.isEmpty()) return;
-
         ItemStack result = doEnchant(toEnchant, this.ravenStats);
-        if (result.isEmpty()) { ioInv.insertItem(INPUT, toEnchant, false); return; }
-
-        // 优先直接存入绑定容器/图书馆
-        if (!depositDirectToBound(result)) {
-            ItemStack output = ioInv.getStackInSlot(OUTPUT);
-            if (output.isEmpty()) {
-                ioInv.setStackInSlot(OUTPUT, result);
-            } else if (ItemStack.isSameItemSameTags(output, result) && output.getCount() < output.getMaxStackSize()) {
-                int added = Math.min(result.getCount(), output.getMaxStackSize() - output.getCount());
-                output.grow(added);
-                int remaining = result.getCount() - added;
-                if (remaining > 0) { result.setCount(remaining); ioInv.insertItem(INPUT, result, false); }
-            } else {
-                ioInv.insertItem(INPUT, result, false); return;
-            }
-        }
+        if (result.isEmpty()) return;
+        ioInv.extractItem(INPUT, 1, false);
+        this.pendingOutput = result;
+        this.flushPendingOutput();
         setChanged();
     }
 
     /** 关闭菜单后对附魔槽残留物品进行附魔并输出 */
-    private void tryAutoEnchantSaved() {
-        ItemStack saved = this.savedEnchantSlot;
-        net.minecraft.world.Container persistent = null;
-        if (EasyMagicCompat.isLoaded() && (Object) this instanceof EasyMagicEnchantingStorage storage) {
-            persistent = storage.getEasyMagicInventory();
-            saved = persistent.getItem(0);
-        }
-        if (saved.isEmpty() || saved.isEnchanted() || saved.getItem().getEnchantmentValue() <= 0) return;
-        ItemStack result = doEnchant(saved, this.ravenStats);
-        if (result.isEmpty()) return;
-        if (!depositDirectToBound(result)) {
-            ItemStack output = ioInv.getStackInSlot(OUTPUT);
-            if (output.isEmpty()) {
-                ioInv.setStackInSlot(OUTPUT, result);
-            } else if (ItemStack.isSameItemSameTags(output, result) && output.getCount() < output.getMaxStackSize()) {
-                int added = Math.min(result.getCount(), output.getMaxStackSize() - output.getCount());
-                output.grow(added);
-                int remaining = result.getCount() - added;
-                if (remaining > 0) {
-                    result.setCount(remaining);
-                    if (persistent != null) persistent.setItem(0, result);
-                    else this.savedEnchantSlot = result;
-                    return;
-                }
-            } else {
-                if (persistent != null) persistent.setItem(0, result);
-                else this.savedEnchantSlot = result;
-                return;
-            }
-        }
-        if (persistent != null) persistent.setItem(0, ItemStack.EMPTY);
-        else this.savedEnchantSlot = ItemStack.EMPTY;
+    private boolean tryAutoEnchantSaved() {
+        if (!this.pendingOutput.isEmpty()) return false;
+        Container persistent = this.getActiveEnchantInventory();
+        ItemStack saved = persistent.getItem(0);
+        if (saved.isEmpty() || saved.isEnchanted() || saved.getItem().getEnchantmentValue() <= 0) return false;
+        ItemStack toEnchant = saved.copy();
+        toEnchant.setCount(1);
+        ItemStack result = doEnchant(toEnchant, this.ravenStats);
+        if (result.isEmpty()) return false;
+        this.pendingOutput = result;
+        persistent.removeItem(0, 1);
+        this.flushPendingOutput();
         setChanged();
+        return true;
     }
 
     /** 核心附魔逻辑：输入物品，返回已附魔的物品 */
@@ -239,43 +245,8 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     private void tryDepositOutput() {
         ItemStack output = ioInv.getStackInSlot(OUTPUT);
         if (output.isEmpty()) return;
-        if (libBound && libDim != null && output.getItem() == Items.ENCHANTED_BOOK) {
-            depositToLibrary(output); return;
-        }
-        if (contBound && contDim != null) depositToContainer(output);
-    }
-
-    private void depositToLibrary(ItemStack output) {
-        if (this.level == null || this.level.getServer() == null) return;
-        var dimKey = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, libDim);
-        var libLevel = this.level.getServer().getLevel(dimKey);
-        if (libLevel == null) return;
-        var be = libLevel.getBlockEntity(new BlockPos(libX, libY, libZ));
-        if (!(be instanceof dev.shadowsoffire.apotheosis.ench.library.EnchLibraryTile lib)) return;
-        ItemStack books = ioInv.extractItem(OUTPUT, output.getCount(), false);
-        int count = books.getCount();
-        for (int c = 0; c < count; c++) {
-            ItemStack single = books.copy(); single.setCount(1);
-            lib.depositBook(single);
-        }
-        setChanged();
-    }
-
-    private void depositToContainer(ItemStack output) {
-        if (this.level == null || this.level.getServer() == null) return;
-        var dimKey = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, contDim);
-        var contLevel = this.level.getServer().getLevel(dimKey);
-        if (contLevel == null) return;
-        var be = contLevel.getBlockEntity(new BlockPos(contX, contY, contZ));
-        if (be == null) return;
-        var cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER).resolve();
-        if (cap.isEmpty()) return;
-        IItemHandler handler = cap.get();
-        ItemStack toInsert = output.copy();
-        for (int s = 0; s < handler.getSlots() && !toInsert.isEmpty(); s++)
-            toInsert = ItemHandlerHelper.insertItem(handler, toInsert, false);
-        int inserted = output.getCount() - toInsert.getCount();
-        if (inserted > 0) { ioInv.extractItem(OUTPUT, inserted, false); setChanged(); }
+        ItemStack remaining = this.depositDirectToBound(output.copy());
+        if (remaining.getCount() != output.getCount()) ioInv.setStackInSlot(OUTPUT, remaining);
     }
 
     @Override public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
@@ -285,38 +256,16 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     @Override public void invalidateCaps() { super.invalidateCaps(); ioCap.invalidate(); }
     @Override public void reviveCaps() {
         super.reviveCaps();
-        ioCap = LazyOptional.of(() -> new IItemHandler() {
-            private int f() { return inv != null ? inv.getSlots() : 0; }
-            @Override public int getSlots() { return 3; }
-            @Override public ItemStack getStackInSlot(int s) {
-                if (s == 0) return ioInv.getStackInSlot(0);
-                if (s == 1) return inv != null && f() > 0 ? inv.getStackInSlot(0) : ItemStack.EMPTY;
-                if (s == 2) return ioInv.getStackInSlot(1); return ItemStack.EMPTY;
-            }
-            @Override public ItemStack insertItem(int s, ItemStack stack, boolean sim) {
-                if (stack.isEmpty()) return stack;
-                if (s == 0) return ioInv.insertItem(0, stack, sim);
-                if (s == 1 && stack.getItem() == Items.LAPIS_LAZULI && inv != null && f() > 0) return inv.insertItem(0, stack, sim);
-                return stack;
-            }
-            @Override public ItemStack extractItem(int s, int a, boolean sim) {
-                if (s == 2) return ioInv.extractItem(1, a, sim); return ItemStack.EMPTY;
-            }
-            @Override public int getSlotLimit(int s) { return 64; }
-            @Override public boolean isItemValid(int s, ItemStack stack) {
-                if (s == 0) return !stack.isEmpty() && stack.getItem().getEnchantmentValue() > 0;
-                if (s == 1) return stack.getItem() == Items.LAPIS_LAZULI; return false;
-            }
-        });
+        ioCap = LazyOptional.of(this::createIOHandler);
     }
 
     @Override
     public void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.put("io_inv", ioInv.serializeNBT()); tag.putLong("ench_seed", this.enchantmentSeed);
-        if (!EasyMagicCompat.isLoaded() && !savedEnchantSlot.isEmpty()) {
-            tag.put("ench_slot", savedEnchantSlot.save(new net.minecraft.nbt.CompoundTag()));
-        }
+        ItemStack saved = this.getSavedEnchantSlot();
+        if (!saved.isEmpty()) tag.put("ench_slot", saved.save(new CompoundTag()));
+        if (!this.pendingOutput.isEmpty()) tag.put("pending_output", this.pendingOutput.save(new CompoundTag()));
         if (libBound && libDim != null) {
             tag.putString("lb_dim", libDim.toString()); tag.putInt("lb_x", libX); tag.putInt("lb_y", libY); tag.putInt("lb_z", libZ);
             tag.putString("lb_name", this.libName);
@@ -332,13 +281,14 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         super.load(tag);
         if (tag.contains("io_inv")) ioInv.deserializeNBT(tag.getCompound("io_inv"));
         if (tag.contains("ench_seed")) this.enchantmentSeed = tag.getLong("ench_seed");
+        this.setSavedEnchantSlot(ItemStack.of(tag.getCompound("ench_slot")));
+        this.pendingOutput = ItemStack.of(tag.getCompound("pending_output"));
         if (tag.contains("ench_slot")) {
-            this.savedEnchantSlot = ItemStack.of(tag.getCompound("ench_slot"));
-            if (EasyMagicCompat.isLoaded() && !this.savedEnchantSlot.isEmpty()
-                && (Object) this instanceof EasyMagicEnchantingStorage storage
+            if ((Object) this instanceof EasyMagicEnchantingStorage storage
+                && EasyMagicCompat.isLoaded() && !this.getSavedEnchantSlot().isEmpty()
                 && storage.getEasyMagicInventory().getItem(0).isEmpty()) {
-                storage.getEasyMagicInventory().setItem(0, this.savedEnchantSlot);
-                this.savedEnchantSlot = ItemStack.EMPTY;
+                ItemStack saved = this.enchantInventory.removeItemNoUpdate(0);
+                storage.getEasyMagicInventory().setItem(0, saved);
             }
         }
         if (tag.contains("lb_dim")) {

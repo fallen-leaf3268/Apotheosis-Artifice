@@ -35,19 +35,24 @@ public class AttributesGuiSearchMixin {
 
     @Inject(method = "render", at = @At("RETURN"), remap = true)
     private void apotheosis_artifice_render(GuiGraphics gfx, int mouseX, int mouseY, float partialTicks, CallbackInfo ci) {
-        if (!open) return;
+        if (!open) {
+            if (AttributesGuiHooks.nameBox != null) AttributesGuiHooks.nameBox.setFocused(false);
+            return;
+        }
         if (AttributesGuiHooks.nameBox != null) {
             AttributesGuiHooks.nameBox.setPosition(leftPos + 40, topPos + 4);
         }
         AttributesGuiHooks.render(gfx, mouseX, mouseY, partialTicks, open);
     }
 
-    @Inject(method = "mouseClicked", at = @At("RETURN"), remap = true)
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, remap = true)
     private void apotheosis_artifice_mouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (!open) return;
         AttributesGuiHooks.mouseClicked(mouseX, mouseY, button);
+        if (AttributesGuiHooks.nameBox != null && AttributesGuiHooks.nameBox.isFocused()) cir.setReturnValue(true);
     }
 
-    @Inject(method = "refreshData", at = @At("RETURN"))
+    @Inject(method = "refreshData", at = @At(value = "INVOKE", target = "Ljava/util/List;sort(Ljava/util/Comparator;)V", shift = At.Shift.AFTER))
     private void apotheosis_artifice_refreshData(CallbackInfo ci) {
         data = AttributesGuiHooks.refreshData(data);
     }

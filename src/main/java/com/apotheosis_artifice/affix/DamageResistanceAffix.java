@@ -11,7 +11,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.apotheosis_artifice.AffixTypes;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.Affix;
-import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixType;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
@@ -21,6 +20,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -49,19 +49,7 @@ public class DamageResistanceAffix extends Affix implements AffixTypes {
     public boolean canApplyTo(ItemStack stack, LootCategory cat, LootRarity rarity) {
         if (!rarityInValues(rarity)) return false;
         if (types.isEmpty()) return true;
-        if (types.contains(cat)) return true;
-        if (tagMatches(stack, types)) return true;
-        String name = cat.getName();
-        return types.stream().anyMatch(t -> name.startsWith(t.getName()));
-    }
-
-    private static boolean tagMatches(ItemStack stack, Set<LootCategory> types) {
-        var afxData = stack.getTagElement(AffixHelper.AFFIX_DATA);
-        if (afxData != null && afxData.contains("curio_artifice")) {
-            String val = afxData.getString("curio_artifice");
-            return types.stream().anyMatch(t -> val.startsWith(t.getName()));
-        }
-        return false;
+        return AffixTypes.curiosforge_typeMatches(types, cat) || AffixTypes.tagMatches(types, stack);
     }
 
     private boolean rarityInValues(LootRarity rarity) {
@@ -88,9 +76,13 @@ public class DamageResistanceAffix extends Affix implements AffixTypes {
             dev.shadowsoffire.placebo.util.StepFunction sf = this.values.get(rarity);
             if (sf == null) return super.onHurt(stack, rarity, level, src, ent, amount);
             float reduction = sf.get(level);
-            return amount * (1 - reduction);
+            return applyReduction(amount, reduction);
         }
         return super.onHurt(stack, rarity, level, src, ent, amount);
+    }
+
+    public static float applyReduction(float amount, float reduction) {
+        return amount * (1 - Mth.clamp(reduction, 0, 1));
     }
 
     @Override

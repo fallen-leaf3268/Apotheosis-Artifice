@@ -30,16 +30,17 @@ public final class EasyMagicInventoryMigrator {
         S stack = source.get(sourceSlot);
         if (empty.test(stack)) return;
         S moved = copy.apply(stack);
+        source.clear(sourceSlot);
         if (!target.hasItem() && target.mayPlace(moved)) target.set(moved);
         else returnStack.accept(moved);
-        source.clear(sourceSlot);
     }
 
     private static <S> void returnOrClear(Source<S> source, int sourceSlot,
         Consumer<S> returnStack, UnaryOperator<S> copy, Predicate<S> empty) {
         S stack = source.get(sourceSlot);
         if (empty.test(stack)) return;
-        returnStack.accept(copy.apply(stack));
+        S moved = copy.apply(stack);
         source.clear(sourceSlot);
+        returnStack.accept(moved);
     }
 }

@@ -35,6 +35,7 @@ public class CleansingRecipe extends ApothSmithingRecipe implements ReactiveSmit
 
     @Override
     public boolean matches(Container pInv, Level pLevel) {
+        if (!pInv.getItem(0).isEmpty()) return false;
         ItemStack base = pInv.getItem(1);
         if (base.isEmpty()) return false;
         ItemStack addition = pInv.getItem(2);
@@ -43,7 +44,7 @@ public class CleansingRecipe extends ApothSmithingRecipe implements ReactiveSmit
 
     @Override
     public ItemStack assemble(Container pInv, RegistryAccess regs) {
-        ItemStack out = pInv.getItem(1).copy();
+        ItemStack out = pInv.getItem(1).copyWithCount(1);
         CompoundTag afxData = out.getTagElement(AffixHelper.AFFIX_DATA);
         if (afxData == null) return out;
 
@@ -60,10 +61,11 @@ public class CleansingRecipe extends ApothSmithingRecipe implements ReactiveSmit
 
     @Override
     public void onCraft(Container inv, Player player, ItemStack output) {
+        if (player.level().isClientSide) return;
         ItemStack base = inv.getItem(1);
         var gems = SocketHelper.getGems(base);
         for (int i = 0; i < gems.size(); i++) {
-            ItemStack stack = gems.get(i).gemStack();
+            ItemStack stack = gems.get(i).gemStack().copy();
             if (!stack.isEmpty()) {
                 stack.removeTagKey(GemItem.UUID_ARRAY);
                 if (!player.addItem(stack)) {
@@ -71,7 +73,6 @@ public class CleansingRecipe extends ApothSmithingRecipe implements ReactiveSmit
                 }
             }
         }
-        SocketHelper.setGems(base, dev.shadowsoffire.apotheosis.adventure.socket.SocketedGems.EMPTY);
     }
 
     @Override

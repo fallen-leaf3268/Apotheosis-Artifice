@@ -8,9 +8,6 @@ import java.util.Map;
 
 import org.jetbrains.annotations.Nullable;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.apotheosis_artifice.ApotheosisConfig;
 import com.apotheosis_artifice.compat.BetterCombatCompat;
 
@@ -31,8 +28,6 @@ import net.minecraftforge.registries.ForgeRegistries;
  * 每个分类自动扫描所有注册物品，JEI 自动循环切换展示。
  */
 public record AffixCodexEntry(List<LootCategory> categories) {
-
-    private static final Logger LOGGER = LogManager.getLogger("ApotheosisArtifice/JEI");
 
     @Nullable
     public static AffixCodexEntry create() {
@@ -169,16 +164,12 @@ public record AffixCodexEntry(List<LootCategory> categories) {
                 }
             }
         }
-        // 扫描结果日志 + 空分类兜底
         for (LootCategory cat : LootCategory.VALUES) {
             if (cat.isNone()) continue;
             String name = cat.getName();
             List<ItemStack> list = CATEGORY_ITEMS.get(name);
             if (list == null || list.isEmpty()) {
-                LOGGER.warn("[{}] empty, using BARRIER", name);
                 CATEGORY_ITEMS.put(name, List.of(new ItemStack(Items.BARRIER)));
-            } else {
-                LOGGER.debug("[{}] {} items", name, list.size());
             }
         }
         initialized = true;

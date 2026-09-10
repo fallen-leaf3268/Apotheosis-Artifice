@@ -44,7 +44,7 @@ public class AttributesGuiLocalizeMixin {
     @Mixin(value = dev.shadowsoffire.attributeslib.client.AttributesGui.HideUnchangedButton.class, remap = false)
     public static class HideUnchangedButtonMixin {
         @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/chat/Component;literal(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;"), remap = true)
-        private MutableComponent localizeHideUnchangedAttr(String text) {
+        private static MutableComponent localizeHideUnchangedAttr(String text) {
             if ("Hide Unchanged Attributes".equals(text)) {
                 return Component.translatable("attributeslib.gui.hide_unchanged_attr");
             }

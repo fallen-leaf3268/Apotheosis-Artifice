@@ -40,7 +40,7 @@ public class SelectEnchantmentMixin {
         int srcLevel = level;
         if (enchantability > 0) {
             float quantaFactor = 1 + RealEnchantmentHelper.getQuantaFactor(rand, quanta, rectification);
-            int powerCap = (int) (Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.MAX_ETERNA.get()) * 4);
+            int powerCap = (int) (Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna()) * 4);
             level = Mth.clamp(Math.round(level * quantaFactor), 1, powerCap);
             Arcana arcanaVals = Arcana.getForThreshold(arcana);
             List<EnchantmentInstance> allEnchants = RealEnchantmentHelper.getAvailableEnchantmentResults(level, stack, treasure, blacklist);
@@ -48,7 +48,7 @@ public class SelectEnchantmentMixin {
             allEnchants.removeIf(e -> enchants.containsKey(e.enchantment));
             List<ArcanaEnchantmentData> possibleEnchants = allEnchants.stream().map(d -> new ArcanaEnchantmentData(arcanaVals, d)).collect(Collectors.toList());
             if (!possibleEnchants.isEmpty()) {
-                int maxEnch = ApotheosisConfig.MAX_ENCHANTMENTS.get();
+                int maxEnch = ApotheosisConfig.getMaxEnchantments();
                 chosenEnchants.add(pickData(rand, possibleEnchants));
                 RealEnchantmentHelper.removeIncompatible(possibleEnchants, Util.lastOf(chosenEnchants));
 

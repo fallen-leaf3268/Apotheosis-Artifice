@@ -21,7 +21,7 @@ public class GemCaseBlockItem extends BlockItem {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, java.util.List<Component> tooltip, TooltipFlag flag) {
-        int stored = 0;
+        long stored = 0;
         int uniqueGems = 0;
         CompoundTag tag = BlockItem.getBlockEntityData(stack);
         if (tag != null && tag.contains("gems")) {

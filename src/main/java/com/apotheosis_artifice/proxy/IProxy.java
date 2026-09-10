@@ -5,6 +5,7 @@ import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import java.util.List;
 
 public interface IProxy {
+    default void handleGemCaseMaterials(int menuId, List<ItemStack> materials) {}
 
     /** 强制设置客户端附魔槽 slot0 */
     default void handleForceSlot0(ItemStack stack) {}

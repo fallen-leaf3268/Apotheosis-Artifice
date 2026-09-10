@@ -1,15 +1,12 @@
 package com.apotheosis_artifice.mixin;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import dev.shadowsoffire.apotheosis.adventure.socket.SocketingRecipe;
 import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
-import dev.shadowsoffire.apotheosis.adventure.socket.SocketedGems;
-import dev.shadowsoffire.apotheosis.adventure.socket.gem.GemInstance;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
@@ -17,30 +14,18 @@ import net.minecraft.world.item.ItemStack;
 @Mixin(value = SocketingRecipe.class, priority = 500, remap = false)
 public class SocketingRecipeMixin {
 
-    /**
-     * @author apotheosis_artifice
-     * @reason Safely reject invalid socketing inputs before accessing missing gem slots.
-     */
-    @Overwrite(remap = true)
-    public ItemStack assemble(Container inv, RegistryAccess regs) {
+    @Inject(method = "assemble", at = @At("HEAD"), cancellable = true, remap = true)
+    private void apotheosis_artifice_validateInputs(Container inv, RegistryAccess regs, CallbackInfoReturnable<ItemStack> cir) {
         ItemStack base = inv.getItem(1);
         ItemStack gemStack = inv.getItem(2);
         if (base.isEmpty() || gemStack.isEmpty()) {
-            return ItemStack.EMPTY;
+            cir.setReturnValue(ItemStack.EMPTY);
+            return;
         }
 
-        ItemStack result = base.copy();
-        result.setCount(1);
-        int socket = SocketHelper.getFirstEmptySocket(result);
-        if (socket < 0) {
-            return ItemStack.EMPTY;
+        int socket = SocketHelper.getFirstEmptySocket(base);
+        if (socket < 0 || socket >= SocketHelper.getGems(base).size()) {
+            cir.setReturnValue(ItemStack.EMPTY);
         }
-        List<GemInstance> gems = new ArrayList<>(SocketHelper.getGems(result).gems());
-        if (socket >= gems.size()) {
-            return ItemStack.EMPTY;
-        }
-        gems.set(socket, GemInstance.socketed(result, gemStack.copy()));
-        SocketHelper.setGems(result, new SocketedGems(gems));
-        return result;
     }
 }

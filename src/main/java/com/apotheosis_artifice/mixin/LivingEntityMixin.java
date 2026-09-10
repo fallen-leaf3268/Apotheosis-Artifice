@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import com.apotheosis_artifice.ApotheosisEvents;
 import com.apotheosis_artifice.affix.EffectImmunityAffix;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
@@ -37,7 +38,9 @@ public class LivingEntityMixin {
                 for (int i = 0; i < stackHandler.getSlots(); i++) {
                     ItemStack stack = stackHandler.getStackInSlot(i);
                     if (stack.isEmpty()) continue;
+                    if (!ApotheosisEvents.curiosforge_matchesSlot(stack, entry.getKey())) continue;
                     for (AffixInstance inst : AffixHelper.getAffixes(stack).values()) {
+                        if (!inst.isValid()) continue;
                         if (inst.affix().get() instanceof EffectImmunityAffix eia && eia.hasEffect(effect)) {
                             cir.setReturnValue(false);
                             return;

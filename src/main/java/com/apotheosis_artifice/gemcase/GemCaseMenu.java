@@ -42,15 +42,8 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
             return tile instanceof com.apotheosis_artifice.gemcase.GemCaseTile.AdvancedGemCaseTile ? Integer.MAX_VALUE : 64;
         }
     };
-    public final SimpleContainer upgradeMatInv = new SimpleContainer(UPGRADE_MAT_COUNT) {
-        @Override
-        public int getMaxStackSize() { return tile.upgradeMatInv.getSlotLimit(0); }
-        @Override
-        public void setChanged() {
-            super.setChanged();
-            GemCaseMenu.this.onChanged();
-        }
-    };
+    public final net.minecraft.world.Container upgradeMatInv;
+    private final List<ItemStack> lastMaterials = new ArrayList<>();
     protected List<ResourceLocation> rarityOrder = new ArrayList<>();
     @Nullable
     protected Gem selectedGem = null;
@@ -59,6 +52,10 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
     public GemCaseMenu(int id, Inventory inv, BlockPos pos) {
         super(ApotheosisArtificeMod.GEM_CASE_MENU.get(), id, inv, pos);
         this.player = inv.player;
+        this.upgradeMatInv = new net.minecraftforge.items.wrapper.RecipeWrapper(this.tile.upgradeMatInv) {
+            @Override public int getMaxStackSize() { return tile.upgradeMatInv.getSlotLimit(0); }
+            @Override public void setChanged() { tile.materialsChanged(); }
+        };
         this.tile.addListener(this);
         buildRarityOrder();
         addInputSlot();
@@ -67,7 +64,6 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
         addUpgradeMatSlots();
         this.addPlayerSlots(inv, 8, 148);
         registerTransferRules();
-        loadUpgradeMaterials();
     }
 
     private void buildRarityOrder() {
@@ -127,8 +123,8 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
     }
 
     private void addGemSlots() {
-        for (int i = 0; i < rarityOrder.size() && i < 6; i++) {
-            this.addSlot(new GemCaseSlot(this, rarityOrder.get(i), 21 + i * 18, 91));
+        for (int i = 0; i < 6; i++) {
+            this.addSlot(new GemCaseSlot(this, i < rarityOrder.size() ? rarityOrder.get(i) : NONE_RARITY, 21 + i * 18, 91));
         }
     }
 
@@ -181,12 +177,6 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
         this.registerInvShuffleRules();
     }
 
-    private void loadUpgradeMaterials() {
-        for (int i = 0; i < UPGRADE_MAT_COUNT; i++) {
-            this.upgradeMatInv.setItem(i, this.tile.upgradeMatInv.getStackInSlot(i).copy());
-        }
-    }
-
     public void setNotifier(Runnable r) {
         this.notifier = r;
     }
@@ -202,6 +192,7 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
 
     public void setSelectedGemFromServer(String gemId) {
         ResourceLocation id = ResourceLocation.tryParse(gemId);
+        this.selectedGem = null;
         if (id != null) {
             DynamicHolder<Gem> holder = GemRegistry.INSTANCE.holder(id);
             this.selectedGem = holder.isBound() ? holder.get() : null;
@@ -211,7 +202,7 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
     public void setPage(int page) {
         List<ResourceLocation> order = this.rarityOrder;
         // page 来自网络包，必须钳制下界与上界，否则负 page → order.get(负) 服务端越界崩溃。
-        int maxPage = order.isEmpty() ? 0 : (order.size() - 1) / 5;
+        int maxPage = order.size() <= 6 ? 0 : (order.size() - 2) / 5;
         page = Math.max(0, Math.min(page, maxPage));
         int offset = page * 5;
         for (int i = 0; i < 6; i++) {
@@ -240,8 +231,8 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
         return this.tile.getCount(gem.getId(), rarityId);
     }
 
-    public int getGemCount(Gem gem) {
-        int total = 0;
+    public long getGemCount(Gem gem) {
+        long total = 0;
         for (ResourceLocation rid : this.rarityOrder) {
             total += this.tile.getCount(gem.getId(), rid);
         }
@@ -271,7 +262,8 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
 
     public boolean handleUpgradeClick(int rarityOrdinal, boolean shift, int page) {
         if (this.selectedGem == null) return false;
-
+        int maxPage = this.rarityOrder.size() <= 6 ? 0 : (this.rarityOrder.size() - 2) / 5;
+        if (page < 0 || page > maxPage || rarityOrdinal < 1 || rarityOrdinal > 5) return false;
         int sourceIdx = page * 5 + rarityOrdinal - 1;
         if (sourceIdx < 0 || sourceIdx >= this.rarityOrder.size()) return false;
         ResourceLocation currentId = this.rarityOrder.get(sourceIdx);
@@ -297,6 +289,19 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
     @Override
     public void clicked(int slotId, int dragType, ClickType clickType, Player player) {
         Slot slot = slotId >= 0 && slotId < this.slots.size() ? this.getSlot(slotId) : null;
+        if (slot != null && slot.index >= FIRST_UPGRADE_MAT_SLOT && slot.index < FIRST_UPGRADE_MAT_SLOT + UPGRADE_MAT_COUNT
+            && slot.getItem().getCount() > slot.getItem().getMaxStackSize()) {
+            if (clickType == ClickType.SWAP) return;
+            if (clickType == ClickType.PICKUP && !this.getCarried().isEmpty()
+                && !ItemStack.isSameItemSameTags(this.getCarried(), slot.getItem())) return;
+            if (clickType == ClickType.THROW) {
+                if (!player.level().isClientSide && this.getCarried().isEmpty()) {
+                    player.drop(slot.remove(dragType == 0 ? 1 : slot.getItem().getMaxStackSize()), true);
+                    slot.setChanged();
+                }
+                return;
+            }
+        }
         if (slot instanceof GemCaseSlot gs && clickType == ClickType.PICKUP && this.getCarried().isEmpty()) {
             if (!player.level().isClientSide && this.selectedGem != null) {
                 int stored = this.tile.getCount(this.selectedGem.getId(), gs.rarityId);
@@ -327,20 +332,42 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
     @Override
     public void removed(Player player) {
         super.removed(player);
+        this.tile.removeListener(this);
         if (!this.level.isClientSide) {
-            this.tile.removeListener(this);
-            boolean changed = false;
-            for (int i = 0; i < UPGRADE_MAT_COUNT; i++) {
-                ItemStack saved = this.upgradeMatInv.getItem(i).copy();
-                this.tile.upgradeMatInv.setStackInSlot(i, saved);
-                if (!saved.isEmpty()) {
-                    changed = true;
-                }
-            }
             this.tile.setChanged();
-            this.level.sendBlockUpdated(this.tile.getBlockPos(), this.tile.getBlockState(), this.tile.getBlockState(), 3);
+            this.clearContainer(player, this.ioInv);
         }
-        this.clearContainer(player, this.ioInv);
+    }
+
+    @Override
+    public void broadcastChanges() {
+        super.broadcastChanges();
+        this.syncMaterials();
+    }
+
+    @Override
+    public void sendAllDataToRemote() {
+        super.sendAllDataToRemote();
+        this.lastMaterials.clear();
+        this.syncMaterials();
+    }
+
+    private void syncMaterials() {
+        if (!(this.player instanceof net.minecraft.server.level.ServerPlayer serverPlayer)) return;
+        List<ItemStack> materials = new ArrayList<>();
+        boolean changed = this.lastMaterials.size() != UPGRADE_MAT_COUNT;
+        for (int i = 0; i < UPGRADE_MAT_COUNT; i++) {
+            ItemStack stack = this.upgradeMatInv.getItem(i);
+            changed |= i >= this.lastMaterials.size() || !ItemStack.matches(stack, this.lastMaterials.get(i));
+            materials.add(stack.copy());
+        }
+        if (changed) {
+            this.lastMaterials.clear();
+            this.lastMaterials.addAll(materials);
+            com.apotheosis_artifice.ApotheosisNetwork.CHANNEL.send(
+                net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> serverPlayer),
+                new com.apotheosis_artifice.ApotheosisNetwork.SyncGemCaseMaterialsPacket(this.containerId, materials));
+        }
     }
 
     @Override

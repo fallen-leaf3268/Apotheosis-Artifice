@@ -1,13 +1,30 @@
 package com.apotheosis_artifice;
 
+import java.util.Optional;
+
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.util.thread.EffectiveSide;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 public class ApotheosisConfig {
 
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
     private static final ForgeConfigSpec SPEC;
+    private static volatile EnchantingConfigPacket synchronizedEnchantingConfig;
 
     public static ForgeConfigSpec.BooleanValue CLEAR_SOCKETS_ON_RARITY_CHANGE;
     public static ForgeConfigSpec.BooleanValue USE_APOTH_ARMOR_FORMULA;
@@ -75,5 +92,95 @@ public class ApotheosisConfig {
 
     public static void init() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+        MinecraftForge.EVENT_BUS.addListener(ApotheosisConfig::onPlayerLoggedIn);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(ApotheosisConfig::onConfigReload);
+    }
+
+    public static int getMaxEterna() {
+        EnchantingConfigPacket remote = remoteEnchantingConfig();
+        return remote == null ? MAX_ETERNA.get() : remote.maxEterna();
+    }
+
+    public static int getMaxQuanta() {
+        EnchantingConfigPacket remote = remoteEnchantingConfig();
+        return remote == null ? MAX_QUANTA.get() : remote.maxQuanta();
+    }
+
+    public static int getMaxArcana() {
+        EnchantingConfigPacket remote = remoteEnchantingConfig();
+        return remote == null ? MAX_ARCANA.get() : remote.maxArcana();
+    }
+
+    public static int getMaxEnchantments() {
+        EnchantingConfigPacket remote = remoteEnchantingConfig();
+        return remote == null ? MAX_ENCHANTMENTS.get() : remote.maxEnchantments();
+    }
+
+    public static int getExtraLevelCap() {
+        EnchantingConfigPacket remote = remoteEnchantingConfig();
+        return remote == null ? EXTRA_LEVEL_CAP.get() : remote.extraLevelCap();
+    }
+
+    public static int getExtraLevelPowerPerLevel() {
+        EnchantingConfigPacket remote = remoteEnchantingConfig();
+        return remote == null ? EXTRA_LEVEL_POWER_PER_LEVEL.get() : remote.extraLevelPowerPerLevel();
+    }
+
+    private static EnchantingConfigPacket remoteEnchantingConfig() {
+        return EffectiveSide.get().isClient() ? synchronizedEnchantingConfig : null;
+    }
+
+    public static void registerNetwork(SimpleChannel channel, int messageId) {
+        channel.registerMessage(messageId, EnchantingConfigPacket.class,
+            (packet, buffer) -> {
+                buffer.writeVarInt(packet.maxEterna());
+                buffer.writeVarInt(packet.maxQuanta());
+                buffer.writeVarInt(packet.maxArcana());
+                buffer.writeVarInt(packet.maxEnchantments());
+                buffer.writeVarInt(packet.extraLevelCap());
+                buffer.writeVarInt(packet.extraLevelPowerPerLevel());
+            },
+            buffer -> new EnchantingConfigPacket(buffer.readVarInt(), buffer.readVarInt(), buffer.readVarInt(),
+                buffer.readVarInt(), buffer.readVarInt(), buffer.readVarInt()),
+            (packet, context) -> {
+                context.get().enqueueWork(() -> synchronizedEnchantingConfig = packet);
+                context.get().setPacketHandled(true);
+            }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+    }
+
+    private static EnchantingConfigPacket localEnchantingConfig() {
+        return new EnchantingConfigPacket(MAX_ETERNA.get(), MAX_QUANTA.get(), MAX_ARCANA.get(),
+            MAX_ENCHANTMENTS.get(), EXTRA_LEVEL_CAP.get(), EXTRA_LEVEL_POWER_PER_LEVEL.get());
+    }
+
+    private static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            ApotheosisNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), localEnchantingConfig());
+        }
+    }
+
+    private static void onConfigReload(ModConfigEvent.Reloading event) {
+        if (event.getConfig().getSpec() != SPEC || ServerLifecycleHooks.getCurrentServer() == null) return;
+        ApotheosisNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), localEnchantingConfig());
+    }
+
+    public record EnchantingConfigPacket(int maxEterna, int maxQuanta, int maxArcana,
+        int maxEnchantments, int extraLevelCap, int extraLevelPowerPerLevel) {
+        public EnchantingConfigPacket {
+            maxEterna = Mth.clamp(maxEterna, 1, 1000);
+            maxQuanta = Mth.clamp(maxQuanta, 1, 1000);
+            maxArcana = Mth.clamp(maxArcana, 1, 1000);
+            maxEnchantments = Mth.clamp(maxEnchantments, 1, 127);
+            extraLevelCap = Mth.clamp(extraLevelCap, 1, 127);
+            extraLevelPowerPerLevel = Mth.clamp(extraLevelPowerPerLevel, 1, 10000);
+        }
+    }
+
+    @Mod.EventBusSubscriber(modid = ApotheosisArtificeMod.MODID, value = Dist.CLIENT)
+    public static class ClientEvents {
+        @SubscribeEvent
+        public static void onLoggingOut(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
+            synchronizedEnchantingConfig = null;
+        }
     }
 }

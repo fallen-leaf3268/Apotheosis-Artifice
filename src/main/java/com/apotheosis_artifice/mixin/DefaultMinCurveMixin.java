@@ -34,7 +34,7 @@ public class DefaultMinCurveMixin {
         var tags = ForgeRegistries.ENCHANTMENTS.tags();
         if (tags == null) return;
         if (!tags.getTag(ARTIFICE_EXTRA_LEVEL).contains(ench)) return;
-        int step = ApotheosisConfig.EXTRA_LEVEL_POWER_PER_LEVEL.get();
+        int step = ApotheosisConfig.getExtraLevelPowerPerLevel();
         int power = ench.getMinCost(baseMax) + step * (level - baseMax);
         cir.setReturnValue(power);
     }

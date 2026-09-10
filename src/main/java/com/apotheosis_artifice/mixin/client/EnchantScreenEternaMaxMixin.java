@@ -22,7 +22,7 @@ public class EnchantScreenEternaMaxMixin {
             ordinal = 0,
             remap = false))
     private float artifice_eternaTooltipMax() {
-        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.MAX_ETERNA.get());
+        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
     }
 
     // 原版附魔台进度条：位阶条按上限缩放；渡鸦台已自行预缩放，返回原值避免双重缩放
@@ -34,19 +34,19 @@ public class EnchantScreenEternaMaxMixin {
             remap = false))
     private float artifice_eternaBarMax() {
         if ((Object) this instanceof RavenEnchantScreen) return EnchantingStatRegistry.getAbsoluteMaxEterna();
-        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.MAX_ETERNA.get());
+        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
     }
 
     @ModifyConstant(method = "renderBg", constant = @Constant(floatValue = 100f, ordinal = 0))
     private float artifice_quantaBarMax(float orig) {
         if ((Object) this instanceof RavenEnchantScreen) return orig;
-        return ApotheosisConfig.MAX_QUANTA.get();
+        return ApotheosisConfig.getMaxQuanta();
     }
 
     @ModifyConstant(method = "renderBg", constant = @Constant(floatValue = 100f, ordinal = 1))
     private float artifice_arcanaBarMax(float orig) {
         if ((Object) this instanceof RavenEnchantScreen) return orig;
-        return ApotheosisConfig.MAX_ARCANA.get();
+        return ApotheosisConfig.getMaxArcana();
     }
 
     // 主界面「威力范围」tooltip 的 *4 天花板（render 内 getAbsoluteMaxEterna 第2、3次）
@@ -57,7 +57,7 @@ public class EnchantScreenEternaMaxMixin {
             ordinal = 1,
             remap = false))
     private float artifice_powerMinCap() {
-        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.MAX_ETERNA.get());
+        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
     }
 
     @Redirect(
@@ -67,6 +67,6 @@ public class EnchantScreenEternaMaxMixin {
             ordinal = 2,
             remap = false))
     private float artifice_powerMaxCap() {
-        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.MAX_ETERNA.get());
+        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
     }
 }

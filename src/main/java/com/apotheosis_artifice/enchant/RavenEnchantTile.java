@@ -11,6 +11,8 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.items.IItemHandler;
+import com.apotheosis_artifice.compat.EasyMagicCompat;
+import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
 
 public class RavenEnchantTile extends ApothEnchantTile {
 
@@ -22,7 +24,12 @@ public class RavenEnchantTile extends ApothEnchantTile {
     }
 
     public RavenTableStats getRavenStats() { return this.ravenStats; }
-    public IItemHandler getFuelInv() { return this.inv; }
+    public IItemHandler getFuelInv() {
+        if (EasyMagicCompat.isLoaded() && (Object) this instanceof EasyMagicEnchantingStorage storage) {
+            return storage.getEasyMagicFuelInventory();
+        }
+        return this.inv;
+    }
 
     @Override
     public BlockEntityType<?> getType() { return TYPE; }

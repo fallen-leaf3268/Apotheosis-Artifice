@@ -17,20 +17,20 @@ public class TableStatsClampMixin {
         method = "<init>(FFFFILjava/util/Set;Z)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;clamp(FFF)F", ordinal = 0))
     private float artifice_clampEterna(float value, float min, float max) {
-        return Mth.clamp(value, min, Math.max(max, ApotheosisConfig.MAX_ETERNA.get()));
+        return Mth.clamp(value, min, Math.max(max, ApotheosisConfig.getMaxEterna()));
     }
 
     @Redirect(
         method = "<init>(FFFFILjava/util/Set;Z)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;clamp(FFF)F", ordinal = 1))
     private float artifice_clampQuanta(float value, float min, float max) {
-        return Mth.clamp(value, min, Math.max(max, ApotheosisConfig.MAX_QUANTA.get()));
+        return Mth.clamp(value, min, ApotheosisConfig.getMaxQuanta());
     }
 
     @Redirect(
         method = "<init>(FFFFILjava/util/Set;Z)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;clamp(FFF)F", ordinal = 2))
     private float artifice_clampArcana(float value, float min, float max) {
-        return Mth.clamp(value, min, Math.max(max, ApotheosisConfig.MAX_ARCANA.get()));
+        return Mth.clamp(value, min, ApotheosisConfig.getMaxArcana());
     }
 }

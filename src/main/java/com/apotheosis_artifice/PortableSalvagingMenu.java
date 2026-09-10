@@ -31,12 +31,19 @@ import net.minecraftforge.items.wrapper.RecipeWrapper;
 public class PortableSalvagingMenu extends PlaceboContainerMenu {
 
     protected final Player player;
+    private final UUID toolId;
     protected final InternalItemHandler inputInv = new InternalItemHandler(12);
-    protected final InternalItemHandler outputInv = new InternalItemHandler(6);
+    protected final InternalItemHandler outputInv = new InternalItemHandler(6) {
+        @Override protected void onContentsChanged(int slot) {
+            if (outputReady) saveOutput();
+        }
+    };
+    private boolean outputReady;
 
     public PortableSalvagingMenu(int id, Inventory inv) {
         super(ApotheosisArtificeMod.PORTABLE_SALVAGING_MENU.get(), id, inv);
         this.player = inv.player;
+        this.toolId = PortableSalvagingItem.openingToolId.get();
 
         int leftOffset = 17, topOffset = 17;
         for (int i = 0; i < 12; i++) {
@@ -56,16 +63,6 @@ public class PortableSalvagingMenu extends PlaceboContainerMenu {
         this.mover.registerRule((stack, slot) -> slot < this.playerInvStart, this.playerInvStart, this.hotbarStart + 9);
         this.registerInvShuffleRules();
 
-        // 注册输出槽变化监听 → 自动保存
-        if (!this.level.isClientSide) {
-            this.addSlotListener(new net.minecraft.world.inventory.ContainerListener() {
-                @Override public void slotChanged(AbstractContainerMenu menu, int slotIdx, ItemStack stack) {
-                    if (slotIdx >= 12 && slotIdx < 18) saveOutput();
-                }
-                @Override public void dataChanged(AbstractContainerMenu menu, int slotIdx, int value) {}
-            });
-        }
-
         // 从工具物品 NBT 恢复输出物品
         if (!this.level.isClientSide) {
             ItemStack tool = findToolByUUID(this.player);
@@ -74,38 +71,40 @@ public class PortableSalvagingMenu extends PlaceboContainerMenu {
                 if (tag != null) this.outputInv.deserializeNBT(tag);
             }
         }
+        this.outputReady = true;
     }
 
     /** 根据 UUID 在背包中查找便携回收工具 */
-    private static ItemStack findToolByUUID(Player player) {
-        UUID targetId = PortableSalvagingItem.openingToolId.get();
+    private ItemStack findToolByUUID(Player player) {
+        UUID targetId = this.toolId;
         if (targetId == null) return ItemStack.EMPTY;
         for (ItemStack stack : player.getInventory().items) {
             if (stack.getItem() == ApotheosisArtificeMod.PORTABLE_SALVAGING_TOOL.get()
-                && stack.hasTag() && targetId.equals(stack.getTag().getUUID("ToolId"))) return stack;
+                && stack.hasTag() && stack.getTag().hasUUID("ToolId") && targetId.equals(stack.getTag().getUUID("ToolId"))) return stack;
         }
         ItemStack offhand = player.getOffhandItem();
         if (offhand.getItem() == ApotheosisArtificeMod.PORTABLE_SALVAGING_TOOL.get()
-            && offhand.hasTag() && targetId.equals(offhand.getTag().getUUID("ToolId"))) return offhand;
+            && offhand.hasTag() && offhand.getTag().hasUUID("ToolId") && targetId.equals(offhand.getTag().getUUID("ToolId"))) return offhand;
         return ItemStack.EMPTY;
     }
 
     @Override
     public boolean stillValid(Player player) {
-        return true;
+        return this.level.isClientSide || !this.findToolByUUID(player).isEmpty();
     }
 
     @Override
     public void removed(Player player) {
         super.removed(player);
         if (!this.level.isClientSide) {
+            this.saveOutput();
             this.clearContainer(player, new RecipeWrapper(this.inputInv));
         }
     }
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (id == 0) {
+        if (id == 0 && !this.level.isClientSide && this.stillValid(player)) {
             this.salvageAll();
             this.level.playSound(null, player.blockPosition(), SoundEvents.EVOKER_CAST_SPELL, SoundSource.BLOCKS, 0.99F, this.level.random.nextFloat() * 0.25F + 1F);
             this.level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_CLUSTER_STEP, SoundSource.BLOCKS, 0.34F, this.level.random.nextFloat() * 0.2F + 0.8F);
@@ -127,8 +126,10 @@ public class PortableSalvagingMenu extends PlaceboContainerMenu {
         for (int inSlot = 0; inSlot < 12; inSlot++) {
             Slot s = this.getSlot(inSlot);
             ItemStack stack = s.getItem();
-            List<ItemStack> outputs = salvageItem(this.level, stack);
-            s.set(ItemStack.EMPTY);
+            if (findMatch(this.level, stack) == null) continue;
+            List<ItemStack> outputs = salvageItem(this.level, stack.copyWithCount(1));
+            stack.shrink(1);
+            s.setChanged();
             for (ItemStack out : outputs) {
                 for (int outSlot = 0; outSlot < 6; outSlot++) {
                     if (out.isEmpty()) break;
@@ -141,7 +142,7 @@ public class PortableSalvagingMenu extends PlaceboContainerMenu {
     }
 
     private void saveOutput() {
-        if (this.level.isClientSide) return;
+        if (!this.outputReady || this.level.isClientSide) return;
         ItemStack tool = findToolByUUID(this.player);
         if (tool.isEmpty()) return;
         boolean hasItems = false;
@@ -153,6 +154,28 @@ public class PortableSalvagingMenu extends PlaceboContainerMenu {
         } else {
             tool.getTag().remove("salvage_output");
         }
+    }
+
+    private boolean isOpeningTool(ItemStack stack) {
+        return this.toolId != null && stack.hasTag() && stack.getTag().hasUUID("ToolId")
+            && this.toolId.equals(stack.getTag().getUUID("ToolId"));
+    }
+
+    @Override
+    public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType type, Player player) {
+        if (slotId >= 0 && slotId < this.slots.size() && this.isOpeningTool(this.getSlot(slotId).getItem())) return;
+        if (type == net.minecraft.world.inventory.ClickType.SWAP && button >= 0 && button < player.getInventory().getContainerSize()
+            && this.isOpeningTool(player.getInventory().getItem(button))) return;
+        super.clicked(slotId, button, type, player);
+        this.saveOutput();
+    }
+
+    @Override
+    public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size() || this.isOpeningTool(this.getSlot(index).getItem())) return ItemStack.EMPTY;
+        ItemStack result = super.quickMoveStack(player, index);
+        this.saveOutput();
+        return result;
     }
 
     public static int[] getSalvageCounts(OutputData output, ItemStack stack) {

@@ -95,20 +95,20 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
     }
 
     public void transferJEI(float e, float q, float a) {
-        float maxE = Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.MAX_ETERNA.get());
+        float maxE = Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
         JEI_SLIDERS = new float[]{e, q, a};
-        this.stats = new TableStats(Mth.clamp(e, 0, maxE), Mth.clamp(q, 0, ApotheosisConfig.MAX_QUANTA.get()), Mth.clamp(a, 0, ApotheosisConfig.MAX_ARCANA.get()),
+        this.stats = new TableStats(Mth.clamp(e, 0, maxE), Mth.clamp(q, 0, ApotheosisConfig.getMaxQuanta()), Mth.clamp(a, 0, ApotheosisConfig.getMaxArcana()),
             this.stats.rectification(), this.stats.clues(), this.stats.blacklist(), this.stats.treasure());
     }
 
     public void setPlayerStats(float eterna, float quanta, float arcana) {
         // 设计上是"滑条自由选"：玩家可在 [0, 绝对上限] / [0,100] 范围内自由设定 e/q/a。
         // 钳到绝对上限即可——既保留自由选玩法，又防止伪造包发送超出滑条范围的离谱值。
-        float maxEterna = Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.MAX_ETERNA.get());
+        float maxEterna = Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
         this.ravenStats.set(
             Mth.clamp(eterna, 0, maxEterna),
-            Mth.clamp(quanta, 0, ApotheosisConfig.MAX_QUANTA.get()),
-            Mth.clamp(arcana, 0, ApotheosisConfig.MAX_ARCANA.get()));
+            Mth.clamp(quanta, 0, ApotheosisConfig.getMaxQuanta()),
+            Mth.clamp(arcana, 0, ApotheosisConfig.getMaxArcana()));
         this.access.evaluate((level, pos) -> {
             if (level.getBlockEntity(pos) instanceof RavenEnchantTile rt) {
                 rt.setChanged();

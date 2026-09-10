@@ -91,6 +91,7 @@ public class GemBinderItem extends Item {
         } else {
             int st = (getSalvageType(stack) + 1) % 3;
             stack.getOrCreateTag().putInt(TAG_SALVAGE_TYPE, st);
+            if (st == 0) stack.getOrCreateTag().putInt(TAG_MODE, 0);
         }
         player.displayClientMessage(
             Component.translatable(getModeTranslationKey(stack)).withStyle(ChatFormatting.YELLOW), true);
@@ -194,9 +195,11 @@ public class GemBinderItem extends Item {
                         for (int c = 0; c < count; c++) {
                             lib.depositBook(pickedUp.copy());
                         }
-                        pickedUp.setCount(0);
-                        event.getItem().discard();
-                        event.setCanceled(true);
+                        pickedUp.shrink(count);
+                        if (pickedUp.isEmpty()) {
+                            event.getItem().discard();
+                            event.setCanceled(true);
+                        }
                         return;
                     }
 
@@ -214,6 +217,7 @@ public class GemBinderItem extends Item {
                         };
                         if (shouldSalvage) {
                             handleSalvage(player, pickedUp, event);
+                            return;
                         }
                         // salvage 不 return，允许继续处理其他绑定
                     }
@@ -223,16 +227,12 @@ public class GemBinderItem extends Item {
                         BlockPos gcPos = getBoundPos(binder, PREFIX_GC);
                         BlockEntity gcBe = gcPos != null ? getBoundTile(player, binder, gcPos, PREFIX_GC) : null;
                         if (isGem(pickedUp) && gcBe instanceof com.apotheosis_artifice.gemcase.GemCaseTile tile) {
-                            int count = Math.min(pickedUp.getCount(), pickedUp.getMaxStackSize());
-                            for (int c = 0; c < count; c++) {
-                                ItemStack single = pickedUp.copy();
-                                single.setCount(1);
-                                tile.depositGem(single);
+                            tile.depositGem(pickedUp);
+                            if (pickedUp.isEmpty()) {
+                                event.getItem().discard();
+                                event.setCanceled(true);
+                                return;
                             }
-                            pickedUp.setCount(0);
-                            event.getItem().discard();
-                            event.setCanceled(true);
-                            return;
                         }
                     }
                 }
@@ -242,16 +242,11 @@ public class GemBinderItem extends Item {
 
     @Nullable
     private static BlockEntity getBoundTile(Player player, ItemStack binder, BlockPos boundPos, String prefix) {
-        BlockEntity be = player.level().getBlockEntity(boundPos);
         ResourceLocation boundDim = getBoundDim(binder, prefix);
-        if (be == null && boundDim != null) {
-            var dimKey = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, boundDim);
-            var boundLevel = player.getServer().getLevel(dimKey);
-            if (boundLevel != null) {
-                be = boundLevel.getBlockEntity(boundPos);
-            }
-        }
-        return be;
+        if (boundDim == null || player.getServer() == null) return null;
+        var dimKey = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, boundDim);
+        var boundLevel = player.getServer().getLevel(dimKey);
+        return boundLevel != null && boundLevel.hasChunkAt(boundPos) ? boundLevel.getBlockEntity(boundPos) : null;
     }
 
     private static boolean isGem(ItemStack stack) {
@@ -285,16 +280,21 @@ public class GemBinderItem extends Item {
         }
         for (int o = 0; o < outCount; o++) {
             if (totals[o] <= 0) continue;
-            var outStack = baseStacks[o].copy();
-            outStack.setCount(totals[o]);
-            var itemEntity = new net.minecraft.world.entity.item.ItemEntity(
-                player.level(), player.getX(), player.getY() + 0.5, player.getZ(), outStack);
-            itemEntity.setPickUpDelay(0);
-            player.level().addFreshEntity(itemEntity);
+            int remaining = totals[o];
+            while (remaining > 0) {
+                var outStack = baseStacks[o].copyWithCount(Math.min(remaining, baseStacks[o].getMaxStackSize()));
+                remaining -= outStack.getCount();
+                var itemEntity = new net.minecraft.world.entity.item.ItemEntity(
+                    player.level(), player.getX(), player.getY() + 0.5, player.getZ(), outStack);
+                itemEntity.setPickUpDelay(0);
+                player.level().addFreshEntity(itemEntity);
+            }
         }
-        pickedUp.setCount(0);
-        event.getItem().discard();
-        event.setCanceled(true);
+        pickedUp.shrink(count);
+        if (pickedUp.isEmpty()) {
+            event.getItem().discard();
+            event.setCanceled(true);
+        }
     }
 
     // ---- Curios 能力 ----

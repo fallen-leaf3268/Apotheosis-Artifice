@@ -226,7 +226,7 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
         return null;
     }
 
-    public int getCountAt(int index) {
+    public long getCountAt(int index) {
         Gem gem = this.getGemAt(index);
         return gem == null ? 0 : this.menu.getGemCount(gem);
     }
@@ -403,7 +403,7 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
             Gem gem = btn.getCurrentGem();
             if (gem == null) continue;
             if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) continue;
-            int count = this.menu.getGemCount(gem);
+            long count = this.menu.getGemCount(gem);
             ItemStack stack = new ItemStack(Adventure.Items.GEM.get());
             GemItem.setGem(stack, gem);
             gfx.renderComponentTooltip(this.font,

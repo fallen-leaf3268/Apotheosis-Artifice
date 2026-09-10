@@ -40,7 +40,7 @@ public abstract class EnchantMaxLevelMixin {
         int boosted = Math.max(this.maxLevel, EnchModule.getDefaultMax(this.ench));
         int hardCap = Math.min(
             EnchModule.ENCH_HARD_CAPS.getOrDefault(this.ench, 127),
-            ApotheosisConfig.EXTRA_LEVEL_CAP.get());
+            ApotheosisConfig.getExtraLevelCap());
         cir.setReturnValue(Math.min(hardCap, boosted));
     }
 }

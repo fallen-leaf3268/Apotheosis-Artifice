@@ -64,6 +64,7 @@ public class ApotheosisEvents {
         if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         ItemStack stack = event.getItemStack();
         if (stack.isEmpty()) return;
+        if (!curiosforge_matchesSlot(stack, event.getSlotContext().identifier())) return;
 
         var afxData = stack.getTagElement(AffixHelper.AFFIX_DATA);
         boolean hasCurioCat = afxData != null && afxData.contains("curio_artifice");
@@ -83,6 +84,8 @@ public class ApotheosisEvents {
         if (AffixHelper.hasAffixes(stack)) {
             for (var inst : AffixHelper.getAffixes(stack).values()) {
                 if (inst.affix().get() instanceof CurioSlotBonusAffix csb) {
+                    if (!csb.getFixedUuid().isEmpty() && event.getSlotContext().entity() != null
+                        && !event.getSlotContext().entity().level().isClientSide()) continue;
                     LootRarity rarity = inst.rarity().get();
                     if (rarity == null) continue;
                     float amount = csb.getBonus(rarity, inst.level());
@@ -323,8 +326,6 @@ public class ApotheosisEvents {
 
         LazyOptional<ICuriosItemHandler> curiosInv = living.getCapability(CuriosCapability.INVENTORY);
         curiosInv.ifPresent(handler -> {
-            // copyFrom 是整体覆盖箭的 affix_data（非合并），多件饰品会互相覆盖；只复制第一件有词缀的。
-            boolean[] copied = { false };
             for (Map.Entry<String, ICurioStacksHandler> entry : handler.getCurios().entrySet()) {
                 IDynamicStackHandler stackHandler = entry.getValue().getStacks();
                 for (int i = 0; i < stackHandler.getSlots(); i++) {
@@ -333,10 +334,6 @@ public class ApotheosisEvents {
                     if (!curiosforge_matchesSlot(stack, entry.getKey())) continue;
                     AffixHelper.getAffixes(stack).values().forEach(inst -> inst.onArrowFired(living, arrow));
                     SocketHelper.getGems(stack).onArrowFired(living, arrow);
-                    if (!copied[0] && AffixHelper.hasAffixes(stack)) {
-                        AffixHelper.copyFrom(stack, arrow);
-                        copied[0] = true;
-                    }
                 }
             }
         });

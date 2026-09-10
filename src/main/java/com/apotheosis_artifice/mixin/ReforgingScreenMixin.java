@@ -32,11 +32,28 @@ public abstract class ReforgingScreenMixin extends AbstractContainerScreen<Refor
     @Unique
     private ItemStack curiosforge_lastSlotItem = ItemStack.EMPTY;
 
+    @Unique
+    private List<String> curiosforge_lastAvailableSlots = List.of();
+
+    @Unique
+    private int curiosforge_lastLeft;
+
+    @Unique
+    private int curiosforge_lastTop;
+
     @Inject(method = "renderBg", at = @At("TAIL"))
     private void curiosforge_checkItem(net.minecraft.client.gui.GuiGraphics gfx, float partials, int x, int y, CallbackInfo ci) {
         ItemStack stack = this.menu.getSlot(0).getItem();
-        if (ItemStack.matches(stack, this.curiosforge_lastSlotItem)) return;
+        List<String> cats = ((ISlotSelectMenu) this.menu).curiosforge_getAvailableSlots();
+        if (ItemStack.matches(stack, this.curiosforge_lastSlotItem)
+            && cats.equals(this.curiosforge_lastAvailableSlots)
+            && this.getGuiLeft() == this.curiosforge_lastLeft
+            && this.getGuiTop() == this.curiosforge_lastTop
+            && this.children().containsAll(this.curiosforge_slotButtons)) return;
         this.curiosforge_lastSlotItem = stack.copy();
+        this.curiosforge_lastAvailableSlots = List.copyOf(cats);
+        this.curiosforge_lastLeft = this.getGuiLeft();
+        this.curiosforge_lastTop = this.getGuiTop();
         curiosforge_rebuild(stack);
     }
 

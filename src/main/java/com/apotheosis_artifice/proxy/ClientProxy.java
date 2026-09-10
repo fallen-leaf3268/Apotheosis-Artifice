@@ -10,6 +10,15 @@ import java.util.List;
 public class ClientProxy implements IProxy {
 
     @Override
+    public void handleGemCaseMaterials(int menuId, List<ItemStack> materials) {
+        var player = Minecraft.getInstance().player;
+        if (player == null || player.containerMenu.containerId != menuId
+            || !(player.containerMenu instanceof com.apotheosis_artifice.gemcase.GemCaseMenu menu)) return;
+        for (int i = 0; i < materials.size(); i++) menu.upgradeMatInv.setItem(i, materials.get(i).copy());
+        menu.onChanged();
+    }
+
+    @Override
     public void handleForceSlot0(ItemStack stack) {
         var player = Minecraft.getInstance().player;
         if (player == null) return;

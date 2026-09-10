@@ -18,7 +18,7 @@ public class GemCaseSelectButton extends AbstractWidget {
     private final GemCaseScreen screen;
     private final int index;
     private Gem gem;
-    private int count;
+    private long count;
 
     public GemCaseSelectButton(GemCaseScreen screen, int index, int x, int y) {
         super(x, y, 16, 16, Component.empty());

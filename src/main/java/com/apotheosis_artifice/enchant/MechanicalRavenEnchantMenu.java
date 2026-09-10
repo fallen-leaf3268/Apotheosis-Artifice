@@ -3,14 +3,12 @@ package com.apotheosis_artifice.enchant;
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.compat.EnigmaticLegacyCompat;
 import com.apotheosis_artifice.compat.EasyMagicCompat;
-import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.core.BlockPos;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.SlotItemHandler;
@@ -23,29 +21,28 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
     private int inputIdx = -1, outputIdx = -1, dedicatedCatalystIdx = -1;
     private volatile boolean broadcasting = false;
     private boolean manualEnchantInProgress;
-    private int lastGoldCount = 0;
-    private int autoTick = 0;
 
     public MechanicalRavenEnchantMenu(int id, Inventory inv, ContainerLevelAccess access, MechanicalRavenEnchantTile te, BlockPos pos, RavenTableStats stats) {
         super(id, inv, access, te, pos, stats);
         this.tile = te;
+        if (!EasyMagicCompat.isLoaded()) {
+            this.enchantSlots = te.getEnchantInventory();
+            Slot old = this.slots.get(0);
+            Slot input = new Slot(this.enchantSlots, 0, old.x, old.y) {
+                @Override public int getMaxStackSize() { return 1; }
+            };
+            input.index = 0;
+            this.slots.set(0, input);
+        }
         addIOSlots(te.getIOInv());
         ItemStack fromSave = te.getSavedEnchantSlot();
-        if (!fromSave.isEmpty()) {
-            if (EasyMagicCompat.isLoaded() && this.enchantSlots.getItem(0).isEmpty()) {
-                this.enchantSlots.setItem(0, fromSave.copy());
-                te.setSavedEnchantSlot(ItemStack.EMPTY);
-            } else if (!EasyMagicCompat.isLoaded()) {
-                boolean pendingEasyMagicInput = te instanceof EasyMagicEnchantingStorage storage
-                    && !storage.getEasyMagicInventory().getItem(0).isEmpty();
-                if (pendingEasyMagicInput || !this.enchantSlots.getItem(0).isEmpty()) {
-                    inv.placeItemBackInInventory(fromSave.copy());
-                    te.setSavedEnchantSlot(ItemStack.EMPTY);
-                } else {
-                    this.enchantSlots.setItem(0, fromSave.copy());
-                }
-            }
+        if (EasyMagicCompat.isLoaded() && !fromSave.isEmpty()) {
+            te.setSavedEnchantSlot(ItemStack.EMPTY);
+            if (this.enchantSlots.getItem(0).isEmpty()) this.enchantSlots.setItem(0, fromSave);
+            else inv.placeItemBackInInventory(fromSave);
         }
+        this.enchantmentSeed.set((int) te.getEnchantmentSeed());
+        this.slotsChanged(this.enchantSlots);
     }
 
     public MechanicalRavenEnchantMenu(int id, Inventory inv, float eterna, float quanta, float arcana, BlockPos pos) {
@@ -76,22 +73,12 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
     @Override
     public int getGoldCount() {
         boolean pearlActive = EnigmaticLegacyCompat.isEnchanterPearlActive(this.player);
-        if (this.tile != null) {
-            int v = this.tile.getFuelInv().getStackInSlot(0).getCount();
-            int result = resolveGoldCount(pearlActive, v, lastGoldCount);
-            if (!pearlActive && v > 0) lastGoldCount = result;
-            return result;
-        }
-        int v = this.getSlot(1).getItem().getCount();
-        int result = resolveGoldCount(pearlActive, v, lastGoldCount);
-        if (!pearlActive && v > 0) lastGoldCount = result;
-        return result;
+        return resolveGoldCount(pearlActive, this.getSlot(1).getItem().getCount());
     }
 
-    static int resolveGoldCount(boolean pearlActive, int fuelCount, int lastGoldCount) {
+    static int resolveGoldCount(boolean pearlActive, int fuelCount) {
         if (pearlActive) return 64;
-        if (fuelCount > 0) return fuelCount;
-        return lastGoldCount;
+        return fuelCount;
     }
 
     public void persistEnchantmentSeed(int seed) {
@@ -106,28 +93,25 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
         boolean manualEnchant = id >= 0 && id < 3 && !player.level().isClientSide && this.tile != null;
         if (!manualEnchant) return super.clickMenuButton(player, id);
         this.manualEnchantInProgress = true;
+        boolean enchanted = false;
         try {
-            boolean enchanted = super.clickMenuButton(player, id);
+            enchanted = super.clickMenuButton(player, id);
             if (enchanted) this.persistEnchantmentSeed(this.enchantmentSeed.get());
             return enchanted;
         } finally {
             this.manualEnchantInProgress = false;
+            if (enchanted) this.enchantSlots.setChanged();
         }
     }
 
-    private ItemStack lastS0 = ItemStack.EMPTY;
-
     @Override
     public void broadcastChanges() {
-        if (this.tile != null && inputIdx >= 0 && !broadcasting) {
+        if (this.tile != null && inputIdx >= 0 && !broadcasting && !this.manualEnchantInProgress) {
             broadcasting = true;
             try {
-                if (!this.manualEnchantInProgress) {
-                    this.enchantmentSeed.set((int) this.tile.getEnchantmentSeed());
-                }
+                this.enchantmentSeed.set((int) this.tile.getEnchantmentSeed());
                 var io = this.tile.getIOInv();
-                var stats = this.tile.getRavenStats();
-
+                this.tile.flushEnchantedInput();
                 if (this.enchantSlots.getItem(0).isEmpty()) {
                     ItemStack buf = io.getStackInSlot(0);
                     if (!buf.isEmpty() && !buf.isEnchanted() && buf.getItem().getEnchantmentValue() > 0) {
@@ -138,69 +122,18 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
                         }
                     }
                 }
-
-                ItemStack slotItem = this.enchantSlots.getItem(0);
-                if (!slotItem.isEmpty() && !slotItem.isEnchanted() && slotItem.getItem().getEnchantmentValue() > 0) {
-                    if (++autoTick >= 20) {
-                        autoTick = 0;
-                        if (this.tile.getLevel().hasNeighborSignal(this.tile.getBlockPos())) {
-                            ItemStack result = this.tile.doEnchant(slotItem, stats);
-                            if (!result.isEmpty()) {
-                                if (!this.tile.depositDirectToBound(result)) {
-                                    ItemStack remaining = io.insertItem(1, result, false);
-                                    if (remaining.isEmpty()) {
-                                        this.enchantSlots.setItem(0, ItemStack.EMPTY);
-                                    } else {
-                                        this.enchantSlots.setItem(0, remaining);
-                                    }
-                                } else {
-                                    this.enchantSlots.setItem(0, ItemStack.EMPTY);
-                                }
-                                this.enchantSlots.setChanged();
-                            } else {
-                                this.enchantSlots.setItem(0, slotItem);
-                                this.enchantSlots.setChanged();
-                            }
-                        }
-                    }
-                }
-
-                ItemStack enchanted = this.enchantSlots.getItem(0);
-                if (!enchanted.isEmpty()) {
-                    boolean hasEnch = enchanted.isEnchanted()
-                        || enchanted.getItem() instanceof net.minecraft.world.item.EnchantedBookItem
-                        || (enchanted.hasTag() && (enchanted.getTag().contains("Enchantments") || enchanted.getTag().contains("StoredEnchantments")));
-                    if (hasEnch) {
-                        ItemStack remaining = io.insertItem(1, enchanted, false);
-                        if (remaining.isEmpty()) {
-                            this.enchantSlots.setItem(0, ItemStack.EMPTY);
-                        } else {
-                            this.enchantSlots.setItem(0, remaining);
-                        }
-                        this.enchantSlots.setChanged();
-                    }
-                }
             } finally { broadcasting = false; }
         }
         super.broadcastChanges();
     }
 
     @Override
-    public void removed(Player player) {
-        if (EasyMagicCompat.isLoaded()) {
-            super.removed(player);
-            return;
+    public void slotsChanged(net.minecraft.world.Container inventoryIn) {
+        if (this.tile != null && !this.manualEnchantInProgress) {
+            this.enchantmentSeed.set((int) this.tile.getEnchantmentSeed());
         }
-        if (this.tile != null) {
-            ItemStack e = this.enchantSlots.getItem(0);
-            this.tile.setSavedEnchantSlot(e);
-        }
-        this.enchantSlots.setItem(0, ItemStack.EMPTY);
-        super.removed(player);
+        super.slotsChanged(inventoryIn);
     }
-
-    @Override
-    public void slotsChanged(net.minecraft.world.Container inventoryIn) { super.slotsChanged(inventoryIn); }
 
     @Override
     public ItemStack quickMoveStack(Player player, int idx) {

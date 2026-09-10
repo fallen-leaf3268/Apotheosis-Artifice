@@ -36,7 +36,8 @@ public class PortableSalvagingItem extends Item {
             }
             openingToolId.set(stack.getTag().getUUID("ToolId"));
 
-            NetworkHooks.openScreen((ServerPlayer) player, new MenuProvider() {
+            try {
+                NetworkHooks.openScreen((ServerPlayer) player, new MenuProvider() {
                 @Override
                 public Component getDisplayName() {
                     return Component.translatable("container.apotheosis.salvage");
@@ -45,7 +46,10 @@ public class PortableSalvagingItem extends Item {
                 public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
                     return new PortableSalvagingMenu(id, inv);
                 }
-            });
+                });
+            } finally {
+                openingToolId.remove();
+            }
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
     }

@@ -3,10 +3,14 @@ package com.apotheosis_artifice.enchant;
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
+import java.util.function.Consumer;
 
 public record SetRavenStatsPacket(float eterna, float quanta, float arcana, ItemStack inputItem) {
 
@@ -39,10 +43,9 @@ public record SetRavenStatsPacket(float eterna, float quanta, float arcana, Item
     }
 
     /** 从玩家背包真实移除最多 amount 个与 match 可堆叠的物品，返回实际取出的栈（数量 ≤ amount）。 */
-    private static ItemStack extractFromInventory(ServerPlayer player, ItemStack match, int amount) {
+    private static ItemStack extractFromInventory(Inventory inv, ItemStack match, int amount) {
         ItemStack result = ItemStack.EMPTY;
         int need = amount;
-        var inv = player.getInventory();
         for (int i = 0; i < inv.getContainerSize() && need > 0; i++) {
             ItemStack invStack = inv.getItem(i);
             if (invStack.isEmpty()
@@ -64,61 +67,45 @@ public record SetRavenStatsPacket(float eterna, float quanta, float arcana, Item
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null || !(player.containerMenu instanceof RavenEnchantMenu menu)) return;
-            if (!menu.stillValid(player)) return; // 复检：菜单仍打开且在有效距离/方块上
+            if (!menu.stillValid(player)) return;
+            if (!Float.isFinite(pkt.eterna) || !Float.isFinite(pkt.quanta) || !Float.isFinite(pkt.arcana)) return;
             if (!pkt.inputItem.isEmpty()) {
+                if (!menu.getSlot(0).mayPlace(pkt.inputItem)) return;
+                ItemStackHandler buffer = null;
                 if (menu instanceof MechanicalRavenEnchantMenu mech && mech.getTile() != null) {
-                    var ioInv = mech.getTile().getIOInv();
-
-                    // 1 清空缓冲（旧物回背包）
-                    ItemStack bufItem = ioInv.getStackInSlot(0);
-                    if (!bufItem.isEmpty()) {
-                        ItemStack leftover = returnToPlayer(player, bufItem);
-                        if (!leftover.isEmpty()) player.drop(leftover, true);
-                        ioInv.extractItem(0, bufItem.getCount(), false);
-                    }
-
-                    // 2 旧附魔物回背包
-                    ItemStack oldEnch = menu.enchantSlots.getItem(0);
-                    if (!oldEnch.isEmpty()) {
-                        ItemStack leftover = returnToPlayer(player, oldEnch);
-                        if (!leftover.isEmpty()) player.drop(leftover, true);
-                    }
-                    mech.getTile().setSavedEnchantSlot(ItemStack.EMPTY);
-
-                    // 3 从玩家背包「真实提取」要放入的物品（不信任 pkt.inputItem，避免凭空造物）
-                    ItemStack taken = extractFromInventory(player, pkt.inputItem, pkt.inputItem.getCount());
-                    if (taken.isEmpty()) return;
-
-                    // 4 放入缓冲，再取 1 个到附魔槽；缓冲放不下的退回玩家
-                    ItemStack leftover = ioInv.insertItem(0, taken, false);
-                    if (!leftover.isEmpty()) {
-                        leftover = returnToPlayer(player, leftover);
-                        if (!leftover.isEmpty()) player.drop(leftover, true);
-                    }
-                    ItemStack enchItem = ioInv.extractItem(0, 1, false);
-                    if (!enchItem.isEmpty()) {
-                        menu.enchantSlots.setItem(0, enchItem);
-                    }
-                } else {
-                    // 普通 RavenEnchantMenu: 旧物回背包，再从背包真实提取 1 个放入
-                    ItemStack old = menu.getSlot(0).getItem();
-                    if (!old.isEmpty()) {
-                        ItemStack leftover = returnToPlayer(player, old);
-                        if (!leftover.isEmpty()) player.drop(leftover, true);
-                    }
-                    ItemStack taken = extractFromInventory(player, pkt.inputItem, 1);
-                    if (taken.isEmpty()) return;
-                    menu.getSlot(0).set(taken);
-                    menu.slotsChanged(menu.enchantSlots);
+                    buffer = mech.getTile().getIOInv();
+                    if (!buffer.isItemValid(0, pkt.inputItem)) return;
                 }
+                if (!replaceInput(menu.enchantSlots, buffer, player.getInventory(), pkt.inputItem,
+                    stack -> returnOrDrop(player, stack))) return;
             }
-            if (pkt.eterna != 0 || pkt.quanta != 0 || pkt.arcana != 0) {
-                menu.setPlayerStats(pkt.eterna, pkt.quanta, pkt.arcana);
-                if (menu instanceof MechanicalRavenEnchantMenu) {
-                    menu.broadcastFullState();
-                }
+            menu.setPlayerStats(pkt.eterna, pkt.quanta, pkt.arcana);
+            if (menu instanceof MechanicalRavenEnchantMenu) {
+                menu.broadcastFullState();
             }
         });
         ctx.get().setPacketHandled(true);
+    }
+
+    static boolean replaceInput(Container input, ItemStackHandler buffer, Inventory inventory,
+        ItemStack requested, Consumer<ItemStack> returnStack) {
+        int amount = buffer == null ? 1 : Math.min(requested.getCount(), requested.getMaxStackSize());
+        ItemStack taken = extractFromInventory(inventory, requested, amount);
+        if (taken.isEmpty()) return false;
+        ItemStack old = input.removeItemNoUpdate(0);
+        ItemStack previousBuffer = buffer == null ? ItemStack.EMPTY
+            : buffer.extractItem(0, buffer.getStackInSlot(0).getCount(), false);
+        ItemStack replacement = taken.split(1);
+        ItemStack leftover = buffer == null ? taken : buffer.insertItem(0, taken, false);
+        input.setItem(0, replacement);
+        if (!old.isEmpty()) returnStack.accept(old);
+        if (!previousBuffer.isEmpty()) returnStack.accept(previousBuffer);
+        if (!leftover.isEmpty()) returnStack.accept(leftover);
+        return true;
+    }
+
+    private static void returnOrDrop(ServerPlayer player, ItemStack stack) {
+        ItemStack leftover = returnToPlayer(player, stack);
+        if (!leftover.isEmpty()) player.drop(leftover, true);
     }
 }

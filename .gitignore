@@ -1,6 +1,7 @@
 # gradle
 .gradle/
 build/
+logs/
 *.jar
 *.class
 

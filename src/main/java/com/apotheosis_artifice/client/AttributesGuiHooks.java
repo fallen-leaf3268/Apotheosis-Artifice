@@ -77,8 +77,7 @@ public class AttributesGuiHooks {
         if (nameBox == null) return data;
         String search = nameBox.getValue().toLowerCase();
         if (search.isEmpty()) return data;
-        return data.stream()
-            .filter(inst -> I18n.get(inst.getAttribute().getDescriptionId()).toLowerCase().contains(search))
-            .toList();
+        data.removeIf(inst -> !I18n.get(inst.getAttribute().getDescriptionId()).toLowerCase().contains(search));
+        return data;
     }
 }

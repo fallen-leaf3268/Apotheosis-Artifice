@@ -130,7 +130,7 @@
     "info.apotheosis_artifice.binder.desc_gemcase": "§7绑定后 拾取的宝石将自动进入宝石柜",
     "info.apotheosis_artifice.binder.salvage_mode": "分解模式",
     "info.apotheosis_artifice.binder.desc_salvage": "§7拾取的物品将自动回收分解",
-    "info.apotheosis_artifice.binder.library_unbound": "§c按住shitf+右键绑定至图书馆",
+    "info.apotheosis_artifice.binder.library_unbound": "§c按住Shift+右键绑定至图书馆",
     "info.apotheosis_artifice.binder.library_bound": "§d%s：%s, %s, %s [%s]",
     "info.apotheosis_artifice.binder.desc_library": "§7绑定后 拾取的附魔书将自动进入图书馆",
     "info.apotheosis_artifice.binder.mode.deposit": "§6存入模式",

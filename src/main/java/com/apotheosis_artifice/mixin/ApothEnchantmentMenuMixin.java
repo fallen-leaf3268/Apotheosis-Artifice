@@ -40,6 +40,7 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
     @Unique private Player artifice$menuPlayer;
     @Unique private Inventory artifice$playerInventory;
     @Unique private Container artifice$pendingEasyMagicInventory;
+    @Unique private EasyMagicEnchantingStorage artifice$legacyFuelStorage;
 
     protected ApothEnchantmentMenuMixin(int id, Inventory inventory) {
         super(id, inventory);
@@ -62,6 +63,7 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
         this.artifice$rememberPlayer(inventory);
         if (!(tile instanceof EasyMagicEnchantingStorage storage)) return;
         if (EasyMagicCompat.isLoaded()) {
+            this.artifice$legacyFuelStorage = storage;
             this.artifice$bindEasyMagicInventory(storage.getEasyMagicInventory());
         } else {
             this.artifice$queueEasyMagicInventoryMigration(storage.getEasyMagicInventory());
@@ -80,6 +82,11 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
 
     @Override
     public void artifice$migrateEasyMagicInventory() {
+        if (this.artifice$legacyFuelStorage != null) {
+            EasyMagicEnchantingStorage storage = this.artifice$legacyFuelStorage;
+            this.artifice$legacyFuelStorage = null;
+            storage.migrateLegacyFuel(this.artifice$menuPlayer);
+        }
         Container source = this.artifice$pendingEasyMagicInventory;
         if (source == null) return;
         this.artifice$pendingEasyMagicInventory = null;
@@ -151,7 +158,17 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
             cir.setReturnValue(true);
             return;
         }
-        if (data == 4) cir.setReturnValue(EasyMagicCompat.tryReroll((ApothEnchantmentMenu) (Object) this, player));
+        if (data == 4) {
+            cir.setReturnValue(EasyMagicCompat.tryReroll((ApothEnchantmentMenu) (Object) this, player));
+            return;
+        }
+        if (data < 0 || data >= 3) cir.setReturnValue(false);
+    }
+
+    @Override
+    public int getGoldCount() {
+        if (EnigmaticLegacyCompat.isEnchanterPearlActive(this.artifice$menuPlayer)) return 64;
+        return super.getGoldCount();
     }
 
     @ModifyVariable(method = "clickMenuButton", at = @At("STORE"), ordinal = 1)

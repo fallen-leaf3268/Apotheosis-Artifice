@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
@@ -19,11 +20,12 @@ import com.apotheosis_artifice.gemcase.GemCaseMenu;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class ApotheosisNetwork {
 
-    private static final String PROTOCOL_VERSION = "1";
+    private static final String PROTOCOL_VERSION = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ApotheosisArtificeMod.MODID + ":main"),
         () -> PROTOCOL_VERSION,
@@ -41,8 +43,6 @@ public class ApotheosisNetwork {
                     ServerPlayer player = ctx.get().getSender();
                     if (player == null) return;
                     if (!(player.containerMenu instanceof ReforgingMenu menu)) {
-                        ApotheosisArtificeMod.LOGGER.warn("[Network] Server packet: menu is {}, not ReforgingMenu",
-                            player.containerMenu.getClass().getName());
                         return;
                     }
                     ((ISlotSelectMenu) menu).curiosforge_selectSlot(pkt.slotIndex);
@@ -53,7 +53,7 @@ public class ApotheosisNetwork {
                         menu.getSlot(4).getItem()));
                 });
                 ctx.get().setPacketHandled(true);
-            });
+            }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
         CHANNEL.registerMessage(id++, GemCaseSelectPacket.class,
             (pkt, buf) -> buf.writeUtf(pkt.gemId),
@@ -68,7 +68,7 @@ public class ApotheosisNetwork {
                     }
                 });
                 ctx.get().setPacketHandled(true);
-            });
+            }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
         CHANNEL.registerMessage(id++, GemCaseUpgradePacket.class,
             (pkt, buf) -> {
@@ -87,7 +87,7 @@ public class ApotheosisNetwork {
                     }
                 });
                 ctx.get().setPacketHandled(true);
-            });
+            }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
         CHANNEL.registerMessage(id++, GemCasePagePacket.class,
             (pkt, buf) -> buf.writeVarInt(pkt.page),
@@ -102,32 +102,37 @@ public class ApotheosisNetwork {
                     }
                 });
                 ctx.get().setPacketHandled(true);
-            });
+            }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
         CHANNEL.registerMessage(id++, com.apotheosis_artifice.enchant.SetRavenStatsPacket.class,
             com.apotheosis_artifice.enchant.SetRavenStatsPacket::encode,
             com.apotheosis_artifice.enchant.SetRavenStatsPacket::decode,
-            com.apotheosis_artifice.enchant.SetRavenStatsPacket::handle);
+            com.apotheosis_artifice.enchant.SetRavenStatsPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
         CHANNEL.registerMessage(id++, ToggleBinderPacket.class,
             ToggleBinderPacket::encode,
             ToggleBinderPacket::decode,
-            ToggleBinderPacket::handle);
+            ToggleBinderPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
         CHANNEL.registerMessage(id++, ForceSlot0Packet.class,
             ForceSlot0Packet::encode,
             ForceSlot0Packet::decode,
-            ForceSlot0Packet::handle);
+            ForceSlot0Packet::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         CHANNEL.registerMessage(id++, SyncCluesPacket.class,
             SyncCluesPacket::encode,
             SyncCluesPacket::decode,
-            SyncCluesPacket::handle);
+            SyncCluesPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         CHANNEL.registerMessage(id++, SyncReforgeChoicesPacket.class,
             SyncReforgeChoicesPacket::encode,
             SyncReforgeChoicesPacket::decode,
-            SyncReforgeChoicesPacket::handle);
+            SyncReforgeChoicesPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        CHANNEL.registerMessage(id++, SyncGemCaseMaterialsPacket.class,
+            SyncGemCaseMaterialsPacket::encode, SyncGemCaseMaterialsPacket::decode,
+            SyncGemCaseMaterialsPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        ApotheosisConfig.registerNetwork(CHANNEL, id++);
     }
 
     public static void sendClues(ServerPlayer player, int slot, List<EnchantmentInstance> clues) {
@@ -259,4 +264,30 @@ public class ApotheosisNetwork {
     public static record GemCaseUpgradePacket(int rarityOrdinal, int page, boolean shift) {}
     public static record GemCaseSelectPacket(String gemId) {}
     public static record GemCasePagePacket(int page) {}
+
+    public static record SyncGemCaseMaterialsPacket(int menuId, List<ItemStack> materials) {
+        public static void encode(SyncGemCaseMaterialsPacket packet, FriendlyByteBuf buf) {
+            buf.writeVarInt(packet.menuId);
+            for (ItemStack stack : packet.materials) {
+                buf.writeItem(stack.copyWithCount(1));
+                buf.writeVarInt(stack.getCount());
+            }
+        }
+
+        public static SyncGemCaseMaterialsPacket decode(FriendlyByteBuf buf) {
+            int menuId = buf.readVarInt();
+            List<ItemStack> materials = new ArrayList<>();
+            for (int i = 0; i < GemCaseMenu.UPGRADE_MAT_COUNT; i++) {
+                ItemStack stack = buf.readItem();
+                stack.setCount(Math.max(0, buf.readVarInt()));
+                materials.add(stack);
+            }
+            return new SyncGemCaseMaterialsPacket(menuId, materials);
+        }
+
+        public static void handle(SyncGemCaseMaterialsPacket packet, Supplier<NetworkEvent.Context> ctx) {
+            ctx.get().enqueueWork(() -> ApotheosisArtificeMod.PROXY.handleGemCaseMaterials(packet.menuId, packet.materials));
+            ctx.get().setPacketHandled(true);
+        }
+    }
 }

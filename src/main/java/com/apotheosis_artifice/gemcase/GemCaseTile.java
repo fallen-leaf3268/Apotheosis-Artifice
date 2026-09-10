@@ -55,6 +55,11 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
             public int getSlotLimit(int slot) { return materialSlotLimit; }
 
             @Override
+            protected void onContentsChanged(int slot) {
+                GemCaseTile.this.materialsChanged();
+            }
+
+            @Override
             public CompoundTag serializeNBT() {
                 CompoundTag tag = new CompoundTag();
                 tag.putInt("Size", this.getSlots());
@@ -66,7 +71,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
                         itemTag.putString("id", ForgeRegistries.ITEMS.getKey(stack.getItem()).toString());
                         itemTag.putInt("Count", stack.getCount());
                         if (stack.hasTag()) {
-                            itemTag.put("tag", stack.getTag());
+                            itemTag.put("tag", stack.getTag().copy());
                         }
                         items.put(String.valueOf(i), itemTag);
                     }
@@ -77,19 +82,19 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
 
             @Override
             public void deserializeNBT(CompoundTag tag) {
-                int size = tag.getInt("Size");
                 CompoundTag items = tag.getCompound("Items");
-                for (int i = 0; i < size; i++) {
+                for (int i = 0; i < this.getSlots(); i++) {
                     String key = String.valueOf(i);
                     if (items.contains(key)) {
                         CompoundTag itemTag = items.getCompound(key);
                         String id = itemTag.getString("id");
                         int count = itemTag.getInt("Count");
-                        ItemStack stack = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation(id)), 1);
+                        ResourceLocation itemId = ResourceLocation.tryParse(id);
+                        ItemStack stack = itemId == null ? ItemStack.EMPTY : new ItemStack(ForgeRegistries.ITEMS.getValue(itemId), 1);
                         if (!stack.isEmpty()) {
-                            stack.setCount(count);
+                            stack.setCount(Math.max(0, Math.min(count, this.getSlotLimit(i))));
                             if (itemTag.contains("tag")) {
-                                stack.setTag(itemTag.getCompound("tag"));
+                                stack.setTag(itemTag.getCompound("tag").copy());
                             }
                         }
                         this.setStackInSlot(i, stack);
@@ -101,9 +106,15 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         };
     }
 
+    public void materialsChanged() {
+        this.setChanged();
+        this.activeContainers.forEach(GemCaseMenu::onChanged);
+    }
+
     // ---- 存入 ----
 
     public void depositGem(ItemStack stack) {
+        if (!this.canAcceptGem(stack)) return;
         DynamicHolder<Gem> gem = GemItem.getGem(stack);
         if (!gem.isBound()) return;
         DynamicHolder<LootRarity> rarity = AffixHelper.getRarity(stack);
@@ -215,13 +226,13 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         int extracted = Math.min(count, stored);
         if (extracted <= 0) return ItemStack.EMPTY;
 
+        DynamicHolder<Gem> gem = GemRegistry.INSTANCE.holder(gemId);
+        DynamicHolder<LootRarity> rarity = RarityRegistry.INSTANCE.holder(rarityId);
+        if (!gem.isBound() || !rarity.isBound()) return ItemStack.EMPTY;
+
         rarities.put(rarityId, stored - extracted);
         if (rarities.get(rarityId) <= 0) rarities.remove(rarityId);
         if (rarities.isEmpty()) this.gems.remove(gemId);
-
-        DynamicHolder<Gem> gem = GemRegistry.INSTANCE.holder(gemId);
-        DynamicHolder<LootRarity> rarity = RarityRegistry.INSTANCE.holder(rarityId);
-        if (!gem.isBound()) return ItemStack.EMPTY;
 
         ItemStack stack = new ItemStack(Adventure.Items.GEM.get());
         GemItem.setGem(stack, gem.get());
@@ -260,7 +271,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
             if (stack.getItem() == Adventure.Items.GEM_DUST.get()) {
                 int consume = Math.min(stack.getCount(), toConsume);
                 stack.shrink(consume);
-                this.upgradeMatInv.getStackInSlot(i).shrink(consume);
                 toConsume -= consume;
             }
         }
@@ -273,12 +283,12 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
                 if (matRarity.isBound() && matRarity.get() == match.materialRarity) {
                     int consume = Math.min(stack.getCount(), toConsume);
                     stack.shrink(consume);
-                    this.upgradeMatInv.getStackInSlot(i).shrink(consume);
                     toConsume -= consume;
                 }
             }
         }
 
+        matInv.setChanged();
         this.setChanged();
         if (!this.level.isClientSide) {
             this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
@@ -298,23 +308,24 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         LootRarity nextRarity = currentHolder.get().next();
         if (nextRarity.ordinal() == currentHolder.get().ordinal()) return null;
         DynamicHolder<Gem> gemHolder = GemRegistry.INSTANCE.holder(gemId);
-        if (gemHolder.isBound() && nextRarity.ordinal() > gemHolder.get().getMaxRarity().ordinal()) return null;
+        if (!gemHolder.isBound() || nextRarity.ordinal() > gemHolder.get().getMaxRarity().ordinal()) return null;
+        if (rarities.getOrDefault(RarityRegistry.INSTANCE.getKey(nextRarity), 0) >= this.maxCount) return null;
 
         int dustNeeded = 1 + currentHolder.get().ordinal() * 2;
-        int dustFound = 0;
+        long dustFound = 0;
         for (int i = 0; i < matInv.getContainerSize(); i++) {
             if (matInv.getItem(i).getItem() == Adventure.Items.GEM_DUST.get()) {
                 dustFound += matInv.getItem(i).getCount();
             }
         }
         if (dustFound < dustNeeded) {
-            return new RarityUpgradeMatch(nextRarity, false, dustNeeded, dustFound, null, 0, 0);
+            return new RarityUpgradeMatch(nextRarity, false, dustNeeded, (int) dustFound, null, 0, 0);
         }
 
         DynamicHolder<LootRarity> nextHolder = RarityRegistry.INSTANCE.holder(RarityRegistry.INSTANCE.getKey(nextRarity));
         DynamicHolder<LootRarity> prevHolder = RarityRegistry.prev(currentHolder);
 
-        int nextMatCount = 0, sameMatCount = 0, prevMatCount = 0;
+        long nextMatCount = 0, sameMatCount = 0, prevMatCount = 0;
         for (int i = 0; i < matInv.getContainerSize(); i++) {
             ItemStack stack = matInv.getItem(i);
             if (stack.isEmpty() || !RarityRegistry.isMaterial(stack.getItem())) continue;
@@ -340,10 +351,10 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
             materialRarity = prevHolder.get();
         }
         else {
-            return new RarityUpgradeMatch(nextRarity, false, dustNeeded, dustFound, null, 0, 0);
+            return new RarityUpgradeMatch(nextRarity, false, dustNeeded, (int) Math.min(Integer.MAX_VALUE, dustFound), null, 0, 0);
         }
 
-        return new RarityUpgradeMatch(nextRarity, true, dustNeeded, dustFound, materialRarity, matNeeded, matNeeded);
+        return new RarityUpgradeMatch(nextRarity, true, dustNeeded, (int) Math.min(Integer.MAX_VALUE, dustFound), materialRarity, matNeeded, matNeeded);
     }
 
     public record RarityUpgradeMatch(
@@ -426,9 +437,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
             }
             this.gems.put(gemId, rarities);
         }
-        if (tag.contains("upgrade_mats")) {
-            this.upgradeMatInv.deserializeNBT(tag.getCompound("upgrade_mats"));
-        }
+        this.upgradeMatInv.deserializeNBT(tag.getCompound("upgrade_mats"));
     }
 
     @Override
@@ -477,7 +486,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         GemCaseAnimationState animState = this.getAnimationState();
         int uniqueGems = 0;
         for (Map.Entry<ResourceLocation, Map<ResourceLocation, Integer>> e : this.gems.entrySet()) {
-            int total = 0;
+            long total = 0;
             for (int count : e.getValue().values()) total += count;
             if (total > 0) uniqueGems++;
         }

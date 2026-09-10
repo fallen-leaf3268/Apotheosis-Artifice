@@ -123,12 +123,6 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         this.curiosforge_availableSlots = List.copyOf(cats);
         if (this.curiosforge_selectedSlotIdx >= cats.size())
             this.curiosforge_selectedSlotIdx = 0;
-        if (cats.size() == 1) {
-            String cat = cats.get(0);
-            if (cat.equals("curio") || cat.startsWith("curios:")) {
-                input.getOrCreateTagElement("affix_data").putString("curio_artifice", cat);
-            }
-        }
     }
 
     @Unique
@@ -168,6 +162,20 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             target = "Ldev/shadowsoffire/apotheosis/adventure/loot/LootController;createLootItem(Lnet/minecraft/world/item/ItemStack;Ldev/shadowsoffire/apotheosis/adventure/loot/LootRarity;Lnet/minecraft/util/RandomSource;)Lnet/minecraft/world/item/ItemStack;"))
     private ItemStack curiosforge_safeCreateLootItem(ItemStack stack, LootRarity rarity, RandomSource rand) {
         try {
+            if (this.curiosforge_availableSlots.size() == 1) {
+                String cat = this.curiosforge_availableSlots.get(0);
+                var affixData = stack.getTagElement("affix_data");
+                if (cat.equals("curio") || cat.startsWith("curios:")
+                    || affixData != null && affixData.contains("curio_artifice")) {
+                    stack.getOrCreateTagElement("affix_data").putString("curio_artifice", cat);
+                }
+            }
+            if (ApotheosisConfig.CLEAR_SOCKETS_ON_RARITY_CHANGE.get()) {
+                var oldRarity = dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper.getRarity(stack);
+                if (!oldRarity.isBound() || oldRarity.get() != rarity) {
+                    dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper.setSockets(stack, 0);
+                }
+            }
             return LootController.createLootItem(stack, rarity, rand);
         } catch (Exception e) {
             ApotheosisArtificeMod.LOGGER.warn("Reforge preview roll failed for {} at rarity {}: {}",
@@ -178,6 +186,11 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
 
     @Inject(method = "slotsChanged", at = @At("HEAD"), remap = true)
     private void curiosforge_updateSlots(net.minecraft.world.Container container, CallbackInfo ci) {
+        java.util.Arrays.fill(this.costs, 0);
+        if (((ReforgingMenu) (Object) this).getRarity() != null && this.player != null) {
+            int[] max = curiosforge_getMaxCosts(this.player);
+            System.arraycopy(max, 0, this.costs, 0, this.costs.length);
+        }
         ItemStack input = ((ReforgingMenu)(Object)this).getSlot(0).getItem();
         if (input.isEmpty()) { this.curiosforge_availableSlots = List.of(); return; }
         curiosforge_detectSlots(input);
@@ -242,12 +255,6 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             } finally {
                 com.apotheosis_artifice.CatOverride.set(null);
             }
-        }
-        if (this.costs[0] == 0 && this.costs[1] == 0 && this.costs[2] == 0 && this.player != null && this.player.level() != null) {
-            int[] max = curiosforge_getMaxCosts(this.player);
-            if (max[0] > 0) this.costs[0] = max[0];
-            if (max[1] > 0) this.costs[1] = max[1];
-            if (max[2] > 0) this.costs[2] = max[2];
         }
     }
 
