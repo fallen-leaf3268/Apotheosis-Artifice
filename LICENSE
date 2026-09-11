@@ -14,25 +14,102 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+along with this program in COPYING. If not, see <https://www.gnu.org/licenses/>.
+
+This GPL-3.0-or-later declaration applies to original Apotheosis Artifice
+code. Third-party code retains the notices and permissions reproduced below.
+It does not grant rights to third-party textures, models, GUI artwork, or
+other assets. Those materials require their own applicable permissions.
+
+Source and build instructions:
+https://github.com/fallen-leaf3268/Apotheosis-Artifice
+See README.md for the corresponding source archive and asset review status.
 
 
 ================================================================================
 THIRD-PARTY NOTICES
 ================================================================================
 
-Apotheosis Artifice incorporates and/or is derived from code and assets ported
-from Apotheosis by Shadows_of_Fire (Stormraven Studios, LLC), which is
-distributed under the MIT License. As required by that license, the original
-copyright notice and permission notice are reproduced below.
+Apotheosis Artifice contains code adapted from Apotheosis and Apothic
+Attributes by Shadows_of_Fire. The MIT notices below apply to that code;
+they do not assert that Apotheosis assets are MIT-licensed.
+
+1. Apotheosis newer-branch code, including the GemCase implementations
 
 Apotheosis: https://github.com/Shadows-of-Fire/Apotheosis
+License reference:
+https://github.com/Shadows-of-Fire/Apotheosis/blob/8a8cd4de3df1bd32a8cba3243a687d332e546efb/LICENSE
 
 --------------------------------------------------------------------------------
 
 MIT License
 
 Copyright (c) 2018-2025 Stormraven Studios, LLC
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+2. Apotheosis 1.20 code
+
+Adapted portions include portable salvaging, enchanting, affix, and recipe
+implementations. The 1.20 copyright notice is retained separately from the
+newer-branch notice above.
+
+Source: https://github.com/Shadows-of-Fire/Apotheosis/tree/1.20
+License: https://github.com/Shadows-of-Fire/Apotheosis/blob/1.20/LICENSE
+
+MIT License
+
+Copyright (c) 2023 Brennan Ward
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+3. Apothic Attributes 1.20 code
+
+ALCombatRulesMixin adapts armor/protection shred and pierce calculations
+from ALCombatRules.
+
+Source: https://github.com/Shadows-of-Fire/Apothic-Attributes/tree/1.20
+License: https://github.com/Shadows-of-Fire/Apothic-Attributes/blob/1.20/LICENSE
+
+MIT License
+
+Copyright (c) 2021 Brennan Ward
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

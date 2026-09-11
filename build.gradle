@@ -131,7 +131,19 @@ tasks.named('processResources', ProcessResources).configure {
     }
 }
 
+tasks.register('verifyLicenseFiles') {
+    doLast {
+        ['LICENSE', 'COPYING', 'README.md'].each { name ->
+            if (!file(name).isFile() || file(name).length() == 0) {
+                throw new GradleException("Missing or empty distribution notice: ${name}")
+            }
+        }
+    }
+}
+
 tasks.named('jar', Jar).configure {
+    dependsOn 'verifyLicenseFiles'
+    from('LICENSE', 'COPYING', 'README.md')
     manifest {
         attributes([
                 'Specification-Title'     : mod_id,
@@ -145,6 +157,18 @@ tasks.named('jar', Jar).configure {
         ])
     }
     finalizedBy 'reobfJar'
+}
+
+tasks.register('sourceDistribution', Zip) {
+    dependsOn 'verifyLicenseFiles'
+    archiveFileName = "${mod_id}-${mod_version}-source.zip"
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+    from(projectDir) {
+        include 'src/main/**', 'src/test/**', 'src/generated/resources/**'
+        include 'gradle/**', 'gradlew', 'gradlew.bat'
+        include 'build.gradle', 'settings.gradle', 'gradle.properties'
+        include 'LICENSE', 'COPYING', 'README.md', '.gitignore'
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
