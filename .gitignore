@@ -23,3 +23,4 @@ src_backup_before_gemcase/
 
 # local-only project materials
 /docs/
+/src/test/
