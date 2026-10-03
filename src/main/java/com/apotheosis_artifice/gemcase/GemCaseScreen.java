@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import org.lwjgl.glfw.GLFW;
+
 import com.apotheosis_artifice.ApotheosisNetwork;
 import com.apotheosis_artifice.ApotheosisNetwork.GemCasePagePacket;
 import com.apotheosis_artifice.ApotheosisNetwork.GemCaseUpgradePacket;
@@ -22,14 +24,17 @@ import dev.shadowsoffire.apotheosis.adventure.socket.gem.GemRegistry;
 import dev.shadowsoffire.placebo.reload.DynamicHolder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -42,6 +47,9 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
     public static final int MAX_ROWS = 3;
     public static final int SLOTS_PER_ROW = 6;
     public static final int SLOTS_PER_PAGE = 6;
+    private static final int SCROLLBAR_TOP = 32;
+    private static final int SCROLLBAR_TRAVEL = 90;
+    private static final int SCROLLBAR_HEIGHT = 12;
 
     protected int startIndex;
     protected int listPage = 0;
@@ -51,7 +59,7 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
     protected List<Gem> data = new ArrayList<>();
     protected List<GemCaseSelectButton> gemButtons = new ArrayList<>();
     protected List<UpgradeButton> upgradeButtons = new ArrayList<>();
-    protected List<Slot> extractSlots = new ArrayList<>();
+    protected List<PageButton> pageButtons = new ArrayList<>();
     protected EditBox filter;
 
     public GemCaseScreen(GemCaseMenu menu, Inventory inv, Component title) {
@@ -67,9 +75,14 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
         int left = this.getGuiLeft();
         int top = this.getGuiTop();
 
-        this.filter = this.addRenderableWidget(new EditBox(this.font, left + 16, top + 16, 110, 11, this.filter, Component.empty()));
+        this.filter = this.addRenderableWidget(new EditBox(this.font, left + 24, top + 15, 100, 11, this.filter, Component.empty()) {
+            @Override
+            public void renderWidget(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
+                super.renderWidget(new SearchGraphics(gfx), mouseX, mouseY, partialTick);
+            }
+        });
         this.filter.setBordered(false);
-        this.filter.setTextColor(0xFF97714F);
+        this.filter.setTextColor(0xFF554536);
         this.filter.setResponder(t -> this.containerChanged());
         this.filter.setCanLoseFocus(true);
 
@@ -80,18 +93,13 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
             this.addRenderableWidget(btn);
         }
 
-        this.extractSlots.clear();
-        for (Slot s : this.menu.slots) {
-            if (s instanceof GemCaseSlot) this.extractSlots.add(s);
-        }
-
-        int totalRarities = this.menu.getRarityOrder().size();
-        this.maxPage = totalRarities <= SLOTS_PER_PAGE ? 0 : (int)Math.ceil((totalRarities - SLOTS_PER_PAGE) / (double)(SLOTS_PER_PAGE - 1));
+        this.maxPage = this.menu.getMaxPage();
         this.page = Math.min(this.page, this.maxPage);
 
-        int pgY = top + 126;
-        this.addRenderableWidget(new PageButton(left + 94, pgY, "<", this, false));
-        this.addRenderableWidget(new PageButton(left + 112, pgY, ">", this, true));
+        int pgY = top + 109;
+        this.pageButtons.clear();
+        this.pageButtons.add(this.addRenderableWidget(new PageButton(left + 20, pgY, this, false)));
+        this.pageButtons.add(this.addRenderableWidget(new PageButton(left + 119, pgY, this, true)));
 
         this.upgradeButtons.clear();
         for (int i = 1; i < 6; i++) {
@@ -116,6 +124,14 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
         this.startIndex = this.listPage * SLOTS_PER_ROW;
 
         Gem selected = this.menu.getSelectedGem();
+        this.maxPage = this.menu.getMaxPage();
+        int validPage = net.minecraft.util.Mth.clamp(this.page, 0, this.maxPage);
+        if (this.page != validPage) {
+            this.page = validPage;
+            this.applyPage();
+            ApotheosisNetwork.CHANNEL.sendToServer(new GemCasePagePacket(this.page));
+        }
+        for (PageButton button : this.pageButtons) button.updateState();
         List<ResourceLocation> order = this.menu.getRarityOrder();
         int offset = this.page * (SLOTS_PER_PAGE - 1);
         for (int i = 0; i < this.upgradeButtons.size() && offset + i + 1 < order.size(); i++) {
@@ -235,26 +251,31 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
     public int getStartIndex() { return this.startIndex; }
 
     private void setPage(int newPage) {
-        this.page = net.minecraft.util.Mth.clamp(newPage, 0, this.maxPage);
+        newPage = net.minecraft.util.Mth.clamp(newPage, 0, this.maxPage);
+        if (this.page == newPage) return;
+        this.page = newPage;
         ApotheosisNetwork.CHANNEL.sendToServer(new GemCasePagePacket(this.page));
         this.applyPage();
         this.containerChanged();
     }
 
     private void applyPage() {
-        List<ResourceLocation> order = this.menu.getRarityOrder();
-        int offset = this.page * (SLOTS_PER_PAGE - 1);
-        ResourceLocation dummyId = GemCaseMenu.NONE_RARITY;
-        for (int i = 0; i < this.extractSlots.size() && i < SLOTS_PER_PAGE; i++) {
-            GemCaseSlot gs = (GemCaseSlot) this.extractSlots.get(i);
-            int idx = offset + i;
-            gs.rarityId = idx < order.size() ? order.get(idx) : dummyId;
-        }
+        this.menu.setPage(this.page);
     }
 
     @Override
     public void containerTick() {
         if (this.filter != null) this.filter.tick();
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode != GLFW.GLFW_KEY_ESCAPE && keyCode != GLFW.GLFW_KEY_TAB
+            && this.filter != null && this.filter.canConsumeInput()) {
+            this.filter.keyPressed(keyCode, scanCode, modifiers);
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -269,7 +290,8 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
             }
         }
         if (isScrollBarActive() && mx >= this.getGuiLeft() + 13 && mx < this.getGuiLeft() + 17
-            && my >= this.getGuiTop() + 29 && my < this.getGuiTop() + 132) {
+            && my >= this.getGuiTop() + SCROLLBAR_TOP
+            && my < this.getGuiTop() + SCROLLBAR_TOP + SCROLLBAR_TRAVEL + SCROLLBAR_HEIGHT) {
             return true;
         }
         return super.mouseClicked(mx, my, button);
@@ -299,12 +321,16 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
         gfx.blit(TEXTURE, left, top, 0, 0, this.imageWidth, this.imageHeight, 307, 256);
         gfx.blit(TEXTURE, left - 65, top + 16, 198, 0, 65, 193, 307, 256);
 
+        if (this.menu.getSlot(GemCaseMenu.FILTER_SLOT).hasItem()) {
+            gfx.blit(TEXTURE, left + 142, top + 18, 8, 148, 16, 16, 307, 256);
+        }
+
         if (this.maxListPage > 0) {
             float pct = (float) this.listPage / this.maxListPage;
-            int scrollbarPos = (int) (90F * pct);
-            gfx.blit(TEXTURE, left + 13, top + 29 + scrollbarPos, 303, 0, 4, 12, 307, 256);
+            int scrollbarPos = (int) (SCROLLBAR_TRAVEL * pct);
+            gfx.blit(TEXTURE, left + 13, top + SCROLLBAR_TOP + scrollbarPos, 303, 0, 4, SCROLLBAR_HEIGHT, 307, 256);
         } else {
-            gfx.blit(TEXTURE, left + 13, top + 29, 303, 12, 4, 12, 307, 256);
+            gfx.blit(TEXTURE, left + 13, top + SCROLLBAR_TOP, 303, 12, 4, SCROLLBAR_HEIGHT, 307, 256);
         }
 
         Gem selected = this.menu.getSelectedGem();
@@ -335,7 +361,6 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
     public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
         super.render(gfx, mouseX, mouseY, partialTick);
         this.renderGemCaseCounts(gfx);
-        if (this.filter != null) this.filter.render(gfx, mouseX, mouseY, partialTick);
     }
 
     private void renderGemCaseCounts(GuiGraphics gfx) {
@@ -354,6 +379,11 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
 
     @Override
     protected void renderTooltip(GuiGraphics gfx, int x, int y) {
+        if (this.hoveredSlot == this.menu.getSlot(GemCaseMenu.FILTER_SLOT) && !this.hoveredSlot.hasItem()) {
+            gfx.renderComponentTooltip(this.font,
+                List.of(Component.translatable("container.apotheosis_artifice.gem_case.filter_hint")), x, y);
+            return;
+        }
         if (this.hoveredSlot instanceof GemCaseSlot gss && this.menu.getSelectedGem() != null) {
             this.renderGemCaseExtractTooltip(gfx, x, y, gss);
             return;
@@ -449,7 +479,7 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
 
     public static void renderGhostItem(GuiGraphics gfx, ItemStack stack, int x, int y) {
         RenderSystem.enableBlend();
-        RenderSystem.setShaderColor(1, 1, 1, 0.3F);
+        RenderSystem.setShaderColor(1, 1, 1, 0.65F);
         gfx.renderItem(stack, x, y);
         RenderSystem.setShaderColor(1, 1, 1, 1F);
         RenderSystem.disableBlend();
@@ -486,19 +516,8 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
         @Override
         public void renderWidget(GuiGraphics gfx, int mx, int my, float pt) {
             int x = this.getX(), y = this.getY();
-            if (this.active && this.isHovered()) {
-                gfx.fill(x - 1, y - 1, x + 17, y, 0xFFFFFFFF);
-                gfx.fill(x - 1, y + 16, x + 17, y + 17, 0xFFFFFFFF);
-                gfx.fill(x - 1, y, x, y + 16, 0xFFFFFFFF);
-                gfx.fill(x + 16, y, x + 17, y + 16, 0xFFFFFFFF);
-            }
-            if (!this.active) {
-                RenderSystem.setShaderColor(0.4F, 0.4F, 0.4F, 1.0F);
-            }
-            gfx.blit(TEXTURE, x, y, 291, 29, 16, 16, 307, 256);
-            if (!this.active) {
-                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-            }
+            int spriteY = !this.active ? 61 : this.isHovered() ? 45 : 29;
+            gfx.blit(TEXTURE, x, y, 291, spriteY, 16, 16, 307, 256);
         }
 
         @Override
@@ -511,43 +530,64 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
         protected void updateWidgetNarration(NarrationElementOutput output) {}
     }
 
+    private static class SearchGraphics extends GuiGraphics {
+        private final GuiGraphics delegate;
+
+        private SearchGraphics(GuiGraphics delegate) {
+            super(Minecraft.getInstance(), delegate.bufferSource());
+            this.delegate = delegate;
+        }
+
+        @Override
+        public int drawString(Font font, FormattedCharSequence text, int x, int y, int color) {
+            return this.delegate.drawString(font, text, x, y, color, false);
+        }
+
+        @Override
+        public int drawString(Font font, Component text, int x, int y, int color) {
+            return this.delegate.drawString(font, text, x, y, color, false);
+        }
+
+        @Override
+        public int drawString(Font font, String text, int x, int y, int color) {
+            return this.delegate.drawString(font, text, x, y, color, false);
+        }
+
+        @Override
+        public void fill(int x1, int y1, int x2, int y2, int color) {
+            this.delegate.fill(x1, y1, x2, y2, color);
+        }
+
+        @Override
+        public void fill(RenderType type, int x1, int y1, int x2, int y2, int color) {
+            this.delegate.fill(type, x1, y1, x2, y2, color);
+        }
+    }
+
     static class PageButton extends AbstractWidget {
         private final GemCaseScreen screen;
         private final boolean forward;
-        private final String label;
 
-        public PageButton(int x, int y, String label, GemCaseScreen screen, boolean forward) {
-            super(x, y, 16, 9, Component.empty());
+        public PageButton(int x, int y, GemCaseScreen screen, boolean forward) {
+            super(x, y, 9, 16, Component.empty());
             this.screen = screen;
             this.forward = forward;
-            this.label = label;
         }
 
         private boolean canPress() {
             return this.forward ? this.screen.page < this.screen.maxPage : this.screen.page > 0;
         }
 
+        private void updateState() {
+            this.visible = this.screen.maxPage > 0;
+            this.active = this.visible && this.canPress();
+        }
+
         @Override
         public void renderWidget(GuiGraphics gfx, int mx, int my, float pt) {
-            int x = this.getX(), y = this.getY();
-            boolean can = this.canPress();
-            int tl = can ? (this.isHovered() ? 0xFFAAAAAA : 0xFF888888) : 0xFF444444;
-            int br = can ? 0xFF444444 : 0xFF222222;
-            int bg = can ? 0xFF555555 : 0xFF333333;
-            gfx.fill(x, y, x + 16, y + 1, tl);
-            gfx.fill(x, y + 8, x + 16, y + 9, br);
-            gfx.fill(x, y, x + 1, y + 9, tl);
-            gfx.fill(x + 15, y, x + 16, y + 9, br);
-            gfx.fill(x + 1, y + 1, x + 15, y + 8, bg);
-            if (can && this.isHovered()) {
-                gfx.fill(x - 1, y - 1, x + 17, y, 0xFFFFFFFF);
-                gfx.fill(x - 1, y + 9, x + 17, y + 10, 0xFFFFFFFF);
-                gfx.fill(x - 1, y, x, y + 9, 0xFFFFFFFF);
-                gfx.fill(x + 16, y, x + 17, y + 9, 0xFFFFFFFF);
-            }
-            int textColor = can ? 0xFFFFFFFF : 0xFF666666;
-            int tx = x + (16 - Minecraft.getInstance().font.width(this.label)) / 2;
-            gfx.drawString(Minecraft.getInstance().font, this.label, tx, y + 1, textColor, false);
+            int spriteY = (this.forward ? 128 : 80)
+                + (!this.canPress() ? 32 : this.isHovered() ? 16 : 0);
+            gfx.blit(TEXTURE, this.getX(), this.getY(), 298, spriteY, 9, 16, 307, 256);
         }
 
         @Override

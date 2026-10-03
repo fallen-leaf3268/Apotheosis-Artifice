@@ -46,6 +46,7 @@
         "ContainerScreenMixin",
         "EnchHwylaPluginMixin",
         "client.EnchantmentBookMixin",
+        "client.EnchantmentBookMixin$WorldBook",
         "GuiGraphicsMixin",
         "ReforgingScreenMixin",
         "client.AttributesGuiSearchMixin",

@@ -47,6 +47,7 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
     protected List<ResourceLocation> rarityOrder = new ArrayList<>();
     @Nullable
     protected Gem selectedGem = null;
+    protected int page = 0;
     protected Runnable notifier = null;
 
     public GemCaseMenu(int id, Inventory inv, BlockPos pos) {
@@ -187,6 +188,7 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
 
     public void setSelectedGem(@Nullable Gem gem) {
         this.selectedGem = gem;
+        this.setPage(this.page);
         if (this.notifier != null) this.notifier.run();
     }
 
@@ -197,13 +199,21 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
             DynamicHolder<Gem> holder = GemRegistry.INSTANCE.holder(id);
             this.selectedGem = holder.isBound() ? holder.get() : null;
         }
+        this.setPage(this.page);
+    }
+
+    public int getMaxPage() {
+        if (this.selectedGem == null) return 0;
+        int maxRarityIndex = this.rarityOrder.indexOf(RarityRegistry.INSTANCE.getKey(this.selectedGem.getMaxRarity()));
+        return Math.max(0, (maxRarityIndex - 1) / 5);
     }
 
     public void setPage(int page) {
         List<ResourceLocation> order = this.rarityOrder;
         // page 来自网络包，必须钳制下界与上界，否则负 page → order.get(负) 服务端越界崩溃。
-        int maxPage = order.size() <= 6 ? 0 : (order.size() - 2) / 5;
+        int maxPage = this.getMaxPage();
         page = Math.max(0, Math.min(page, maxPage));
+        this.page = page;
         int offset = page * 5;
         for (int i = 0; i < 6; i++) {
             Slot s = this.slots.get(FIRST_GEM_SLOT + i);
@@ -262,7 +272,7 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
 
     public boolean handleUpgradeClick(int rarityOrdinal, boolean shift, int page) {
         if (this.selectedGem == null) return false;
-        int maxPage = this.rarityOrder.size() <= 6 ? 0 : (this.rarityOrder.size() - 2) / 5;
+        int maxPage = this.getMaxPage();
         if (page < 0 || page > maxPage || rarityOrdinal < 1 || rarityOrdinal > 5) return false;
         int sourceIdx = page * 5 + rarityOrdinal - 1;
         if (sourceIdx < 0 || sourceIdx >= this.rarityOrder.size()) return false;

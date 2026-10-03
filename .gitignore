@@ -3,6 +3,7 @@
 build/
 logs/
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.class
 
 # IDE
@@ -22,4 +23,3 @@ src_backup_before_gemcase/
 
 # local-only project materials
 /docs/
-/src/test/

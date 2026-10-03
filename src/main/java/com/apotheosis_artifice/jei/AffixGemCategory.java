@@ -33,6 +33,11 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
     private static final int SLOT_SIZE = 18;
 
     @Override
+    public List<Component> getTooltipStrings(AffixGemEntry entry, IRecipeSlotsView slots, double mouseX, double mouseY) {
+        return AffixDetailCategory.sourceTooltip(entry.gem().getId(), "gems", mouseX, mouseY);
+    }
+
+    @Override
     public RecipeType<AffixGemEntry> getRecipeType() { return TYPE; }
 
     @Override
@@ -141,7 +146,7 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
         } else {
             catLocalized = Component.translatable("text.apotheosis.category." + catRaw).getString();
         }
-        gfx.drawString(font, catLocalized, 22, 3, 0xFFFFAA00, false);
+        AffixDetailCategory.drawSourceHeader(gfx, font, catLocalized, mouseX, mouseY);
 
         // 宝石名（去掉稀有度前缀，保留颜色）
         String name;

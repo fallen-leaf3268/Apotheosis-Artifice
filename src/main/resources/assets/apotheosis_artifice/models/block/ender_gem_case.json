@@ -14,7 +14,10 @@
             }
         },
         "glass": {
-            "parent": "apotheosis_artifice:block/gem_case_glass"
+            "parent": "apotheosis_artifice:block/gem_case_glass",
+            "textures": {
+                "1": "apotheosis_artifice:blocks/ender_gem_case"
+            }
         }
     },
     "textures": {

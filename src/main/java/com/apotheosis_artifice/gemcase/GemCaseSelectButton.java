@@ -52,7 +52,9 @@ public class GemCaseSelectButton extends AbstractWidget {
             gfx.renderItem(stack, x, y);
         }
 
-        if (this.count > 1) {
+        if (this.count <= 0) {
+            GemCaseScreen.renderCountText(gfx, "0", x, y, 200, 0xFFB8B8B8);
+        } else if (this.count > 1) {
             GemCaseScreen.renderCountText(gfx, GemCaseBlock.formatCount(this.count), x, y, 200, 0xFFFFFFFF);
         }
 
