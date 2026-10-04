@@ -9,7 +9,6 @@ import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
 import dev.shadowsoffire.apotheosis.adventure.socket.gem.GemInstance;
 import dev.shadowsoffire.apotheosis.adventure.socket.gem.GemItem;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
@@ -38,6 +37,7 @@ public class CleansingRecipe extends ApothSmithingRecipe implements ReactiveSmit
         if (!pInv.getItem(0).isEmpty()) return false;
         ItemStack base = pInv.getItem(1);
         if (base.isEmpty()) return false;
+        if (base.getTagElement(AffixHelper.AFFIX_DATA) == null) return false;
         ItemStack addition = pInv.getItem(2);
         return addition.getItem() == com.apotheosis_artifice.ApotheosisArtificeMod.SIGIL_OF_CLEANSING.get();
     }
@@ -45,17 +45,7 @@ public class CleansingRecipe extends ApothSmithingRecipe implements ReactiveSmit
     @Override
     public ItemStack assemble(Container pInv, RegistryAccess regs) {
         ItemStack out = pInv.getItem(1).copyWithCount(1);
-        CompoundTag afxData = out.getTagElement(AffixHelper.AFFIX_DATA);
-        if (afxData == null) return out;
-
-        afxData.remove(AffixHelper.AFFIXES);
-        afxData.remove(AffixHelper.RARITY);
-        afxData.remove(AffixHelper.NAME);
-        afxData.remove("gems");
-        afxData.remove("sockets");
-        afxData.remove("tiered_socket_tiers");
-        afxData.remove("uuids");
-
+        out.removeTagKey(AffixHelper.AFFIX_DATA);
         return out;
     }
 

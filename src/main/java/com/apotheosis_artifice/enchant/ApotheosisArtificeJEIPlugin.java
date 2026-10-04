@@ -49,6 +49,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -199,6 +200,18 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
 
     private static IRecipeTransferHandlerHelper TRANSFER_HELPER;
 
+    static ItemStack findMechanicalTransferInput(Inventory inventory, Ingredient ingredient, boolean maxTransfer) {
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (!stack.isEmpty() && ingredient.test(stack)) {
+                ItemStack requested = stack.copy();
+                requested.setCount(maxTransfer ? stack.getMaxStackSize() : 1);
+                return requested;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
     private static class CleansingExtension implements ApothSmithingCategory.Extension<CleansingRecipe> {
         @Override
         public void setRecipe(IRecipeLayoutBuilder builder, CleansingRecipe recipe, IFocusGroup focuses) {
@@ -273,16 +286,7 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         @Override @Nullable
         public IRecipeTransferError transferRecipe(MechanicalRavenEnchantMenu container, EnchantingRecipe recipe,
             IRecipeSlotsView recipeSlots, Player player, boolean maxTransfer, boolean doTransfer) {
-            Inventory inv = player.getInventory();
-            ItemStack inputItem = ItemStack.EMPTY;
-            for (int i = 0; i < inv.getContainerSize(); i++) {
-                ItemStack stack = inv.getItem(i);
-                if (!stack.isEmpty() && recipe.getInput().test(stack)) {
-                    inputItem = stack.copy();
-                    inputItem.setCount(maxTransfer ? Math.min(stack.getCount(), stack.getMaxStackSize()) : 1);
-                    break;
-                }
-            }
+            ItemStack inputItem = findMechanicalTransferInput(player.getInventory(), recipe.getInput(), maxTransfer);
             if (inputItem.isEmpty()) {
                 return TRANSFER_HELPER == null ? null : TRANSFER_HELPER.createUserErrorWithTooltip(
                     Component.translatable("jei.apotheosis_artifice.transfer.no_matching_item"));

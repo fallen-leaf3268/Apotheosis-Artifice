@@ -10,7 +10,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.EnchantedBookItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -41,7 +40,8 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     private String contName = "";
 
     private long enchantmentSeed = 0;
-    private ItemStack pendingOutput = ItemStack.EMPTY;
+    private ItemStack completedWorkStack = ItemStack.EMPTY;
+    private boolean movingInventory;
     private final SimpleContainer enchantInventory = new SimpleContainer(2) {
         @Override
         public void setChanged() {
@@ -156,27 +156,70 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         return this.ioInv.insertItem(OUTPUT, remaining, false);
     }
 
-    public void flushEnchantedInput() {
-        Container input = this.getActiveEnchantInventory();
-        ItemStack stack = input.getItem(0);
-        if (!stack.isEnchanted() && !(stack.getItem() instanceof EnchantedBookItem)) return;
-        ItemStack remaining = this.storeOutput(stack.copy());
-        if (remaining.getCount() != stack.getCount()) input.setItem(0, remaining);
+    public boolean isOutputPending() {
+        ItemStack current = this.getActiveEnchantInventory().getItem(0);
+        if (current.isEmpty() || current != this.completedWorkStack) {
+            this.completedWorkStack = ItemStack.EMPTY;
+            return false;
+        }
+        return true;
     }
 
-    private void flushPendingOutput() {
-        if (this.pendingOutput.isEmpty()) return;
-        this.pendingOutput = this.storeOutput(this.pendingOutput);
+    public boolean canAcceptManualOutput() { return !this.isOutputPending(); }
+
+    public void refillEnchantSlot() {
+        if (this.movingInventory) return;
+        Container input = this.getActiveEnchantInventory();
+        if (!input.getItem(0).isEmpty()) return;
+        ItemStack buffered = this.ioInv.getStackInSlot(INPUT);
+        if (buffered.isEmpty() || buffered.isEnchanted() || !this.ioInv.isItemValid(INPUT, buffered)) return;
+        this.movingInventory = true;
+        try {
+            this.completedWorkStack = ItemStack.EMPTY;
+            input.setItem(0, this.ioInv.extractItem(INPUT, 1, false));
+            this.setChanged();
+        } finally {
+            this.movingInventory = false;
+        }
+    }
+
+    public boolean submitManualOutput() {
+        if (this.movingInventory || !this.canAcceptManualOutput()) return false;
+        Container input = this.getActiveEnchantInventory();
+        ItemStack result = input.getItem(0);
+        if (result.isEmpty()) return false;
+        this.completedWorkStack = result;
         this.setChanged();
+        this.flushEnchantedInput();
+        this.refillEnchantSlot();
+        return true;
+    }
+
+    public void flushEnchantedInput() {
+        if (this.movingInventory || !this.isOutputPending()) return;
+        Container input = this.getActiveEnchantInventory();
+        ItemStack stack = input.getItem(0);
+        this.movingInventory = true;
+        try {
+            ItemStack remaining = this.storeOutput(stack.copy());
+            if (remaining.getCount() != stack.getCount()) {
+                this.completedWorkStack = remaining;
+                input.setItem(0, remaining);
+                this.setChanged();
+            }
+        } finally {
+            this.movingInventory = false;
+        }
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, MechanicalRavenEnchantTile tile) {
         if (level.isClientSide) return;
+        tile.refillEnchantSlot();
         if (++tile.tickCounter < 20) return;
         tile.tickCounter = 0;
         tile.tryDepositOutput();
-        tile.flushPendingOutput();
         tile.flushEnchantedInput();
+        tile.refillEnchantSlot();
         if (level.hasNeighborSignal(pos)) {
             tile.tryAutoEnchant();
         }
@@ -184,35 +227,23 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     }
 
     private void tryAutoEnchant() {
-        if (!this.pendingOutput.isEmpty()) return;
-        if (this.tryAutoEnchantSaved()) return;
-        ItemStack input = ioInv.getStackInSlot(INPUT);
-        if (input.isEmpty() || input.isEnchanted() || input.getItem().getEnchantmentValue() <= 0) return;
-        ItemStack toEnchant = ioInv.extractItem(INPUT, 1, true);
-        if (toEnchant.isEmpty()) return;
-        ItemStack result = doEnchant(toEnchant, this.ravenStats);
+        if (this.movingInventory || this.isOutputPending()) return;
+        this.refillEnchantSlot();
+        Container input = this.getActiveEnchantInventory();
+        ItemStack stack = input.getItem(0);
+        if (stack.isEmpty() || stack.getCount() != 1 || stack.isEnchanted() || stack.getItem().getEnchantmentValue() <= 0) return;
+        ItemStack result = this.doEnchant(stack.copy(), this.ravenStats);
         if (result.isEmpty()) return;
-        ioInv.extractItem(INPUT, 1, false);
-        this.pendingOutput = result;
-        this.flushPendingOutput();
-        setChanged();
-    }
-
-    /** 关闭菜单后对附魔槽残留物品进行附魔并输出 */
-    private boolean tryAutoEnchantSaved() {
-        if (!this.pendingOutput.isEmpty()) return false;
-        Container persistent = this.getActiveEnchantInventory();
-        ItemStack saved = persistent.getItem(0);
-        if (saved.isEmpty() || saved.isEnchanted() || saved.getItem().getEnchantmentValue() <= 0) return false;
-        ItemStack toEnchant = saved.copy();
-        toEnchant.setCount(1);
-        ItemStack result = doEnchant(toEnchant, this.ravenStats);
-        if (result.isEmpty()) return false;
-        this.pendingOutput = result;
-        persistent.removeItem(0, 1);
-        this.flushPendingOutput();
-        setChanged();
-        return true;
+        this.movingInventory = true;
+        try {
+            this.completedWorkStack = result;
+            input.setItem(0, result);
+            this.setChanged();
+        } finally {
+            this.movingInventory = false;
+        }
+        this.flushEnchantedInput();
+        this.refillEnchantSlot();
     }
 
     /** 核心附魔逻辑：输入物品，返回已附魔的物品 */
@@ -265,7 +296,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         tag.put("io_inv", ioInv.serializeNBT()); tag.putLong("ench_seed", this.enchantmentSeed);
         ItemStack saved = this.getSavedEnchantSlot();
         if (!saved.isEmpty()) tag.put("ench_slot", saved.save(new CompoundTag()));
-        if (!this.pendingOutput.isEmpty()) tag.put("pending_output", this.pendingOutput.save(new CompoundTag()));
+        tag.putBoolean("ench_completed", this.isOutputPending());
         if (libBound && libDim != null) {
             tag.putString("lb_dim", libDim.toString()); tag.putInt("lb_x", libX); tag.putInt("lb_y", libY); tag.putInt("lb_z", libZ);
             tag.putString("lb_name", this.libName);
@@ -282,7 +313,6 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         if (tag.contains("io_inv")) ioInv.deserializeNBT(tag.getCompound("io_inv"));
         if (tag.contains("ench_seed")) this.enchantmentSeed = tag.getLong("ench_seed");
         this.setSavedEnchantSlot(ItemStack.of(tag.getCompound("ench_slot")));
-        this.pendingOutput = ItemStack.of(tag.getCompound("pending_output"));
         if (tag.contains("ench_slot")) {
             if ((Object) this instanceof EasyMagicEnchantingStorage storage
                 && EasyMagicCompat.isLoaded() && !this.getSavedEnchantSlot().isEmpty()
@@ -291,6 +321,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
                 storage.getEasyMagicInventory().setItem(0, saved);
             }
         }
+        this.completedWorkStack = tag.getBoolean("ench_completed") ? this.getActiveEnchantInventory().getItem(0) : ItemStack.EMPTY;
         if (tag.contains("lb_dim")) {
             libBound = true; libDim = ResourceLocation.tryParse(tag.getString("lb_dim"));
             libX = tag.getInt("lb_x"); libY = tag.getInt("lb_y"); libZ = tag.getInt("lb_z");

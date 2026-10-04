@@ -6,6 +6,7 @@ import com.apotheosis_artifice.compat.EasyMagicCompat;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -21,20 +22,21 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
     private int inputIdx = -1, outputIdx = -1, dedicatedCatalystIdx = -1;
     private volatile boolean broadcasting = false;
     private boolean manualEnchantInProgress;
+    private final DataSlot outputPending = DataSlot.standalone();
+
+    public boolean isOutputPending() {
+        return this.tile != null ? this.tile.isOutputPending() : this.outputPending != null && this.outputPending.get() != 0;
+    }
 
     public MechanicalRavenEnchantMenu(int id, Inventory inv, ContainerLevelAccess access, MechanicalRavenEnchantTile te, BlockPos pos, RavenTableStats stats) {
         super(id, inv, access, te, pos, stats);
         this.tile = te;
         if (!EasyMagicCompat.isLoaded()) {
             this.enchantSlots = te.getEnchantInventory();
-            Slot old = this.slots.get(0);
-            Slot input = new Slot(this.enchantSlots, 0, old.x, old.y) {
-                @Override public int getMaxStackSize() { return 1; }
-            };
-            input.index = 0;
-            this.slots.set(0, input);
         }
+        this.replaceEnchantSlot();
         addIOSlots(te.getIOInv());
+        this.addDataSlot(this.outputPending);
         ItemStack fromSave = te.getSavedEnchantSlot();
         if (EasyMagicCompat.isLoaded() && !fromSave.isEmpty()) {
             te.setSavedEnchantSlot(ItemStack.EMPTY);
@@ -42,12 +44,15 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
             else inv.placeItemBackInInventory(fromSave);
         }
         this.enchantmentSeed.set((int) te.getEnchantmentSeed());
+        te.refillEnchantSlot();
         this.slotsChanged(this.enchantSlots);
     }
 
     public MechanicalRavenEnchantMenu(int id, Inventory inv, float eterna, float quanta, float arcana, BlockPos pos) {
         super(id, inv, eterna, quanta, arcana);
+        this.replaceEnchantSlot();
         addIOSlots(new ItemStackHandler(2));
+        this.addDataSlot(this.outputPending);
         if (inv.player.level().isClientSide) {
             try {
                 var rs = this.getRavenStats();
@@ -57,6 +62,18 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
                 ApotheosisArtificeMod.LOGGER.warn("[fromBuf] client stats failed", e);
             }
         }
+    }
+
+    private void replaceEnchantSlot() {
+        Slot original = this.slots.get(0);
+        Slot input = new Slot(this.enchantSlots, 0, original.x, original.y) {
+            @Override public int getMaxStackSize() { return 1; }
+            @Override public boolean mayPlace(ItemStack stack) {
+                return !MechanicalRavenEnchantMenu.this.isOutputPending() && original.mayPlace(stack);
+            }
+        };
+        input.index = original.index;
+        this.slots.set(0, input);
     }
 
     private void addIOSlots(ItemStackHandler ioInv) {
@@ -90,18 +107,30 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        if ((id >= 0 && id < 3 || id == 4) && this.isOutputPending()) return false;
         boolean manualEnchant = id >= 0 && id < 3 && !player.level().isClientSide && this.tile != null;
         if (!manualEnchant) return super.clickMenuButton(player, id);
+        if (!this.tile.canAcceptManualOutput()) return false;
+        ItemStack input = this.enchantSlots.getItem(0);
+        ItemStack before = input.copy();
+        int seed = this.enchantmentSeed.get();
         this.manualEnchantInProgress = true;
         boolean enchanted = false;
         try {
             enchanted = super.clickMenuButton(player, id);
             if (enchanted) this.persistEnchantmentSeed(this.enchantmentSeed.get());
+            if (hasCompletedManualEnchant(enchanted, input, before, this.enchantSlots.getItem(0), seed, this.enchantmentSeed.get())) {
+                this.tile.submitManualOutput();
+            }
             return enchanted;
         } finally {
             this.manualEnchantInProgress = false;
             if (enchanted) this.enchantSlots.setChanged();
         }
+    }
+
+    static boolean hasCompletedManualEnchant(boolean accepted, ItemStack input, ItemStack before, ItemStack after, int oldSeed, int newSeed) {
+        return accepted && !after.isEmpty() && (input != after || !ItemStack.matches(before, after) || oldSeed != newSeed);
     }
 
     @Override
@@ -110,18 +139,10 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
             broadcasting = true;
             try {
                 this.enchantmentSeed.set((int) this.tile.getEnchantmentSeed());
-                var io = this.tile.getIOInv();
                 this.tile.flushEnchantedInput();
-                if (this.enchantSlots.getItem(0).isEmpty()) {
-                    ItemStack buf = io.getStackInSlot(0);
-                    if (!buf.isEmpty() && !buf.isEnchanted() && buf.getItem().getEnchantmentValue() > 0) {
-                        ItemStack n = io.extractItem(0, 1, false);
-                        if (!n.isEmpty()) {
-                            this.enchantSlots.setItem(0, n);
-                            this.enchantSlots.setChanged();
-                        }
-                    }
-                }
+                this.tile.refillEnchantSlot();
+                this.outputPending.set(this.tile.isOutputPending() ? 1 : 0);
+                if (this.isOutputPending()) java.util.Arrays.fill(this.costs, 0);
             } finally { broadcasting = false; }
         }
         super.broadcastChanges();
@@ -133,6 +154,7 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
             this.enchantmentSeed.set((int) this.tile.getEnchantmentSeed());
         }
         super.slotsChanged(inventoryIn);
+        if (this.isOutputPending()) java.util.Arrays.fill(this.costs, 0);
     }
 
     @Override
@@ -152,8 +174,7 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
                 && this.moveItemStackTo(raw, dedicatedCatalystIdx, dedicatedCatalystIdx + 1, false)) {
             } else if (raw.is(net.minecraftforge.common.Tags.Items.ENCHANTING_FUELS)
                 && this.moveItemStackTo(raw, 1, 2, false)) {
-            } else if (!this.moveItemStackTo(raw, inputIdx, inputIdx + 1, false)
-                && !this.moveItemStackTo(raw, 0, 1, false)) return ItemStack.EMPTY;
+            } else if (!this.moveItemStackTo(raw, inputIdx, inputIdx + 1, false)) return ItemStack.EMPTY;
         }
         if (raw.isEmpty()) slot.set(ItemStack.EMPTY);
         slot.setChanged();

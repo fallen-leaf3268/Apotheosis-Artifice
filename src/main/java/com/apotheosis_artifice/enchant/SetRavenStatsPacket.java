@@ -70,17 +70,18 @@ public record SetRavenStatsPacket(float eterna, float quanta, float arcana, Item
             if (!menu.stillValid(player)) return;
             if (!Float.isFinite(pkt.eterna) || !Float.isFinite(pkt.quanta) || !Float.isFinite(pkt.arcana)) return;
             if (!pkt.inputItem.isEmpty()) {
-                if (!menu.getSlot(0).mayPlace(pkt.inputItem)) return;
                 ItemStackHandler buffer = null;
                 if (menu instanceof MechanicalRavenEnchantMenu mech && mech.getTile() != null) {
                     buffer = mech.getTile().getIOInv();
                     if (!buffer.isItemValid(0, pkt.inputItem)) return;
-                }
+                } else if (!menu.getSlot(0).mayPlace(pkt.inputItem)) return;
                 if (!replaceInput(menu.enchantSlots, buffer, player.getInventory(), pkt.inputItem,
                     stack -> returnOrDrop(player, stack))) return;
             }
             menu.setPlayerStats(pkt.eterna, pkt.quanta, pkt.arcana);
-            if (menu instanceof MechanicalRavenEnchantMenu) {
+            if (menu instanceof MechanicalRavenEnchantMenu mechanical && mechanical.getTile() != null) {
+                mechanical.getTile().refillEnchantSlot();
+                mechanical.broadcastChanges();
                 menu.broadcastFullState();
             }
         });
@@ -95,7 +96,7 @@ public record SetRavenStatsPacket(float eterna, float quanta, float arcana, Item
         ItemStack old = input.removeItemNoUpdate(0);
         ItemStack previousBuffer = buffer == null ? ItemStack.EMPTY
             : buffer.extractItem(0, buffer.getStackInSlot(0).getCount(), false);
-        ItemStack replacement = taken.split(1);
+        ItemStack replacement = buffer == null ? taken.split(1) : ItemStack.EMPTY;
         ItemStack leftover = buffer == null ? taken : buffer.insertItem(0, taken, false);
         input.setItem(0, replacement);
         if (!old.isEmpty()) returnStack.accept(old);

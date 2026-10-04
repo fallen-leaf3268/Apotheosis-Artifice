@@ -114,6 +114,7 @@
     "tooltip.apotheosis_artifice.gem_case.unique_gems": "包含 %s 种不同宝石",
 
     "gui.apotheosis_artifice.enchant.info": "附魔信息",
+    "gui.apotheosis_artifice.mechanical_raven.output_pending": "已完成，等待输出",
     "gui.apotheosis_artifice.attribute_search": "搜索属性…",
     "attributeslib.gui.hide_unchanged": "隐藏未变化的属性",
     "attributeslib.gui.modifier_formula": "修饰符公式",

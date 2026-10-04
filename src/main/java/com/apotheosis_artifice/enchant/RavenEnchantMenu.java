@@ -17,8 +17,10 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.items.SlotItemHandler;
 
 public class RavenEnchantMenu extends ApothEnchantmentMenu {
 
@@ -39,7 +41,20 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
     public RavenEnchantMenu(int id, Inventory inv, ContainerLevelAccess access, RavenEnchantTile te, BlockPos pos, RavenTableStats stats) {
         super(id, inv, access, te);
         this.ravenStats = stats;
+        if (!EasyMagicCompat.isLoaded()) this.slots.set(1, createFuelSlot(te, this.slots.get(1)));
         this.refreshEasyMagicStats();
+    }
+
+    static Slot createFuelSlot(RavenEnchantTile tile, Slot original) {
+        Slot slot = new SlotItemHandler(tile.getFuelInv(), 0, original.x, original.y) {
+            @Override
+            public void setChanged() {
+                super.setChanged();
+                tile.setChanged();
+            }
+        };
+        slot.index = original.index;
+        return slot;
     }
 
     private void refreshEasyMagicStats() {

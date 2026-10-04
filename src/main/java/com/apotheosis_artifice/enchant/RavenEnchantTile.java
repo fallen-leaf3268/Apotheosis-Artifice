@@ -8,9 +8,12 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.Tags;
 import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemStackHandler;
 import com.apotheosis_artifice.compat.EasyMagicCompat;
 import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
 
@@ -21,6 +24,17 @@ public class RavenEnchantTile extends ApothEnchantTile {
 
     public RavenEnchantTile(BlockPos pos, BlockState state) {
         super(pos, state);
+        this.inv = new ItemStackHandler(1) {
+            @Override
+            public boolean isItemValid(int slot, ItemStack stack) {
+                return stack.is(Tags.Items.ENCHANTING_FUELS);
+            }
+
+            @Override
+            protected void onContentsChanged(int slot) {
+                RavenEnchantTile.this.setChanged();
+            }
+        };
     }
 
     public RavenTableStats getRavenStats() { return this.ravenStats; }

@@ -34,6 +34,7 @@
         "ApothEnchantBlockEasyMagicMixin",
         "TableStatsClampMixin",
         "CommonTooltipUtilMixin",
+        "EnchHwylaPluginMixin",
         "PowerCapEnchModuleMixin",
         "PowerCapEnchInfoMixin",
         "SelectEnchantmentMixin",
@@ -44,7 +45,6 @@
     ],
     "client": [
         "ContainerScreenMixin",
-        "EnchHwylaPluginMixin",
         "client.EnchantmentBookMixin",
         "client.EnchantmentBookMixin$WorldBook",
         "GuiGraphicsMixin",

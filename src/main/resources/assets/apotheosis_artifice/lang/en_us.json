@@ -113,6 +113,7 @@
     "tooltip.apotheosis_artifice.gem_case.unique_gems": "%s different gems",
 
     "gui.apotheosis_artifice.enchant.info": "Enchant Info",
+    "gui.apotheosis_artifice.mechanical_raven.output_pending": "Completed, waiting for output",
     "gui.apotheosis_artifice.attribute_search": "Search attributes…",
     "attributeslib.gui.hide_unchanged": "Hide unchanged",
     "attributeslib.gui.modifier_formula": "Formula",

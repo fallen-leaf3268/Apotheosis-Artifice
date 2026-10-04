@@ -8,6 +8,10 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.EnchantmentMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
+import net.minecraft.ChatFormatting;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MechanicalRavenEnchantScreen extends RavenEnchantScreen {
 
@@ -42,5 +46,18 @@ public class MechanicalRavenEnchantScreen extends RavenEnchantScreen {
 
         gfx.blit(CHEST_BG, x + INPUT_X - 1, y + INPUT_Y - 1, 7, 17, 18, 18);
         gfx.blit(CHEST_BG, x + OUTPUT_X - 1, y + OUTPUT_Y - 1, 7, 17, 18, 18);
+        if (((MechanicalRavenEnchantMenu) this.menu).isOutputPending()) {
+            var slot = this.menu.getSlot(0);
+            gfx.renderOutline(x + slot.x - 1, y + slot.y - 1, 18, 18, 0xFFFFC65A);
+        }
+    }
+
+    @Override
+    protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
+        List<Component> tooltip = new ArrayList<>(super.getTooltipFromContainerItem(stack));
+        if (this.hoveredSlot == this.menu.getSlot(0) && ((MechanicalRavenEnchantMenu) this.menu).isOutputPending()) {
+            tooltip.add(Component.translatable("gui.apotheosis_artifice.mechanical_raven.output_pending").withStyle(ChatFormatting.GOLD));
+        }
+        return tooltip;
     }
 }
