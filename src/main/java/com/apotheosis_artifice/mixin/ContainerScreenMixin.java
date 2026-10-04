@@ -3,11 +3,14 @@ package com.apotheosis_artifice.mixin;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.apotheosis_artifice.ApotheosisNetwork;
 import com.apotheosis_artifice.enchant.GemBinderItem;
 
+import dev.shadowsoffire.apotheosis.ench.library.EnchLibraryScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
 @Mixin(AbstractContainerScreen.class)
@@ -32,5 +35,13 @@ public class ContainerScreenMixin {
             return;
         }
 
+    }
+    @Mixin(EnchLibraryScreen.class)
+    public static class LibraryFocus {
+
+        @Inject(method = "init", at = @At("TAIL"), require = 1)
+        private void artifice$clearInitialSearchFocus(CallbackInfo ci) {
+            ((Screen) (Object) this).setFocused(null);
+        }
     }
 }

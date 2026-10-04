@@ -45,10 +45,12 @@
     ],
     "client": [
         "ContainerScreenMixin",
+        "ContainerScreenMixin$LibraryFocus",
         "client.EnchantmentBookMixin",
         "client.EnchantmentBookMixin$WorldBook",
         "GuiGraphicsMixin",
         "ReforgingScreenMixin",
+        "client.ReforgingHammerMixin",
         "client.AttributesGuiSearchMixin",
         "client.AttributesGuiLocalizeMixin",
         "client.AttributesGuiLocalizeMixin$HideUnchangedButtonMixin",

@@ -15,6 +15,9 @@
     "item.apotheosis_artifice.apotheosis_charm": "万能神化护符",
     "item.apotheosis_artifice.sigil_of_cleansing": "清除符石",
     "item.apotheosis_artifice.sigil_of_cleansing.desc": "清除装备的所有重铸属性",
+    "item.apotheosis_artifice.holy_cloth": "圣洁布匹",
+    "item.apotheosis_artifice.holy_cloth.desc": "消耗 1 块布匹与 %s 级经验，清除目标的全部诅咒附魔",
+    "item.apotheosis_artifice.holy_cloth.usage": "在物品栏拿起布匹，右键点击需要净化的物品",
 
     "item.apotheosis.gem.apotheosis_artifice:vital_stone": "生命之石",
     "item.apotheosis.gem.apotheosis_artifice:moonglow_pearl": "月华之珠",

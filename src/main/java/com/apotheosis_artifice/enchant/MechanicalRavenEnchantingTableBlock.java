@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.InteractionHand;
@@ -23,7 +24,12 @@ import net.minecraftforge.network.NetworkHooks;
 
 public class MechanicalRavenEnchantingTableBlock extends RavenEnchantingTableBlock {
 
+    public static final ResourceLocation MECHANICAL_BOOK_TEXTURE_ID = new ResourceLocation(ApotheosisArtificeMod.MODID, "mechanical_raven_book");
+
     public MechanicalRavenEnchantingTableBlock() { super(); }
+
+    @Override
+    public ResourceLocation getBookTextureId() { return MECHANICAL_BOOK_TEXTURE_ID; }
 
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {

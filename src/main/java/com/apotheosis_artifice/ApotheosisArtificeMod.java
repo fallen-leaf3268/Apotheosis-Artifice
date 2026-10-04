@@ -10,6 +10,7 @@ import com.apotheosis_artifice.affix.HeartBaseListener;
 import com.apotheosis_artifice.enchant.ApotheosisArtificeReforgingTableBlock;
 import com.apotheosis_artifice.enchant.CleansingRecipe;
 import com.apotheosis_artifice.enchant.GemBinderItem;
+import com.apotheosis_artifice.enchant.HolyClothItem;
 import com.apotheosis_artifice.PortableSalvagingMenu;
 import com.apotheosis_artifice.enchant.MechanicalRavenEnchantBlockItem;
 import com.apotheosis_artifice.enchant.MechanicalRavenEnchantMenu;
@@ -126,6 +127,9 @@ public class ApotheosisArtificeMod {
     public static final RegistryObject<Item> SIGIL_OF_CLEANSING = ITEMS.register("sigil_of_cleansing",
         () -> new dev.shadowsoffire.apotheosis.util.TooltipItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
 
+    public static final RegistryObject<Item> HOLY_CLOTH = ITEMS.register("holy_cloth",
+        () -> new HolyClothItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
+
     public static final RegistryObject<net.minecraft.world.item.crafting.RecipeSerializer<?>> CLEANSING_SERIALIZER = RECIPE_SERIALIZERS.register("cleansing",
         () -> CleansingRecipe.Serializer.INSTANCE);
 
@@ -145,6 +149,7 @@ public class ApotheosisArtificeMod {
                 output.accept(APOTHEOSIS_CHARM.get());
                 output.accept(APOTHEOSIS_REFORGING_TABLE_ITEM.get());
                 output.accept(SIGIL_OF_CLEANSING.get());
+                output.accept(HOLY_CLOTH.get());
                 output.accept(GEM_CASE_ITEM.get());
                 output.accept(ENDER_GEM_CASE_ITEM.get());
             })

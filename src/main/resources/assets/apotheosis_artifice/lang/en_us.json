@@ -14,6 +14,9 @@
     "item.apotheosis_artifice.apotheosis_charm": "Apotheosis Charm",
     "item.apotheosis_artifice.sigil_of_cleansing": "Sigil of Cleansing",
     "item.apotheosis_artifice.sigil_of_cleansing.desc": "Clears all reforged attributes from equipment",
+    "item.apotheosis_artifice.holy_cloth": "Holy Cloth",
+    "item.apotheosis_artifice.holy_cloth.desc": "Consumes 1 cloth and %s experience levels to remove all curses from an item",
+    "item.apotheosis_artifice.holy_cloth.usage": "Pick up the cloth in your inventory and right-click the item to cleanse",
 
     "item.apotheosis.gem.apotheosis_artifice:vital_stone": "Vital Stone",
     "item.apotheosis.gem.apotheosis_artifice:moonglow_pearl": "Moonglow Pearl",

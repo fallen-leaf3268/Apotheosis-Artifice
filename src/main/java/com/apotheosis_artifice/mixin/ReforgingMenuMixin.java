@@ -18,6 +18,7 @@ import com.apotheosis_artifice.AffixTypes;
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.ApotheosisConfig;
 import com.apotheosis_artifice.ISlotSelectMenu;
+import com.apotheosis_artifice.enchant.ApotheosisArtificeReforgingTableBlock;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry;
 import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingMenu;
@@ -26,10 +27,12 @@ import dev.shadowsoffire.apotheosis.adventure.loot.LootController;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
 import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
 import dev.shadowsoffire.placebo.cap.InternalItemHandler;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 import top.theillusivec4.curios.api.CuriosApi;
@@ -63,6 +66,20 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     private boolean curiosforge_costsInit = false;
     @Unique
     private long curiosforge_initialVersion = -1;
+
+    @Unique
+    private boolean curiosforge_artificeGui;
+
+    @Inject(method = "<init>", at = @At("TAIL"), remap = false)
+    private void curiosforge_captureTable(int id, Inventory inventory, BlockPos pos, CallbackInfo ci) {
+        this.curiosforge_artificeGui = inventory.player.level().getBlockState(pos).getBlock()
+            instanceof ApotheosisArtificeReforgingTableBlock;
+    }
+
+    @Override
+    public boolean curiosforge_usesArtificeGui() {
+        return this.curiosforge_artificeGui;
+    }
 
     @Unique
     private int[] curiosforge_getMaxCosts(net.minecraft.world.entity.player.Player player) {
