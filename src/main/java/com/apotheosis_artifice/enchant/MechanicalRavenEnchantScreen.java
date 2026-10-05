@@ -15,13 +15,16 @@ import java.util.List;
 
 public class MechanicalRavenEnchantScreen extends RavenEnchantScreen {
 
-    private static final ResourceLocation CHEST_BG = new ResourceLocation("textures/gui/container/generic_54.png");
-
-    private static final int INPUT_X = 15, INPUT_Y = 17;
-    private static final int OUTPUT_X = 35, OUTPUT_Y = 17;
+    private static final ResourceLocation GUI_TEXTURE =
+        new ResourceLocation("apotheosis_artifice", "textures/gui/mechanical_enchanting_table.png");
 
     public MechanicalRavenEnchantScreen(EnchantmentMenu container, Inventory inv, Component title) {
         super(container, inv, title);
+    }
+
+    @Override
+    public ResourceLocation getGuiTexture() {
+        return GUI_TEXTURE;
     }
 
     @Override
@@ -44,8 +47,6 @@ public class MechanicalRavenEnchantScreen extends RavenEnchantScreen {
         int x = this.leftPos;
         int y = this.topPos;
 
-        gfx.blit(CHEST_BG, x + INPUT_X - 1, y + INPUT_Y - 1, 7, 17, 18, 18);
-        gfx.blit(CHEST_BG, x + OUTPUT_X - 1, y + OUTPUT_Y - 1, 7, 17, 18, 18);
         if (((MechanicalRavenEnchantMenu) this.menu).isOutputPending()) {
             var slot = this.menu.getSlot(0);
             gfx.renderOutline(x + slot.x - 1, y + slot.y - 1, 18, 18, 0xFFFFC65A);

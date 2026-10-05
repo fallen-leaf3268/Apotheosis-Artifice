@@ -7,11 +7,13 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.apotheosis_artifice.compat.EasyMagicCompat;
 import com.apotheosis_artifice.enchant.MechanicalRavenEnchantMenu;
+import com.apotheosis_artifice.enchant.RavenEnchantScreen;
 
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantScreen;
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu;
@@ -33,6 +35,34 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
 
     public ApothEnchantScreenEasyMagicMixin(ApothEnchantmentMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
+    }
+
+    @ModifyArg(method = "renderBg", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/gui/GuiGraphics;blit(Lnet/minecraft/resources/ResourceLocation;IIIIII)V"),
+        index = 0, require = 11)
+    private ResourceLocation artifice$guiTexture(ResourceLocation original) {
+        return (Object) this instanceof RavenEnchantScreen raven ? raven.getGuiTexture() : original;
+    }
+
+    @ModifyArg(method = "renderBg", at = @At(value = "INVOKE", remap = false,
+        target = "Lcom/mojang/blaze3d/systems/RenderSystem;setShaderTexture(ILnet/minecraft/resources/ResourceLocation;)V"),
+        index = 1, require = 1)
+    private ResourceLocation artifice$shaderTexture(ResourceLocation original) {
+        return (Object) this instanceof RavenEnchantScreen raven ? raven.getGuiTexture() : original;
+    }
+
+    @ModifyArg(method = "renderBg", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/gui/GuiGraphics;drawWordWrap(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/FormattedText;IIII)V"),
+        index = 3, require = 2)
+    private int artifice$optionTextY(int original) {
+        return (Object) this instanceof RavenEnchantScreen ? original + 4 : original;
+    }
+
+    @ModifyArg(method = "renderBg", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)I"),
+        index = 3, require = 1)
+    private int artifice$optionCostY(int original) {
+        return (Object) this instanceof RavenEnchantScreen ? original - 3 : original;
     }
 
     @Inject(method = "containerTick", at = @At("TAIL"))
@@ -77,6 +107,11 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
     private void artifice$renderDedicatedCatalystSlot(GuiGraphics graphics, float partialTick, int mouseX, int mouseY, CallbackInfo ci) {
         if (!EasyMagicCompat.isLoaded() || !EasyMagicCompat.rerollEnchantments()
             || !EasyMagicCompat.dedicatedRerollButton()) return;
+        if ((Object) this instanceof RavenEnchantScreen raven) {
+            graphics.blit(raven.getGuiTexture(), this.leftPos + 2, this.topPos + 44, 84, 223, 58, 22);
+            graphics.blit(ARTIFICE_REROLL_TEXTURE, this.leftPos + 40, this.topPos + 46, 0, 81, 18, 18);
+            return;
+        }
         graphics.blit(ARTIFICE_ENCHANTING_TEXTURE, this.leftPos + 4, this.topPos + 46, 14, 46, 18, 18);
         graphics.blit(ARTIFICE_ENCHANTING_TEXTURE, this.leftPos + 22, this.topPos + 46, 34, 46, 18, 18);
         graphics.blit(ARTIFICE_REROLL_TEXTURE, this.leftPos + 40, this.topPos + 46, 0, 81, 18, 18);

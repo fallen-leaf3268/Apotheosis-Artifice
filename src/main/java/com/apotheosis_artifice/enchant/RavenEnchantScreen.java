@@ -6,7 +6,9 @@ import com.apotheosis_artifice.ApotheosisNetwork;
 import dev.shadowsoffire.apotheosis.ench.table.ApothEnchantScreen;
 import dev.shadowsoffire.apotheosis.ench.table.EnchantingStatRegistry;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.EnchantmentMenu;
@@ -14,12 +16,12 @@ import net.minecraft.world.item.ItemStack;
 
 public class RavenEnchantScreen extends ApothEnchantScreen {
 
-    private static final net.minecraft.resources.ResourceLocation CURIOS_TEX =
-        new net.minecraft.resources.ResourceLocation("apotheosis_artifice", "textures/gui/enchanting_table.png");
+    private static final ResourceLocation GUI_TEXTURE =
+        new ResourceLocation("apotheosis_artifice", "textures/gui/enchanting_table.png");
 
     private static final int BAR_X = 59, BAR_W = 110, BAR_H = 5;
     private static final int ETERNA_Y = 75, QUANTA_Y = 85, ARCANA_Y = 95;
-    private static final int HANDLE_U = 122, HANDLE_W = 4, HANDLE_H = 7;
+    private static final int HANDLE_U = 122, HANDLE_W = 6, HANDLE_H = 7;
     private static final int HANDLE_V_ETERNA = 197, HANDLE_V_QUANTA = 204, HANDLE_V_ARCANA = 211;
 
     private final RavenEnchantMenu ravenMenu;
@@ -34,6 +36,19 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
         this.curE = Math.min(s.eterna(), eternaMax());
         this.curQ = Mth.clamp(s.quanta(), 0, ApotheosisConfig.getMaxQuanta());
         this.curA = Mth.clamp(s.arcana(), 0, ApotheosisConfig.getMaxArcana());
+    }
+
+    public ResourceLocation getGuiTexture() {
+        return GUI_TEXTURE;
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
+        gfx.drawString(this.font, this.title.getVisualOrderText(), 9F, 4.5F, 0x404040, false);
+        gfx.drawString(this.font, this.playerInventoryTitle.getVisualOrderText(), 7F, this.imageHeight - 92.5F, 0x404040, false);
+        gfx.drawString(this.font, I18n.get("gui.apotheosis.enchant.eterna"), 19F, 73.5F, 0xC9DDB1, false);
+        gfx.drawString(this.font, I18n.get("gui.apotheosis.enchant.quanta"), 19F, 83.5F, 0xEFC8BC, false);
+        gfx.drawString(this.font, I18n.get("gui.apotheosis.enchant.arcana"), 19F, 93.5F, 0xDFC8EE, false);
     }
 
     @Override
@@ -63,9 +78,9 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
-        if (hoverBar(mx, my, ETERNA_Y)) { dragging = DragStat.E; updateVal(mx, eternaMax()); return true; }
-        if (hoverBar(mx, my, QUANTA_Y)) { dragging = DragStat.Q; updateVal(mx, ApotheosisConfig.getMaxQuanta()); return true; }
-        if (hoverBar(mx, my, ARCANA_Y)) { dragging = DragStat.A; updateVal(mx, ApotheosisConfig.getMaxArcana()); return true; }
+        if (hoverBar(mx, my, ETERNA_Y, this.curE, eternaMax())) { dragging = DragStat.E; updateVal(mx, eternaMax()); return true; }
+        if (hoverBar(mx, my, QUANTA_Y, this.curQ, ApotheosisConfig.getMaxQuanta())) { dragging = DragStat.Q; updateVal(mx, ApotheosisConfig.getMaxQuanta()); return true; }
+        if (hoverBar(mx, my, ARCANA_Y, this.curA, ApotheosisConfig.getMaxArcana())) { dragging = DragStat.A; updateVal(mx, ApotheosisConfig.getMaxArcana()); return true; }
         return super.mouseClicked(mx, my, btn);
     }
 
@@ -142,17 +157,25 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
     }
 
     private void drawHandle(GuiGraphics gfx, int bx, int by, float val, float max, int v) {
-        float clampedVal = Mth.clamp(val, 0, max);
-        // 计算像素位置，钳制不超过纹理最大宽度
-        int barPixelWidth = (int)(clampedVal * (BAR_W / Math.max(max, 1)));
-        barPixelWidth = Math.min(barPixelWidth, BAR_W);
-        int tipX = bx + barPixelWidth;
-        gfx.blit(CURIOS_TEX, tipX - HANDLE_W/2, by + (BAR_H - HANDLE_H)/2, HANDLE_U, v, HANDLE_W, HANDLE_H);
+        int tipX = bx + getBarPixelWidth(val, max);
+        gfx.blit(this.getGuiTexture(), tipX - HANDLE_W/2, by + (BAR_H - HANDLE_H)/2, HANDLE_U, v, HANDLE_W, HANDLE_H);
     }
 
-    private boolean hoverBar(double mx, double my, int barY) {
-        return mx >= this.leftPos + BAR_X && mx < this.leftPos + BAR_X + BAR_W
-            && my >= this.topPos + barY - 3 && my < this.topPos + barY + BAR_H + 3;
+    private static int getBarPixelWidth(float val, float max) {
+        float clampedVal = Mth.clamp(val, 0, max);
+        int barPixelWidth = (int)(clampedVal * (BAR_W / Math.max(max, 1)));
+        return Math.min(barPixelWidth, BAR_W);
+    }
+
+    private boolean hoverBar(double mx, double my, int barY, float val, float max) {
+        double localX = mx - this.leftPos;
+        double localY = my - this.topPos - barY;
+        if (localY < 0 || localY >= BAR_H) return false;
+        if (localX >= BAR_X && localX < BAR_X + BAR_W) return true;
+        if (localY >= 1 && localY < BAR_H - 1
+            && localX >= BAR_X - 1 && localX < BAR_X + BAR_W + 1) return true;
+        int handleX = BAR_X + getBarPixelWidth(val, max) - HANDLE_W / 2;
+        return localX >= handleX && localX < handleX + HANDLE_W;
     }
 
     private static float eternaMax() {
