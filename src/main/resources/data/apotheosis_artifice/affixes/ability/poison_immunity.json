@@ -1,6 +1,15 @@
 {
-    "type": "apotheosis_artifice:effect_immunity",
-    "effects": ["minecraft:poison"],
-    "rarities": ["rare", "epic", "mythic", "ancient"],
-    "types": ["curio"]
+  "type": "apotheosis_artifice:effect_immunity",
+  "effects": [
+    "minecraft:poison"
+  ],
+  "rarities": [
+    "rare",
+    "epic",
+    "mythic",
+    "ancient"
+  ],
+  "types": [
+    "curio"
+  ]
 }

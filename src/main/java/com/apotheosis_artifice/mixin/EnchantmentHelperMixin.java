@@ -53,6 +53,7 @@ public class EnchantmentHelperMixin {
     }
 
     private static void forEachCurio(LivingEntity user, BiConsumer<ItemStack, AffixInstance> affixFn, java.util.function.Consumer<ItemStack> gemFn) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         LazyOptional<ICuriosItemHandler> curiosInv = user.getCapability(CuriosCapability.INVENTORY);
         curiosInv.ifPresent(handler -> {
             Map<String, ICurioStacksHandler> curios = handler.getCurios();

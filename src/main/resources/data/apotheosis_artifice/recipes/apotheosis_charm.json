@@ -1,20 +1,42 @@
 {
-    "type": "minecraft:crafting_shaped",
-    "group": "apotheosis_artifice",
-    "pattern": [
-        "ABA",
-        "CDE",
-        "AFA"
-    ],
-    "key": {
-        "A": { "item": "apotheosis:gem_dust" },
-        "B": { "item": "minecraft:trapped_chest" },
-        "C": { "item": "apotheosis:library" },
-        "D": { "item": "apotheosis:mythic_material" },
-        "E": { "item": "apotheosis:salvaging_table" },
-        "F": { "item": "apotheosis:warden_tendril" }
+  "type": "minecraft:crafting_shaped",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "adventure"
     },
-    "result": {
-        "item": "apotheosis_artifice:apotheosis_charm"
+    {
+      "type": "apotheosis:module",
+      "module": "enchantment"
     }
+  ],
+  "group": "apotheosis_artifice",
+  "pattern": [
+    "ABA",
+    "CDE",
+    "AFA"
+  ],
+  "key": {
+    "A": {
+      "item": "apotheosis:gem_dust"
+    },
+    "B": {
+      "item": "minecraft:trapped_chest"
+    },
+    "C": {
+      "item": "apotheosis:library"
+    },
+    "D": {
+      "item": "apotheosis:mythic_material"
+    },
+    "E": {
+      "item": "apotheosis:salvaging_table"
+    },
+    "F": {
+      "item": "apotheosis:warden_tendril"
+    }
+  },
+  "result": {
+    "item": "apotheosis_artifice:apotheosis_charm"
+  }
 }

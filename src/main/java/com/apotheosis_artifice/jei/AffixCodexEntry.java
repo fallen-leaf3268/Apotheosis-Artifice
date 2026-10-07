@@ -30,6 +30,14 @@ import net.minecraftforge.registries.ForgeRegistries;
 public record AffixCodexEntry(List<LootCategory> categories) {
 
     @Nullable
+    public AffixCodexEntry withoutCurios() {
+        var nativeCategories = categories.stream()
+            .filter(c -> !c.getName().equals("curio") && !c.getName().startsWith("curios:"))
+            .toList();
+        return nativeCategories.isEmpty() ? null : new AffixCodexEntry(nativeCategories);
+    }
+
+    @Nullable
     public static AffixCodexEntry create() {
         ensureInit();
         var orderedRarities = RarityRegistry.INSTANCE.getOrderedRarities();

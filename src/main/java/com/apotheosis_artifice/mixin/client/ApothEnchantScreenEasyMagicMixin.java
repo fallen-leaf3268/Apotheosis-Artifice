@@ -39,33 +39,35 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
 
     @ModifyArg(method = "renderBg", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/gui/GuiGraphics;blit(Lnet/minecraft/resources/ResourceLocation;IIIIII)V"),
-        index = 0, require = 11)
+        index = 0, require = 0)
     private ResourceLocation artifice$guiTexture(ResourceLocation original) {
-        return (Object) this instanceof RavenEnchantScreen raven ? raven.getGuiTexture() : original;
+        return ApothEnchantScreen.TEXTURES.equals(original) && (Object) this instanceof RavenEnchantScreen raven
+            ? raven.getGuiTexture() : original;
     }
 
     @ModifyArg(method = "renderBg", at = @At(value = "INVOKE", remap = false,
         target = "Lcom/mojang/blaze3d/systems/RenderSystem;setShaderTexture(ILnet/minecraft/resources/ResourceLocation;)V"),
-        index = 1, require = 1)
+        index = 1, require = 0)
     private ResourceLocation artifice$shaderTexture(ResourceLocation original) {
-        return (Object) this instanceof RavenEnchantScreen raven ? raven.getGuiTexture() : original;
+        return ApothEnchantScreen.TEXTURES.equals(original) && (Object) this instanceof RavenEnchantScreen raven
+            ? raven.getGuiTexture() : original;
     }
 
     @ModifyArg(method = "renderBg", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/gui/GuiGraphics;drawWordWrap(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/FormattedText;IIII)V"),
-        index = 3, require = 2)
+        index = 3, require = 0)
     private int artifice$optionTextY(int original) {
         return (Object) this instanceof RavenEnchantScreen ? original + 4 : original;
     }
 
     @ModifyArg(method = "renderBg", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)I"),
-        index = 3, require = 1)
+        index = 3, require = 0)
     private int artifice$optionCostY(int original) {
         return (Object) this instanceof RavenEnchantScreen ? original - 3 : original;
     }
 
-    @Inject(method = "containerTick", at = @At("TAIL"))
+    @Inject(method = "containerTick", at = @At("TAIL"), require = 1)
     private void artifice$refreshPersistentPreview(CallbackInfo ci) {
         if (!this.artifice$previewSyncPending) return;
         this.artifice$previewSyncPending = false;
@@ -79,7 +81,7 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
         ApothEnchantmentMenu menu = (ApothEnchantmentMenu) this.menu;
         boolean usable = EasyMagicCompat.canUseReroll(menu);
         int experience = EasyMagicCompat.rerollExperienceCost();
-        int catalyst = EasyMagicCompat.rerollCatalystCost(this.minecraft.player);
+        int catalyst = EasyMagicCompat.rerollCatalystCost(menu, this.minecraft.player);
         boolean missingResources = !this.minecraft.player.getAbilities().instabuild
             && (EasyMagicCompat.getTotalExperience(this.minecraft.player) < experience
                 || EasyMagicCompat.getRerollCatalystCount(menu) < catalyst);
@@ -105,8 +107,9 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
 
     @Inject(method = "renderBg", at = @At("TAIL"))
     private void artifice$renderDedicatedCatalystSlot(GuiGraphics graphics, float partialTick, int mouseX, int mouseY, CallbackInfo ci) {
+        ApothEnchantmentMenu menu = (ApothEnchantmentMenu) this.menu;
         if (!EasyMagicCompat.isLoaded() || !EasyMagicCompat.rerollEnchantments()
-            || !EasyMagicCompat.dedicatedRerollButton()) return;
+            || EasyMagicCompat.getDedicatedRerollSlot(menu) == null) return;
         if ((Object) this instanceof RavenEnchantScreen raven) {
             graphics.blit(raven.getGuiTexture(), this.leftPos + 2, this.topPos + 44, 84, 223, 58, 22);
             graphics.blit(ARTIFICE_REROLL_TEXTURE, this.leftPos + 40, this.topPos + 46, 0, 81, 18, 18);
@@ -117,7 +120,7 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
         graphics.blit(ARTIFICE_REROLL_TEXTURE, this.leftPos + 40, this.topPos + 46, 0, 81, 18, 18);
     }
 
-    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, require = 1)
     private void artifice$clickReroll(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         if (!EasyMagicCompat.isLoaded() || !EasyMagicCompat.rerollEnchantments()) return;
         int x = this.artifice$rerollButtonX();
@@ -133,13 +136,14 @@ public abstract class ApothEnchantScreenEasyMagicMixin extends EnchantmentScreen
     @Inject(method = "render", at = @At("TAIL"))
     private void artifice$renderRerollTooltip(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         if (!EasyMagicCompat.isLoaded() || !EasyMagicCompat.rerollEnchantments()) return;
+        ApothEnchantmentMenu menu = (ApothEnchantmentMenu) this.menu;
         int x = this.artifice$rerollButtonX();
         int y = this.topPos + 16;
         if (mouseX <= x || mouseX > x + 38 || mouseY <= y || mouseY > y + 27) return;
         List<Component> tooltip = new ArrayList<>();
         tooltip.add(Component.translatable("container.enchant.reroll"));
         int experience = EasyMagicCompat.rerollExperienceCost();
-        int catalyst = EasyMagicCompat.rerollCatalystCost(this.minecraft.player);
+        int catalyst = EasyMagicCompat.rerollCatalystCost(menu, this.minecraft.player);
         if (experience > 0) tooltip.add(Component.translatable(experience == 1 ? "container.enchant.experience.one" : "container.enchant.experience.many", experience).withStyle(ChatFormatting.GREEN));
         if (catalyst > 0) tooltip.add(Component.literal(catalyst + " × ").append(Component.translatable("item.minecraft.lapis_lazuli")).withStyle(ChatFormatting.BLUE));
         graphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);

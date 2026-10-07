@@ -1,0 +1,18 @@
+{
+  "type": "apotheosis:spawner_modifier",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "spawner"
+    }
+  ],
+  "mainhand": {
+    "item": "minecraft:campfire"
+  },
+  "stat_changes": [
+    {
+      "id": "artifice_burning",
+      "value": true
+    }
+  ]
+}

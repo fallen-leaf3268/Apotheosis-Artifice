@@ -4,10 +4,15 @@
     {
       "rolls": 1,
       "entries": [
-        { "type": "minecraft:item", "name": "apotheosis_artifice:raven_enchanting_table" }
+        {
+          "type": "minecraft:item",
+          "name": "apotheosis_artifice:raven_enchanting_table"
+        }
       ],
       "conditions": [
-        { "condition": "minecraft:survives_explosion" }
+        {
+          "condition": "minecraft:survives_explosion"
+        }
       ]
     }
   ]

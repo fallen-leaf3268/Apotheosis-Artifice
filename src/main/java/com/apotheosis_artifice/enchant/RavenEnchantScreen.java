@@ -53,6 +53,7 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
 
     @Override
     public void containerTick() {
+        this.applyPendingJeiTransfer();
         super.containerTick();
         this.curE = Math.min(this.curE, eternaMax());
         this.curQ = Mth.clamp(this.curQ, 0, ApotheosisConfig.getMaxQuanta());
@@ -111,6 +112,15 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
         this.dirty = true;
     }
 
+    private void applyPendingJeiTransfer() {
+        var pending = this.ravenMenu.takePendingJeiStats();
+        if (pending == null) return;
+        this.curE = Mth.clamp(pending.eterna(), 0, eternaMax());
+        this.curQ = Mth.clamp(pending.quanta(), 0, ApotheosisConfig.getMaxQuanta());
+        this.curA = Mth.clamp(pending.arcana(), 0, ApotheosisConfig.getMaxArcana());
+        this.dirty = false;
+    }
+
     private void updateVal(double mx, float max) {
         double t = Mth.clamp((mx - (this.leftPos + BAR_X)) / (double)BAR_W, 0, 1);
         float v = (float)(Math.round(t * max * 2) / 2.0);
@@ -124,13 +134,7 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
 
     @Override
     public void render(GuiGraphics gfx, int mx, int my, float pt) {
-        float[] jei = RavenEnchantMenu.consumeJEISliders();
-        if (jei != null) {
-            this.curE = Mth.clamp(jei[0], 0, eternaMax());
-            this.curQ = Mth.clamp(jei[1], 0, ApotheosisConfig.getMaxQuanta());
-            this.curA = Mth.clamp(jei[2], 0, ApotheosisConfig.getMaxArcana());
-            this.dirty = true;
-        }
+        this.applyPendingJeiTransfer();
         this.ravenMenu.syncStatsToSliders(this.curE, this.curQ, this.curA);
         super.render(gfx, mx, my, pt);
     }

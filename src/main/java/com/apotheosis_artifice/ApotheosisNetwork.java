@@ -25,7 +25,7 @@ import java.util.function.Supplier;
 
 public class ApotheosisNetwork {
 
-    private static final String PROTOCOL_VERSION = "2";
+    private static final String PROTOCOL_VERSION = "3";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ApotheosisArtificeMod.MODID + ":main"),
         () -> PROTOCOL_VERSION,
@@ -47,10 +47,7 @@ public class ApotheosisNetwork {
                     }
                     ((ISlotSelectMenu) menu).curiosforge_selectSlot(pkt.slotIndex);
                     menu.slotsChanged(null);
-                    CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncReforgeChoicesPacket(
-                        menu.getSlot(2).getItem(),
-                        menu.getSlot(3).getItem(),
-                        menu.getSlot(4).getItem()));
+                    menu.broadcastChanges();
                 });
                 ctx.get().setPacketHandled(true);
             }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
@@ -133,6 +130,7 @@ public class ApotheosisNetwork {
             SyncGemCaseMaterialsPacket::encode, SyncGemCaseMaterialsPacket::decode,
             SyncGemCaseMaterialsPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         ApotheosisConfig.registerNetwork(CHANNEL, id++);
+        ApotheosisConfig.registerReforgingNetwork(CHANNEL, id++);
     }
 
     public static void sendClues(ServerPlayer player, int slot, List<EnchantmentInstance> clues) {
@@ -254,9 +252,9 @@ public class ApotheosisNetwork {
                 if (player == null || !(player.containerMenu instanceof ReforgingMenu menu)) {
                     return;
                 }
-                menu.getSlot(2).set(pkt.slot0);
-                menu.getSlot(3).set(pkt.slot1);
-                menu.getSlot(4).set(pkt.slot2);
+                menu.getSlot(3).set(pkt.slot0);
+                menu.getSlot(4).set(pkt.slot1);
+                menu.getSlot(5).set(pkt.slot2);
             });
             ctx.get().setPacketHandled(true);
         }

@@ -1,8 +1,13 @@
 package com.apotheosis_artifice.enchant;
 
+import com.apotheosis_artifice.ApotheosisConfig;
 import com.apotheosis_artifice.compat.EasyMagicCompat;
 import com.apotheosis_artifice.compat.EasyMagicEnchantingStorage;
+import com.apotheosis_artifice.lead.EnderLeadAccess;
 
+import dev.shadowsoffire.apotheosis.Apotheosis;
+import dev.shadowsoffire.apotheosis.ench.table.EnchantingRecipe;
+import dev.shadowsoffire.apotheosis.ench.table.RealEnchantmentHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -10,6 +15,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -18,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.ForgeEventFactory;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
@@ -72,7 +79,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         protected void onContentsChanged(int slot) { setChanged(); }
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            if (slot == INPUT) return !stack.isEmpty() && stack.getItem().getEnchantmentValue() > 0;
+            if (slot == INPUT) return canEnchantInput(stack);
             return true;
         }
     };
@@ -100,13 +107,21 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         }
         @Override public int getSlotLimit(int slot) { return 64; }
         @Override public boolean isItemValid(int slot, ItemStack stack) {
-            if (slot == 0) return !stack.isEmpty() && stack.getItem().getEnchantmentValue() > 0;
+            if (slot == 0) return canEnchantInput(stack);
             if (slot == 1) return getFuelInv().isItemValid(0, stack);
             return false;
         }
         };
     }
     private int tickCounter = 0;
+    private int autoTickCounter = 0;
+
+    private boolean canEnchantInput(ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        ItemStack single = stack.copyWithCount(1);
+        return single.isEnchantable() && single.getEnchantmentValue() > 0
+            || this.level != null && EnchantingRecipe.findItemMatch(this.level, stack) != null;
+    }
 
     public MechanicalRavenEnchantTile(BlockPos pos, BlockState state) { super(pos, state); }
 
@@ -172,7 +187,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         Container input = this.getActiveEnchantInventory();
         if (!input.getItem(0).isEmpty()) return;
         ItemStack buffered = this.ioInv.getStackInSlot(INPUT);
-        if (buffered.isEmpty() || buffered.isEnchanted() || !this.ioInv.isItemValid(INPUT, buffered)) return;
+        if (!this.ioInv.isItemValid(INPUT, buffered)) return;
         this.movingInventory = true;
         try {
             this.completedWorkStack = ItemStack.EMPTY;
@@ -215,27 +230,59 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     public static void tick(Level level, BlockPos pos, BlockState state, MechanicalRavenEnchantTile tile) {
         if (level.isClientSide) return;
         tile.refillEnchantSlot();
-        if (++tile.tickCounter < 20) return;
-        tile.tickCounter = 0;
-        tile.tryDepositOutput();
-        tile.flushEnchantedInput();
-        tile.refillEnchantSlot();
-        if (level.hasNeighborSignal(pos)) {
+        boolean moveOutput = ++tile.tickCounter >= 20;
+        if (moveOutput) {
+            tile.tickCounter = 0;
+            tile.tryDepositOutput();
+            tile.flushEnchantedInput();
+            tile.refillEnchantSlot();
+        }
+        if (tile.advanceAutoEnchantTimer(Apotheosis.enableEnch && level.hasNeighborSignal(pos), ApotheosisConfig.getMechanicalEnchantInterval())) {
             tile.tryAutoEnchant();
         }
-        tile.tryDepositOutput();
+        if (moveOutput) tile.tryDepositOutput();
+    }
+
+    private boolean advanceAutoEnchantTimer(boolean active, int interval) {
+        if (!active) {
+            this.autoTickCounter = 0;
+            return false;
+        }
+        if (++this.autoTickCounter < interval) return false;
+        this.autoTickCounter = 0;
+        return true;
+    }
+
+    private int getAutoEnchantLapisCost() {
+        return EnchantingCostRules.lapisCost(3, EnchantingDiscounts.gather(this.level, this.worldPosition).lapis());
+    }
+
+    static boolean hasAutoEnchantFuel(IItemHandler fuel, int lapisCost) {
+        if (lapisCost <= 0) return true;
+        ItemStack availableFuel = fuel.extractItem(0, lapisCost, true);
+        return availableFuel.getCount() == lapisCost
+            && (availableFuel.is(Items.LAPIS_LAZULI) || fuel.isItemValid(0, availableFuel));
+    }
+
+    public boolean isMissingAutoEnchantLapis() {
+        int lapisCost = this.getAutoEnchantLapisCost();
+        return lapisCost > 0 && !hasAutoEnchantFuel(this.getFuelInv(), lapisCost);
     }
 
     private void tryAutoEnchant() {
-        if (this.movingInventory || this.isOutputPending()) return;
+        if (!Apotheosis.enableEnch || this.movingInventory || this.isOutputPending()) return;
         this.refillEnchantSlot();
         Container input = this.getActiveEnchantInventory();
         ItemStack stack = input.getItem(0);
-        if (stack.isEmpty() || stack.getCount() != 1 || stack.isEnchanted() || stack.getItem().getEnchantmentValue() <= 0) return;
+        if (stack.getCount() != 1 || !this.canEnchantInput(stack)) return;
+        int lapisCost = this.getAutoEnchantLapisCost();
+        IItemHandler fuel = this.getFuelInv();
+        if (!hasAutoEnchantFuel(fuel, lapisCost)) return;
         ItemStack result = this.doEnchant(stack.copy(), this.ravenStats);
         if (result.isEmpty()) return;
         this.movingInventory = true;
         try {
+            if (lapisCost > 0) fuel.extractItem(0, lapisCost, false);
             this.completedWorkStack = result;
             input.setItem(0, result);
             this.setChanged();
@@ -248,12 +295,12 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
 
     /** 核心附魔逻辑：输入物品，返回已附魔的物品 */
     public ItemStack doEnchant(ItemStack input, RavenTableStats stats) {
-        if (input.isEmpty() || input.isEnchanted() || input.getItem().getEnchantmentValue() <= 0) return ItemStack.EMPTY;
+        if (input.isEmpty()) return ItemStack.EMPTY;
 
         float eterna = stats.eterna();
         float quanta = stats.quanta();
         float arcana = stats.arcana();
-        var recipe = dev.shadowsoffire.apotheosis.ench.table.EnchantingRecipe.findMatch(this.level, input, eterna, quanta, arcana);
+        var recipe = EnchantingRecipe.findMatch(this.level, input, eterna, quanta, arcana);
 
         if (recipe != null) {
             input = recipe.assemble(input, eterna, quanta, arcana);
@@ -261,14 +308,21 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
             return input;
         }
 
+        if (!input.isEnchantable() || input.getEnchantmentValue() <= 0 || input.getItem() instanceof EnderLeadAccess) return ItemStack.EMPTY;
+
         var bs = dev.shadowsoffire.apotheosis.ench.table.ApothEnchantmentMenu.gatherStats(this.level, this.worldPosition, input.getEnchantmentValue());
-        int level = Math.round(eterna * 2);
+        eterna = Math.max(1.5F, eterna);
+        var random = RandomSource.create((int) this.enchantmentSeed);
+        int level = RealEnchantmentHelper.getEnchantmentCost(random, 2, eterna, input);
+        if (level < 3) level++;
+        level = ForgeEventFactory.onEnchantmentLevelSet(this.level, this.worldPosition, 2, Math.round(eterna), input, level);
         if (level <= 0) return ItemStack.EMPTY;
-        var list = dev.shadowsoffire.apotheosis.ench.table.RealEnchantmentHelper.selectEnchantment(
-            this.level.random, input, level, quanta, arcana, bs.rectification(), bs.treasure(), bs.blacklist());
+        random.setSeed((int) this.enchantmentSeed + 2);
+        var list = RealEnchantmentHelper.selectEnchantment(
+            random, input, level, quanta, arcana, bs.rectification(), bs.treasure(), bs.blacklist());
         if (list.isEmpty()) return ItemStack.EMPTY;
-        var instance = list.get(this.level.random.nextInt(list.size()));
         input = ((dev.shadowsoffire.apotheosis.ench.table.IEnchantableItem) input.getItem()).onEnchantment(input, list);
+        if (input.isEmpty()) return ItemStack.EMPTY;
         this.enchantmentSeed = this.level.random.nextInt();
         return input;
     }

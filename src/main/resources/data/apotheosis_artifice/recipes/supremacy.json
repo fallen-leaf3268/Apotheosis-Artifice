@@ -1,0 +1,9 @@
+{
+  "type": "apotheosis_artifice:supremacy",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "adventure"
+    }
+  ]
+}

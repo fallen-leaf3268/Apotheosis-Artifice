@@ -359,7 +359,7 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
 
     @Override
     public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
-        super.render(gfx, mouseX, mouseY, partialTick);
+        super.render(new CountGraphics(gfx), mouseX, mouseY, partialTick);
         this.renderGemCaseCounts(gfx);
     }
 
@@ -528,6 +528,62 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
 
         @Override
         protected void updateWidgetNarration(NarrationElementOutput output) {}
+    }
+
+    private static class CountGraphics extends GuiGraphics {
+        private final GuiGraphics source;
+        private CountDecoration decoration;
+
+        private CountGraphics(GuiGraphics source) {
+            super(Minecraft.getInstance(), source.bufferSource());
+            this.source = source;
+            this.pose().last().pose().set(source.pose().last().pose());
+            this.pose().last().normal().set(source.pose().last().normal());
+        }
+
+        @Override
+        public void enableScissor(int left, int top, int right, int bottom) {
+            this.source.enableScissor(left, top, right, bottom);
+        }
+
+        @Override
+        public void disableScissor() {
+            this.source.disableScissor();
+        }
+
+        @Override
+        public void renderItemDecorations(Font font, ItemStack stack, int x, int y, String text) {
+            CountDecoration previous = this.decoration;
+            this.decoration = null;
+            String count = Integer.toString(stack.getCount());
+            if (stack.getCount() > 1 && (text == null || text.equals(count)) && font.width(count) > 14) {
+                this.decoration = new CountDecoration(font, count, x, y);
+            }
+            try {
+                super.renderItemDecorations(font, stack, x, y, text);
+            } finally {
+                this.decoration = previous;
+            }
+        }
+
+        @Override
+        public int drawString(Font font, String text, int x, int y, int color, boolean shadow) {
+            CountDecoration count = this.decoration;
+            if (count == null || font != count.font() || !count.text().equals(text)
+                || x != count.x() + 17 - font.width(text) || y != count.y() + 9
+                || color != 0xFFFFFF || !shadow) return super.drawString(font, text, x, y, color, shadow);
+            float scale = 14F / font.width(text);
+            this.pose().pushPose();
+            try {
+                this.pose().translate(x + font.width(text) * (1 - scale), y + (1 - scale) * 4, 0);
+                this.pose().scale(scale, scale, 1);
+                return super.drawString(font, text, 0, 0, color, shadow);
+            } finally {
+                this.pose().popPose();
+            }
+        }
+
+        private record CountDecoration(Font font, String text, int x, int y) {}
     }
 
     private static class SearchGraphics extends GuiGraphics {

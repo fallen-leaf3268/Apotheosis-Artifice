@@ -1,0 +1,47 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "enchantment"
+    }
+  ],
+  "pattern": [
+    "ABC",
+    "DEF",
+    "GHI"
+  ],
+  "key": {
+    "A": {
+      "item": "apotheosis:infused_seashelf"
+    },
+    "B": {
+      "item": "minecraft:enchanted_golden_apple"
+    },
+    "C": {
+      "item": "apotheosis:deepshelf"
+    },
+    "D": {
+      "item": "minecraft:experience_bottle"
+    },
+    "E": {
+      "item": "apotheosis:endshelf"
+    },
+    "F": {
+      "item": "minecraft:experience_bottle"
+    },
+    "G": {
+      "item": "apotheosis:deepshelf"
+    },
+    "H": {
+      "item": "minecraft:enchanted_golden_apple"
+    },
+    "I": {
+      "item": "apotheosis:infused_hellshelf"
+    }
+  },
+  "result": {
+    "item": "apotheosis_artifice:knowledge_overflow_shelf",
+    "count": 1
+  }
+}

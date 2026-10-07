@@ -1,0 +1,40 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "spawner"
+    },
+    {
+      "type": "apotheosis:module",
+      "module": "adventure"
+    }
+  ],
+  "category": "misc",
+  "pattern": [
+    "MCM",
+    "SPS",
+    "MFM"
+  ],
+  "key": {
+    "M": {
+      "item": "apotheosis:uncommon_material"
+    },
+    "C": {
+      "item": "minecraft:clock"
+    },
+    "S": {
+      "item": "minecraft:sugar"
+    },
+    "P": {
+      "item": "minecraft:piston"
+    },
+    "F": {
+      "item": "minecraft:fermented_spider_eye"
+    }
+  },
+  "result": {
+    "item": "apotheosis_artifice:frontier_spawner_upgrade_rune",
+    "count": 1
+  }
+}

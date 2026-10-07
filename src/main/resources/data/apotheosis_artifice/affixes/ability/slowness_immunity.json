@@ -1,6 +1,13 @@
 {
-    "type": "apotheosis_artifice:effect_immunity",
-    "effects": ["minecraft:slowness"],
-    "rarities": ["mythic", "ancient"],
-    "types": ["curios:feet"]
+  "type": "apotheosis_artifice:effect_immunity",
+  "effects": [
+    "minecraft:slowness"
+  ],
+  "rarities": [
+    "mythic",
+    "ancient"
+  ],
+  "types": [
+    "curios:feet"
+  ]
 }

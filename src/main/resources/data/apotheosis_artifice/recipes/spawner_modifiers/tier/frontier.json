@@ -1,0 +1,44 @@
+{
+  "type": "apotheosis:spawner_modifier",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "spawner"
+    }
+  ],
+  "mainhand": {
+    "item": "apotheosis_artifice:frontier_spawner_upgrade_rune"
+  },
+  "stat_changes": [
+    {
+      "id": "min_delay",
+      "value": 0,
+      "min": 150,
+      "max": 150
+    },
+    {
+      "id": "max_delay",
+      "value": 0,
+      "min": 600,
+      "max": 600
+    },
+    {
+      "id": "spawn_count",
+      "value": 0,
+      "min": 7,
+      "max": 7
+    },
+    {
+      "id": "max_nearby_entities",
+      "value": 0,
+      "min": 12,
+      "max": 12
+    },
+    {
+      "id": "req_player_range",
+      "value": 0,
+      "min": 24,
+      "max": 24
+    }
+  ]
+}

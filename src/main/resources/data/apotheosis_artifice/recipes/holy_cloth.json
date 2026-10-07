@@ -1,26 +1,26 @@
 {
-    "type": "apotheosis:enchanting",
-    "conditions": [
-        {
-            "type": "apotheosis:module",
-            "module": "enchantment"
-        }
-    ],
-    "input": {
-        "item": "minecraft:paper"
-    },
-    "requirements": {
-        "eterna": 45,
-        "quanta": 55,
-        "arcana": 100
-    },
-    "max_requirements": {
-        "eterna": 50,
-        "quanta": 75,
-        "arcana": -1
-    },
-    "result": {
-        "item": "apotheosis_artifice:holy_cloth",
-        "count": 1
+  "type": "apotheosis:enchanting",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "enchantment"
     }
+  ],
+  "input": {
+    "item": "minecraft:paper"
+  },
+  "requirements": {
+    "eterna": 45,
+    "quanta": 55,
+    "arcana": 100
+  },
+  "max_requirements": {
+    "eterna": 50,
+    "quanta": 75,
+    "arcana": -1
+  },
+  "result": {
+    "item": "apotheosis_artifice:holy_cloth",
+    "count": 1
+  }
 }

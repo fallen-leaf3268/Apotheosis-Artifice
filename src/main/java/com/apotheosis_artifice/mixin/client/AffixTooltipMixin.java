@@ -1,8 +1,7 @@
 package com.apotheosis_artifice.mixin.client;
 
-import java.util.Optional;
-
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -14,15 +13,14 @@ import dev.shadowsoffire.apotheosis.adventure.client.AdventureModuleClient;
 import dev.shadowsoffire.apotheosis.adventure.client.SocketTooltipRenderer.SocketComponent;
 import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.contents.LiteralContents;
-import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraftforge.client.event.RenderTooltipEvent;
 
 @Mixin(value = AdventureModuleClient.class, remap = false)
 public class AffixTooltipMixin {
 
-    @Inject(method = "comps", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "comps", at = @At("RETURN"))
     private static void cf_repositionSocket(RenderTooltipEvent.GatherComponents e, CallbackInfo ci) {
         var stack = e.getItemStack();
         var afxData = stack.getTagElement(AffixHelper.AFFIX_DATA);
@@ -35,23 +33,52 @@ public class AffixTooltipMixin {
         if (sockets == 0) return;
 
         var list = e.getTooltipElements();
-        list.removeIf(c -> {
-            Optional<FormattedText> o = c.left();
-            return o.isPresent() && o.get() instanceof Component comp
-                && comp.getContents() instanceof LiteralContents tc
-                && "APOTH_REMOVE_MARKER".equals(tc.text());
-        });
-        int insertAt = list.size();
-        for (int i = list.size() - 1; i >= 0; i--) {
-            if (list.get(i).left().isPresent()) {
-                String txt = list.get(i).left().get().getString().trim();
-                if (txt.startsWith("+") || txt.startsWith("-")) {
-                    insertAt = i + 1;
-                    break;
+        SocketComponent socket = null;
+        int originalIndex = -1;
+        for (int i = 0; i < list.size(); i++) {
+            var element = list.get(i);
+            if (element.right().orElse(null) instanceof SocketComponent existing) {
+                if (socket == null) {
+                    socket = existing;
+                    originalIndex = i;
                 }
+                list.remove(i--);
+            } else if (element.left().orElse(null) instanceof Component component
+                && component.getContents() instanceof LiteralContents literal
+                && "APOTH_REMOVE_MARKER".equals(literal.text())) {
+                list.remove(i--);
             }
         }
-        list.add(Math.min(insertAt, list.size()), Either.right(new SocketComponent(stack, SocketHelper.getGems(stack))));
-        ci.cancel();
+        int insertAt = originalIndex == -1 ? list.size() : Math.min(originalIndex, list.size());
+        boolean curioAttributes = false;
+        for (int i = 0; i < list.size(); i++) {
+            if (!(list.get(i).left().orElse(null) instanceof Component component)) {
+                curioAttributes = false;
+                continue;
+            }
+            if (artifice$matchesCurioTranslation(component, true)) {
+                curioAttributes = true;
+            } else if (curioAttributes && artifice$matchesCurioTranslation(component, false)) {
+                insertAt = i + 1;
+            } else if (!(component.getContents() instanceof LiteralContents literal
+                && literal.text().isBlank() && component.getSiblings().isEmpty())) {
+                curioAttributes = false;
+            }
+        }
+        if (socket == null) socket = new SocketComponent(stack, SocketHelper.getGems(stack));
+        list.add(insertAt, Either.right(socket));
+    }
+
+    @Unique
+    private static boolean artifice$matchesCurioTranslation(Component component, boolean header) {
+        if (component.getContents() instanceof TranslatableContents contents) {
+            String key = contents.getKey();
+            if (header ? key.startsWith("curios.modifiers.") && !key.startsWith("curios.modifiers.slots.")
+                : key.startsWith("attribute.modifier.") || key.startsWith("curios.modifiers.slots.")) return true;
+        }
+        for (Component sibling : component.getSiblings()) {
+            if (artifice$matchesCurioTranslation(sibling, header)) return true;
+        }
+        return false;
     }
 }

@@ -19,7 +19,7 @@ import dev.shadowsoffire.placebo.reload.DynamicRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 
-import top.theillusivec4.curios.common.data.CuriosSlotManager;
+import top.theillusivec4.curios.api.CuriosApi;
 import net.minecraft.world.entity.EquipmentSlot;
 
 @Mixin(value = AffixRegistry.class, remap = false)
@@ -39,11 +39,8 @@ public class AffixRegistryMixin {
 
     @Inject(method = "beginReload", at = @At("TAIL"))
     private void apotheosis_artifice_registerSlots(CallbackInfo ci) {
-        if (!com.apotheosis_artifice.ApotheosisConfig.ENABLE_CURIOS_LOOT_RARITY.get()) {
-            return;
-        }
         try {
-            for (String slotId : CuriosSlotManager.SERVER.getSlots().keySet()) {
+            for (String slotId : CuriosApi.getSlots().keySet()) {
                 String catName = "curios:" + slotId;
                 if (LootCategory.byId(catName) == null || LootCategory.byId(catName).isNone()) {
                     LootCategory.register(LootCategory.HELMET, catName,

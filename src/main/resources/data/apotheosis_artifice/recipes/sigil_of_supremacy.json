@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "adventure"
+    }
+  ],
+  "pattern": [
+    "MSM",
+    "ENE",
+    "MSM"
+  ],
+  "key": {
+    "M": {
+      "item": "apotheosis:mythic_material"
+    },
+    "S": {
+      "item": "apotheosis_artifice:sigil_of_malice"
+    },
+    "E": {
+      "item": "minecraft:echo_shard"
+    },
+    "N": {
+      "item": "minecraft:nether_star"
+    }
+  },
+  "result": {
+    "item": "apotheosis_artifice:sigil_of_supremacy",
+    "count": 1
+  }
+}

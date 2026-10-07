@@ -1,7 +1,11 @@
 package com.apotheosis_artifice.compat;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.enchant.MechanicalRavenEnchantMenu;
@@ -11,6 +15,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
@@ -19,12 +24,18 @@ public final class EasyMagicCompat {
 
     private static final TagKey<Item> REROLL_CATALYSTS = TagKey.create(Registries.ITEM, new ResourceLocation("easymagic", "reroll_catalysts"));
     private static final TagKey<Item> ENCHANTING_CATALYSTS = TagKey.create(Registries.ITEM, new ResourceLocation("easymagic", "enchanting_catalysts"));
-    private static boolean available = ModList.get().isLoaded("easymagic");
+    private static volatile boolean available = ModList.get().isLoaded("easymagic");
+    private static volatile boolean configAccessResolved;
     private static boolean warned;
+    private static Class<?> serverConfigClass;
+    private static Field configHolderField;
+    private static Method configGetter;
+    private static final Map<String, Optional<Field>> configFields = new ConcurrentHashMap<>();
 
     private EasyMagicCompat() {}
 
     public static boolean isLoaded() {
+        if (available) resolveConfigAccess();
         return available;
     }
 
@@ -43,8 +54,16 @@ public final class EasyMagicCompat {
     }
 
     public static int rerollCatalystCost(Player player) {
+        return rerollCatalystCost(player, dedicatedRerollButton());
+    }
+
+    public static int rerollCatalystCost(ApothEnchantmentMenu menu, Player player) {
+        return rerollCatalystCost(player, getDedicatedRerollSlot(menu) != null);
+    }
+
+    private static int rerollCatalystCost(Player player, boolean dedicated) {
         int configuredCost = rerollCatalystCost();
-        if (!dedicatedRerollButton() && EnigmaticLegacyCompat.isEnchanterPearlActive(player)) return 0;
+        if (!dedicated && EnigmaticLegacyCompat.isEnchanterPearlActive(player)) return 0;
         return configuredCost;
     }
 
@@ -75,16 +94,25 @@ public final class EasyMagicCompat {
     }
 
     public static int getRerollCatalystCount(ApothEnchantmentMenu menu) {
-        if (dedicatedRerollButton()) return menu.enchantSlots.getItem(2).getCount();
-        return menu.getSlot(1).getItem().getCount();
+        Slot dedicated = getDedicatedRerollSlot(menu);
+        return (dedicated == null ? menu.getSlot(1) : dedicated).getItem().getCount();
+    }
+
+    public static Slot getDedicatedRerollSlot(ApothEnchantmentMenu menu) {
+        for (Slot slot : menu.slots) {
+            if (slot.container == menu.enchantSlots && slot.getContainerSlot() == 2) return slot;
+        }
+        return null;
     }
 
     public static boolean tryReroll(ApothEnchantmentMenu menu, Player player) {
         if (!canUseReroll(menu)) return false;
-        int catalystCost = rerollCatalystCost(player);
+        Slot dedicated = getDedicatedRerollSlot(menu);
+        Slot catalystSlot = dedicated == null ? menu.getSlot(1) : dedicated;
+        int catalystCost = rerollCatalystCost(player, dedicated != null);
         int experienceCost = rerollExperienceCost();
         if (!player.getAbilities().instabuild
-            && (getTotalExperience(player) < experienceCost || getRerollCatalystCount(menu) < catalystCost)) return false;
+            && (getTotalExperience(player) < experienceCost || catalystSlot.getItem().getCount() < catalystCost)) return false;
         if (player.level().isClientSide) return true;
 
         ItemStack input = menu.enchantSlots.getItem(0);
@@ -96,15 +124,9 @@ public final class EasyMagicCompat {
         }
         if (!player.getAbilities().instabuild) {
             if (catalystCost > 0) {
-                if (dedicatedRerollButton()) {
-                    ItemStack catalyst = menu.enchantSlots.getItem(2);
-                    catalyst.shrink(catalystCost);
-                    if (catalyst.isEmpty()) menu.enchantSlots.setItem(2, ItemStack.EMPTY);
-                } else {
-                    ItemStack catalyst = menu.getSlot(1).getItem();
-                    catalyst.shrink(catalystCost);
-                    if (catalyst.isEmpty()) menu.getSlot(1).set(ItemStack.EMPTY);
-                }
+                ItemStack catalyst = catalystSlot.getItem();
+                catalyst.shrink(catalystCost);
+                if (catalyst.isEmpty()) catalystSlot.set(ItemStack.EMPTY);
             }
             if (experienceCost > 0) player.giveExperiencePoints(-experienceCost);
         }
@@ -133,22 +155,54 @@ public final class EasyMagicCompat {
     }
 
     private static Object getConfigField(String fieldName) {
-        if (!available) return null;
-        try {
-            Class<?> easyMagic = Class.forName("fuzs.easymagic.EasyMagic");
-            Class<?> serverConfig = Class.forName("fuzs.easymagic.config.ServerConfig");
-            Field configField = easyMagic.getField("CONFIG");
-            Object configHolder = configField.get(null);
-            Method get = configHolder.getClass().getMethod("get", Class.class);
-            Object config = get.invoke(configHolder, serverConfig);
-            return serverConfig.getField(fieldName).get(config);
-        } catch (ReflectiveOperationException | LinkageError ex) {
-            available = false;
-            if (!warned) {
-                warned = true;
-                ApotheosisArtificeMod.LOGGER.warn("Easy Magic compatibility was disabled because its config could not be read", ex);
+        if (!isLoaded()) return null;
+        Field field = configFields.computeIfAbsent(fieldName, name -> {
+            try {
+                return Optional.of(serverConfigClass.getField(name));
+            } catch (NoSuchFieldException exception) {
+                warnConfigRead(exception);
+                return Optional.empty();
             }
+        }).orElse(null);
+        if (field == null) return null;
+        try {
+            Object holder = configHolderField.get(null);
+            if (holder == null) return null;
+            Object config = configGetter.invoke(holder, serverConfigClass);
+            return config == null ? null : field.get(config);
+        } catch (InvocationTargetException exception) {
+            if (exception.getCause() instanceof Error error) throw error;
+            warnConfigRead(exception);
             return null;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            warnConfigRead(exception);
+            return null;
+        }
+    }
+
+    private static synchronized void resolveConfigAccess() {
+        if (configAccessResolved || !available) return;
+        try {
+            ClassLoader loader = EasyMagicCompat.class.getClassLoader();
+            Class<?> easyMagic = Class.forName("fuzs.easymagic.EasyMagic", false, loader);
+            Class<?> configType = Class.forName("fuzs.easymagic.config.ServerConfig", false, loader);
+            Field holder = easyMagic.getField("CONFIG");
+            Method getter = holder.getType().getMethod("get", Class.class);
+            serverConfigClass = configType;
+            configHolderField = holder;
+            configGetter = getter;
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            available = false;
+            warnConfigRead(exception);
+        } finally {
+            configAccessResolved = true;
+        }
+    }
+
+    private static synchronized void warnConfigRead(Throwable exception) {
+        if (!warned) {
+            warned = true;
+            ApotheosisArtificeMod.LOGGER.warn("Easy Magic configuration could not be read; unavailable values use defaults", exception);
         }
     }
 }

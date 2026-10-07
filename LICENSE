@@ -30,8 +30,9 @@ See README.md for the corresponding source archive and asset review status.
 THIRD-PARTY NOTICES
 ================================================================================
 
-Apotheosis Artifice contains code adapted from Apotheosis and Apothic
-Attributes by Shadows_of_Fire. The MIT notices below apply to that code;
+Apotheosis Artifice contains code adapted from Apotheosis, Apothic
+Attributes, Apothic Spawners, and Apothic Enchanting by Shadows_of_Fire.
+The MIT notices below apply to that code;
 they do not assert that Apotheosis assets are MIT-licensed.
 
 1. Apotheosis newer-branch code, including the GemCase implementations
@@ -110,6 +111,86 @@ License: https://github.com/Shadows-of-Fire/Apothic-Attributes/blob/1.20/LICENSE
 MIT License
 
 Copyright (c) 2021 Brennan Ward
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+4. Apothic Spawners 1.21 code
+
+Initial health, burning, and echoing spawner behavior is adapted for
+Minecraft 1.20.1. No Apothic Spawners artwork is included by this port.
+The four preset rune symbol overlays are original artwork. Their item
+models reference apotheosis:items/gem_fused_slate from the installed
+Apotheosis dependency as a shared background; that background texture is
+not copied into this distribution.
+
+Source: https://github.com/Shadows-of-Fire/Apothic-Spawners/tree/fa52d69e86817a377116b669383703f8b6838f8a
+License: https://github.com/Shadows-of-Fire/Apothic-Spawners/blob/fa52d69e86817a377116b669383703f8b6838f8a/LICENSE
+
+MIT License
+
+Copyright (c) 2024-2025 Stormraven Studios, LLC
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+5. Apotheosis sigils and Apothic Enchanting Ender Leads (1.21)
+
+Sigil of Supremacy and Sigil of Malice behavior is adapted from Apotheosis.
+The normal and occult Ender Lead tiers are adapted from Apothic Enchanting, retaining
+the existing Apotheosis 1.20.1 normal Ender Lead item ID and storage format.
+The two new sigil symbol overlays are original artwork. Their item models
+use the same runtime gem_fused_slate background reference described above.
+The occult Ender Lead icon is
+a recolor of the Apotheosis 7.4.8 Ender Lead texture, not original artwork.
+Its source is assets/apotheosis/textures/items/ender_lead.png in Apotheosis
+1.20. Retain the 1.20 upstream notice in section 2; this attribution does not
+assert approval by a distribution platform. No upstream sound files are
+included by these ports.
+
+Apotheosis source: https://github.com/Shadows-of-Fire/Apotheosis/tree/7dd7cec26830074f1745529eb8f1f533092733d0
+Apotheosis license: https://github.com/Shadows-of-Fire/Apotheosis/blob/7dd7cec26830074f1745529eb8f1f533092733d0/LICENSE
+Apothic Enchanting source: https://github.com/Shadows-of-Fire/Apothic-Enchanting/tree/2d92331a0395cfd7587595d5170398cdaba145ce
+Apothic Enchanting license: https://github.com/Shadows-of-Fire/Apothic-Enchanting/blob/2d92331a0395cfd7587595d5170398cdaba145ce/LICENSE
+
+MIT License
+
+Apotheosis: Copyright (c) 2018-2025 Stormraven Studios, LLC
+Apothic Enchanting: Copyright (c) 2024-2025 Stormraven Studios, LLC
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

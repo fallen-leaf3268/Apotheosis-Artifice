@@ -4,19 +4,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.apotheosis_artifice.affix.AttributeBaseAffix;
 import com.apotheosis_artifice.affix.CurioSlotBonusAffix;
 import com.apotheosis_artifice.affix.RadianceAffix;
-import com.apotheosis_artifice.mixin.AttributeAffixAccessor;
+import com.apotheosis_artifice.enchant.EnchantingDiscounts;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixInstance;
-import dev.shadowsoffire.apotheosis.adventure.affix.AttributeAffix;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
-import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
 import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -28,6 +26,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
@@ -39,6 +38,7 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.ShieldBlockEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -50,6 +50,18 @@ import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
 public class ApotheosisEvents {
+
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public void enchantingShelfTooltip(ItemTooltipEvent event) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableEnch
+            || !(event.getItemStack().getItem() instanceof BlockItem item)) return;
+        var bonuses = EnchantingDiscounts.forBlock(item.getBlock());
+        if (bonuses.lapis() == 0 && bonuses.experience() == 0) return;
+        var tooltip = event.getToolTip();
+        boolean hasHeader = tooltip.stream().anyMatch(line -> line.getContents() instanceof TranslatableContents contents
+            && contents.getKey().equals("info.apotheosis.ench_stats"));
+        EnchantingDiscounts.appendShelfBonuses(bonuses, tooltip::add, !hasHeader);
+    }
 
     /** reforging recipe 资源重载版本号:TagsUpdatedEvent 触发时递增,ReforgingMenu 缓存自动失效。 */
     public static volatile long recipeCacheVersion = 0;
@@ -83,6 +95,7 @@ public class ApotheosisEvents {
 
         if (AffixHelper.hasAffixes(stack)) {
             for (var inst : AffixHelper.getAffixes(stack).values()) {
+                if (!inst.isValid()) continue;
                 if (inst.affix().get() instanceof CurioSlotBonusAffix csb) {
                     if (!csb.getFixedUuid().isEmpty() && event.getSlotContext().entity() != null
                         && !event.getSlotContext().entity().level().isClientSide()) continue;
@@ -94,21 +107,10 @@ public class ApotheosisEvents {
                     event.addModifier(
                         SlotAttribute.getOrCreate(slotId),
                         new AttributeModifier(uuid, "apotheosis_artifice:curio_slot_bonus:" + slotId, amount, Operation.ADDITION));
-                } else if (inst.affix().get() instanceof AttributeAffix attrAfx) {
-                    AttributeAffixAccessor acc = (AttributeAffixAccessor) (Object) attrAfx;
-                    LootRarity rarity = inst.rarity().get();
-                    if (rarity == null) continue;
-                    ResourceLocation rid = RarityRegistry.INSTANCE.getKey(rarity);
-                    if (rid == null) continue;
-                    for (var e : acc.getValues().entrySet()) {
-                        ResourceLocation eid = RarityRegistry.INSTANCE.getKey(e.getKey());
-                        if (rid.equals(eid)) {
-                            double v = e.getValue().get(inst.level());
-                            UUID uuid = affixUUID(event.getSlotContext(), inst.affix().getId());
-                            event.addModifier(acc.getAttribute(), new AttributeModifier(uuid, "affix:" + inst.affix().getId(), v, acc.getOperation()));
-                            break;
-                        }
-                    }
+                } else {
+                    inst.addModifiers(EquipmentSlot.CHEST, (attribute, modifier) -> event.addModifier(attribute,
+                        new AttributeModifier(affixUUID(event.getSlotContext(), inst.affix().getId(), modifier.getId()),
+                            modifier.getName(), modifier.getAmount(), modifier.getOperation())));
                 }
             }
         }
@@ -118,20 +120,12 @@ public class ApotheosisEvents {
             : LootCategory.forItem(stack);
         if (gemCat != null && !gemCat.isNone()) {
             SocketHelper.getGems(stack).addModifiers(gemCat, EquipmentSlot.CHEST, event::addModifier);
-            if (!"curio".equals(gemCat.getName())) {
-                LootCategory genericCurio = LootCategory.byId("curio");
-                if (genericCurio != null && !genericCurio.isNone()) {
-                    SocketHelper.getGems(stack).addModifiers(genericCurio, EquipmentSlot.CHEST, event::addModifier);
-                }
-            }
         }
     }
 
-    // UUID 必须与「物品/槽位」绑定，否则两件相同词缀的饰品会用同一 UUID，
-    // Curios 给第二件应用属性时会抛 "Modifier is already applied" 并丢失修饰符。
-    private static UUID affixUUID(top.theillusivec4.curios.api.SlotContext ctx, ResourceLocation affixId) {
+    private static UUID affixUUID(top.theillusivec4.curios.api.SlotContext ctx, ResourceLocation affixId, UUID modifierId) {
         return UUID.nameUUIDFromBytes(
-            ("apoth_art:" + ctx.identifier() + ":" + ctx.index() + ":" + affixId)
+            ("apoth_art:" + ctx.identifier() + ":" + ctx.index() + ":" + affixId + ":" + modifierId)
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
@@ -289,6 +283,7 @@ public class ApotheosisEvents {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onDamage(LivingHurtEvent event) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide) return;
 
@@ -319,6 +314,7 @@ public class ApotheosisEvents {
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onArrowFired(EntityJoinLevelEvent event) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         if (!(event.getEntity() instanceof AbstractArrow arrow)) return;
         if (arrow.getPersistentData().getBoolean("apoth.generated")) return;
         Entity shooter = arrow.getOwner();
@@ -341,6 +337,7 @@ public class ApotheosisEvents {
 
     @SubscribeEvent
     public void onShieldBlock(ShieldBlockEvent event) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide) return;
 
@@ -367,6 +364,7 @@ public class ApotheosisEvents {
 
     @SubscribeEvent
     public void onBlockBreak(BlockEvent.BreakEvent event) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         Player player = event.getPlayer();
         if (player.level().isClientSide) return;
 

@@ -45,17 +45,16 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
     private static final int SLOT_SIZE = 18;
     private static final int SOURCE_X = PANEL_W - 14;
     private static final int SOURCE_Y = 1;
-    private static final int[] SOURCE_GEAR = {
-        0x0F0, 0x6F6, 0x7FE, 0x3FC, 0xF9F, 0xF0F,
-        0xF0F, 0xF9F, 0x3FC, 0x7FE, 0x6F6, 0x0F0
-    };
+    private static final int SOURCE_SIZE = 12;
+    private static final ResourceLocation SOURCE_TEXTURE =
+        new ResourceLocation("apotheosis_artifice", "textures/gui/jei_source.png");
 
     public static String sourcePath(ResourceLocation id, String directory) {
         return "data\\" + id.getNamespace() + "\\" + directory + "\\" + id.getPath().replace('/', '\\') + ".json";
     }
 
     private static boolean isSourceHovered(double mouseX, double mouseY) {
-        return mouseX >= SOURCE_X && mouseX < SOURCE_X + 12 && mouseY >= SOURCE_Y && mouseY < SOURCE_Y + 12;
+        return mouseX >= SOURCE_X && mouseX < SOURCE_X + SOURCE_SIZE && mouseY >= SOURCE_Y && mouseY < SOURCE_Y + SOURCE_SIZE;
     }
 
     public static List<Component> splitTooltipLines(Component text) {
@@ -81,14 +80,8 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
 
     static void drawSourceHeader(GuiGraphics gfx, Font font, String name, double mouseX, double mouseY) {
         gfx.drawString(font, font.plainSubstrByWidth(name, SOURCE_X - 24), 22, 3, 0xFFFFAA00, false);
-        int color = isSourceHovered(mouseX, mouseY) ? 0xFFE0A63A : 0xFF6C6C6C;
-        for (int y = 0; y < SOURCE_GEAR.length; y++) {
-            for (int x = 0; x < 12; x++) {
-                if ((SOURCE_GEAR[y] & (1 << x)) != 0) {
-                    gfx.fill(SOURCE_X + x, SOURCE_Y + y, SOURCE_X + x + 1, SOURCE_Y + y + 1, color);
-                }
-            }
-        }
+        gfx.blit(SOURCE_TEXTURE, SOURCE_X, SOURCE_Y, isSourceHovered(mouseX, mouseY) ? 16 : 0, 0,
+            SOURCE_SIZE, SOURCE_SIZE, 32, 16);
     }
 
     @Override

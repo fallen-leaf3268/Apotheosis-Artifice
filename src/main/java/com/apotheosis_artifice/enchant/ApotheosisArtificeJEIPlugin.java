@@ -8,7 +8,9 @@ import java.util.Optional;
 import org.jetbrains.annotations.Nullable;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
+import com.apotheosis_artifice.ApotheosisConfig;
 import com.apotheosis_artifice.ApotheosisNetwork;
+import com.apotheosis_artifice.adventure.SigilUpgradeRecipe;
 import com.apotheosis_artifice.jei.AffixCodexCategory;
 import com.apotheosis_artifice.jei.AffixCodexEntry;
 import com.apotheosis_artifice.jei.AffixDetailCategory;
@@ -38,6 +40,7 @@ import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
+import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.RegistryAccess;
@@ -63,9 +66,21 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
 
     private AffixDetailCategory suffixCategory;
     private AffixDetailCategory prefixCategory;
+    private static volatile ApotheosisArtificeJEIPlugin activePlugin;
+    private IJeiRuntime runtime;
+    private List<AffixDetailEntry> curioSuffixEntries = List.of();
+    private List<AffixDetailEntry> curioPrefixEntries = List.of();
+    private List<AffixGemEntry> curioGemEntries = List.of();
+    private AffixCodexEntry fullCodex;
+    private AffixCodexEntry nativeCodex;
+    private boolean nativeCodexAdded;
+    private Boolean displayedCuriosEnabled;
 
     public ApotheosisArtificeJEIPlugin() {
-        ApothSmithingCategory.registerExtension(CleansingRecipe.class, new CleansingExtension());
+        if (dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) {
+            ApothSmithingCategory.registerExtension(CleansingRecipe.class, new CleansingExtension());
+            ApothSmithingCategory.registerExtension(SigilUpgradeRecipe.class, new SigilUpgradeExtension());
+        }
     }
 
     @Override public ResourceLocation getPluginUid() { return new ResourceLocation(ApotheosisArtificeMod.MODID, "enchant"); }
@@ -92,8 +107,10 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     }
 
     @Override public void registerRecipeCatalysts(IRecipeCatalystRegistration reg) {
-        reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.RAVEN_ENCHANTING_TABLE_ITEM.get()), EnchantingCategory.TYPE);
-        reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.MECHANICAL_RAVEN_TABLE_ITEM.get()), EnchantingCategory.TYPE);
+        if (dev.shadowsoffire.apotheosis.Apotheosis.enableEnch) {
+            reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.RAVEN_ENCHANTING_TABLE_ITEM.get()), EnchantingCategory.TYPE);
+            reg.addRecipeCatalyst(new ItemStack(ApotheosisArtificeMod.MECHANICAL_RAVEN_TABLE_ITEM.get()), EnchantingCategory.TYPE);
+        }
         if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return; // 词缀/重铸都属 adventure 模块
         var ourTable = new ItemStack(ApotheosisArtificeMod.APOTHEOSIS_REFORGING_TABLE_ITEM.get());
         for (var type : List.of(AffixCodexCategory.TYPE, SUFFIX_TYPE, PREFIX_TYPE)) reg.addRecipeCatalyst(ourTable, type);
@@ -116,6 +133,8 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         // 修复"可重铸物品"里法术卷轴只显示一个空 NBT 卷轴的问题
         AffixCodexEntry.bindIngredientManager(reg.getIngredientManager());
         AffixCodexEntry codex = AffixCodexEntry.create();
+        fullCodex = codex;
+        nativeCodex = codex == null ? null : codex.withoutCurios();
         if (codex != null) reg.addRecipes(AffixCodexCategory.TYPE, List.of(codex));
         List<AffixDetailEntry> suffixEntries = new ArrayList<>();
         List<AffixDetailEntry> prefixEntries = new ArrayList<>();
@@ -181,6 +200,8 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         }
         suffixEntries.sort(java.util.Comparator.comparing(a -> a.affix().getName(true).getString()));
         prefixEntries.sort(java.util.Comparator.comparing(a -> a.affix().getName(true).getString()));
+        curioSuffixEntries = suffixEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
+        curioPrefixEntries = prefixEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
         reg.addRecipes(SUFFIX_TYPE, suffixEntries);
         reg.addRecipes(PREFIX_TYPE, prefixEntries);
         List<AffixGemEntry> gemEntries = new ArrayList<>();
@@ -189,10 +210,68 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
             if (cat.getName().startsWith("curios:") && !"curio".equals(cat.getName())) continue;
             gemEntries.addAll(AffixGemEntry.createAll(cat));
         }
+        curioGemEntries = gemEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
         reg.addRecipes(AffixGemCategory.TYPE, gemEntries);
     }
 
+    @Override public void onRuntimeAvailable(IJeiRuntime runtime) {
+        this.runtime = runtime;
+        this.nativeCodexAdded = false;
+        this.displayedCuriosEnabled = null;
+        activePlugin = this;
+        refreshReforgingViews();
+    }
+
+    @Override public void onRuntimeUnavailable() {
+        runtime = null;
+        if (activePlugin == this) activePlugin = null;
+    }
+
+    public static void refreshReforgingViews() {
+        Minecraft.getInstance().execute(() -> {
+            ApotheosisArtificeJEIPlugin plugin = activePlugin;
+            if (plugin != null) plugin.updateReforgingViews();
+        });
+    }
+
+    private void updateReforgingViews() {
+        if (runtime == null) return;
+        boolean enabled = ApotheosisConfig.isCuriosReforgingEnabled();
+        if (displayedCuriosEnabled != null && displayedCuriosEnabled == enabled) return;
+        var manager = runtime.getRecipeManager();
+        if (enabled) {
+            manager.unhideRecipes(SUFFIX_TYPE, curioSuffixEntries);
+            manager.unhideRecipes(PREFIX_TYPE, curioPrefixEntries);
+            manager.unhideRecipes(AffixGemCategory.TYPE, curioGemEntries);
+        } else {
+            manager.hideRecipes(SUFFIX_TYPE, curioSuffixEntries);
+            manager.hideRecipes(PREFIX_TYPE, curioPrefixEntries);
+            manager.hideRecipes(AffixGemCategory.TYPE, curioGemEntries);
+        }
+        if (fullCodex != null && !fullCodex.equals(nativeCodex)) {
+            if (enabled) {
+                if (nativeCodexAdded) manager.hideRecipes(AffixCodexCategory.TYPE, List.of(nativeCodex));
+                manager.unhideRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
+            } else {
+                manager.hideRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
+                if (nativeCodex != null) {
+                    if (!nativeCodexAdded) {
+                        manager.addRecipes(AffixCodexCategory.TYPE, List.of(nativeCodex));
+                        nativeCodexAdded = true;
+                    } else manager.unhideRecipes(AffixCodexCategory.TYPE, List.of(nativeCodex));
+                }
+            }
+        }
+        displayedCuriosEnabled = enabled;
+    }
+
+    private static boolean isCurioCategory(LootCategory category) {
+        String name = category.getName();
+        return name.equals("curio") || name.startsWith("curios:");
+    }
+
     @Override public void registerRecipeTransferHandlers(IRecipeTransferRegistration reg) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableEnch) return;
         TRANSFER_HELPER = reg.getTransferHelper();
         reg.addRecipeTransferHandler(new MechanicalRavenTransferHandler(), EnchantingCategory.TYPE);
         reg.addRecipeTransferHandler(new RavenTransferHandler(), EnchantingCategory.TYPE);
@@ -268,10 +347,6 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
             float q = recipe.getRequirements().quanta();
             float a = recipe.getRequirements().arcana();
             container.transferJEI(e, q, a);
-            Minecraft.getInstance().execute(() -> {
-                if (Minecraft.getInstance().screen instanceof RavenEnchantScreen res)
-                    res.transferSetSliders(e, q, a);
-            });
             ApotheosisNetwork.CHANNEL.sendToServer(new SetRavenStatsPacket(e, q, a, inputItem));
             return null;
         }
@@ -297,9 +372,6 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
             float q = recipe.getRequirements().quanta();
             float a = recipe.getRequirements().arcana();
             container.transferJEI(e, q, a);
-            if (Minecraft.getInstance().screen instanceof MechanicalRavenEnchantScreen res) {
-                res.transferSetSliders(e, q, a);
-            }
             ApotheosisNetwork.CHANNEL.sendToServer(new SetRavenStatsPacket(e, q, a, sendItem));
             return null;
         }

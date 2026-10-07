@@ -1,0 +1,16 @@
+{
+  "block": "apotheosis_artifice:knowledge_overflow_shelf",
+  "stats": {
+    "maxEterna": 50,
+    "eterna": 4,
+    "quanta": 5,
+    "arcana": 5,
+    "experience_discount": 25
+  },
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "enchantment"
+    }
+  ]
+}

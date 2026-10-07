@@ -1,0 +1,9 @@
+{
+  "type": "apotheosis_artifice:malice",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "adventure"
+    }
+  ]
+}

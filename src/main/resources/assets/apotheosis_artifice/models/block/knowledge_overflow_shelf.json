@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "apotheosis_artifice:blocks/knowledge_overflow_shelf_top",
+    "side": "apotheosis_artifice:blocks/knowledge_overflow_shelf_side"
+  }
+}

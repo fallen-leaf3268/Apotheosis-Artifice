@@ -1,0 +1,20 @@
+{
+  "type": "apotheosis:spawner_modifier",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "spawner"
+    }
+  ],
+  "mainhand": {
+    "item": "minecraft:echo_shard"
+  },
+  "stat_changes": [
+    {
+      "id": "artifice_echoing",
+      "value": 1,
+      "min": 0,
+      "max": 3
+    }
+  ]
+}

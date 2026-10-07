@@ -4,7 +4,10 @@
     {
       "bonus_rolls": 0,
       "entries": [
-        { "type": "minecraft:item", "name": "apotheosis_artifice:mechanical_raven_enchanting_table" }
+        {
+          "type": "minecraft:item",
+          "name": "apotheosis_artifice:mechanical_raven_enchanting_table"
+        }
       ],
       "rolls": 1
     }

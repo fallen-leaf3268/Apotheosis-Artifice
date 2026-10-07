@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "apotheosis:items/gem_fused_slate",
+    "layer1": "apotheosis_artifice:items/sigil_of_malice"
+  }
+}

@@ -1,25 +1,35 @@
 {
-    "type": "minecraft:crafting_shaped",
-    "pattern": [
-        "aba",
-        "dcd",
-        "aba"
-    ],
-    "key": {
-        "a": {
-            "item": "apotheosis:prismatic_web"
-        },
-        "b": {
-            "item": "apotheosis:sigil_of_unnaming"
-        },
-        "c": {
-            "item": "apotheosis:sigil_of_enhancement"
-        },
-        "d": {
-            "item": "apotheosis:sigil_of_withdrawal"
-        }
+  "type": "minecraft:crafting_shaped",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "adventure"
     },
-    "result": {
-        "item": "apotheosis_artifice:sigil_of_cleansing"
+    {
+      "type": "apotheosis:module",
+      "module": "enchantment"
     }
+  ],
+  "pattern": [
+    "aba",
+    "dcd",
+    "aba"
+  ],
+  "key": {
+    "a": {
+      "item": "apotheosis:prismatic_web"
+    },
+    "b": {
+      "item": "apotheosis:sigil_of_unnaming"
+    },
+    "c": {
+      "item": "apotheosis:sigil_of_enhancement"
+    },
+    "d": {
+      "item": "apotheosis:sigil_of_withdrawal"
+    }
+  },
+  "result": {
+    "item": "apotheosis_artifice:sigil_of_cleansing"
+  }
 }

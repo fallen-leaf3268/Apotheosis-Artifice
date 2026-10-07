@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "adventure"
+    }
+  ],
+  "pattern": [
+    "DMD",
+    "SES",
+    "DMD"
+  ],
+  "key": {
+    "D": {
+      "item": "apotheosis:gem_dust"
+    },
+    "M": {
+      "item": "apotheosis:mythic_material"
+    },
+    "S": {
+      "item": "apotheosis:sigil_of_enhancement"
+    },
+    "E": {
+      "item": "minecraft:echo_shard"
+    }
+  },
+  "result": {
+    "item": "apotheosis_artifice:sigil_of_malice",
+    "count": 1
+  }
+}

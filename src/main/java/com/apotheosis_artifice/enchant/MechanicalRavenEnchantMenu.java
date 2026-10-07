@@ -77,7 +77,14 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
     }
 
     private void addIOSlots(ItemStackHandler ioInv) {
-        if (EasyMagicCompat.isLoaded() && EasyMagicCompat.dedicatedRerollButton()) dedicatedCatalystIdx = this.slots.size() - 1;
+        dedicatedCatalystIdx = -1;
+        for (int i = 0; i < this.slots.size(); i++) {
+            Slot slot = this.slots.get(i);
+            if (slot.container == this.enchantSlots && slot.getContainerSlot() == 2) {
+                dedicatedCatalystIdx = i;
+                break;
+            }
+        }
         inputIdx = this.slots.size();
         this.addSlot(new SlotItemHandler(ioInv, 0, 15, 17) { @Override public int getMaxStackSize() { return 64; } });
         outputIdx = this.slots.size();
@@ -175,9 +182,11 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
             } else if (raw.is(net.minecraftforge.common.Tags.Items.ENCHANTING_FUELS)
                 && this.moveItemStackTo(raw, 1, 2, false)) {
             } else if (!this.moveItemStackTo(raw, inputIdx, inputIdx + 1, false)) return ItemStack.EMPTY;
-        }
-        if (raw.isEmpty()) slot.set(ItemStack.EMPTY);
-        slot.setChanged();
+        } else return ItemStack.EMPTY;
+        if (raw.isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
+        else slot.setChanged();
+        if (raw.getCount() == stack.getCount()) return ItemStack.EMPTY;
+        slot.onTake(player, raw);
         return stack;
     }
 

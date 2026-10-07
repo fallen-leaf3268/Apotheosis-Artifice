@@ -1,0 +1,36 @@
+{
+  "type": "apotheosis:enchanting",
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "garden"
+    },
+    {
+      "type": "apotheosis:module",
+      "module": "enchantment"
+    }
+  ],
+  "input": {
+    "type": "forge:partial_nbt",
+    "item": "apotheosis:ender_lead",
+    "nbt": {
+      "entity_data": {
+        "id": "minecraft:witch"
+      }
+    }
+  },
+  "requirements": {
+    "eterna": 50,
+    "quanta": 85,
+    "arcana": 60
+  },
+  "max_requirements": {
+    "eterna": -1,
+    "quanta": -1,
+    "arcana": 85
+  },
+  "result": {
+    "item": "apotheosis_artifice:occult_ender_lead",
+    "count": 1
+  }
+}

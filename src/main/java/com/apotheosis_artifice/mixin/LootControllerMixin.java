@@ -6,16 +6,17 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.Affix;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixInstance;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixType;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootController;
+import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
 import dev.shadowsoffire.placebo.reload.DynamicHolder;
 import net.minecraft.resources.ResourceLocation;
@@ -24,11 +25,46 @@ import net.minecraft.world.item.ItemStack;
 @Mixin(value = LootController.class, remap = false)
 public class LootControllerMixin {
 
-    @Inject(method = "createLootItem(Lnet/minecraft/world/item/ItemStack;Ldev/shadowsoffire/apotheosis/adventure/loot/LootCategory;Ldev/shadowsoffire/apotheosis/adventure/loot/LootRarity;Lnet/minecraft/util/RandomSource;)Lnet/minecraft/world/item/ItemStack;",
-        at = @At(value = "INVOKE", target = "Ljava/lang/RuntimeException;<init>(Ljava/lang/String;)V"),
-        cancellable = true)
-    private static void curiosforge_preventCrashOnNoAffixes(ItemStack stack, dev.shadowsoffire.apotheosis.adventure.loot.LootCategory cat, LootRarity rarity, net.minecraft.util.RandomSource rand, CallbackInfoReturnable<ItemStack> cir) {
-        cir.setReturnValue(ItemStack.EMPTY);
+    @Inject(method = "createLootItem(Lnet/minecraft/world/item/ItemStack;Ldev/shadowsoffire/apotheosis/adventure/loot/LootCategory;Ldev/shadowsoffire/apotheosis/adventure/loot/LootRarity;Lnet/minecraft/util/RandomSource;)Lnet/minecraft/world/item/ItemStack;", at = @At("HEAD"), cancellable = true)
+    private static void artifice$gateCurioLoot(ItemStack stack, LootCategory cat, LootRarity rarity,
+        net.minecraft.util.RandomSource rand, CallbackInfoReturnable<ItemStack> cir) {
+        if (!artifice$isCurioCategory(cat) || artifice$canGenerateCurioLoot()) return;
+        LootCategory nativeCategory = com.apotheosis_artifice.CatOverride.forNativeItem(stack);
+        if (nativeCategory.isNone() || artifice$isCurioCategory(nativeCategory)) {
+            cir.setReturnValue(stack);
+            return;
+        }
+        LootCategory previous = com.apotheosis_artifice.CatOverride.get();
+        try {
+            com.apotheosis_artifice.CatOverride.set(nativeCategory);
+            var affixData = stack.getTagElement("affix_data");
+            if (affixData != null && affixData.contains("curio_artifice")) {
+                affixData.putString("curio_artifice", nativeCategory.getName());
+            }
+            cir.setReturnValue(LootController.createLootItem(stack, nativeCategory, rarity, rand));
+        } finally {
+            com.apotheosis_artifice.CatOverride.set(previous);
+        }
+    }
+
+    @Unique
+    private static boolean artifice$isCurioCategory(LootCategory category) {
+        String name = category.getName();
+        return name.equals("curio") || name.startsWith("curios:");
+    }
+
+    @Unique
+    private static boolean artifice$canGenerateCurioLoot() {
+        return com.apotheosis_artifice.ApotheosisConfig.isCuriosReforgingEnabled()
+            && (com.apotheosis_artifice.CatOverride.isReforging()
+                || com.apotheosis_artifice.ApotheosisConfig.isCuriosLootRarityEnabled());
+    }
+
+    @Inject(method = "createLootItem(Lnet/minecraft/world/item/ItemStack;Ldev/shadowsoffire/apotheosis/adventure/loot/LootCategory;Ldev/shadowsoffire/apotheosis/adventure/loot/LootRarity;Lnet/minecraft/util/RandomSource;)Lnet/minecraft/world/item/ItemStack;", at = @At("RETURN"))
+    private static void artifice$clearMaliceOnReforge(ItemStack stack, dev.shadowsoffire.apotheosis.adventure.loot.LootCategory cat,
+        LootRarity rarity, net.minecraft.util.RandomSource rand, CallbackInfoReturnable<ItemStack> cir) {
+        if (artifice$isCurioCategory(cat) && !artifice$canGenerateCurioLoot()) return;
+        com.apotheosis_artifice.adventure.SigilAffixHelper.clearMaliceState(cir.getReturnValue());
     }
 
     @Inject(method = "getAvailableAffixes", at = @At("RETURN"), cancellable = true)

@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.apotheosis_artifice.enchant.MechanicalRavenEnchantTile;
+import com.apotheosis_artifice.enchant.EnchantingDiscounts;
 import com.apotheosis_artifice.enchant.MechanicalRavenEnchantingTableBlock;
 import com.apotheosis_artifice.enchant.RavenEnchantTile;
 import com.apotheosis_artifice.enchant.RavenEnchantingTableBlock;
@@ -31,6 +32,9 @@ public class EnchHwylaPluginMixin {
     @Unique
     private static final String APOTHEOSIS_ARTIFICE_REDSTONE_POWERED = "apotheosis_artifice:redstone_powered";
 
+    @Unique
+    private static final String APOTHEOSIS_ARTIFICE_MISSING_LAPIS = "apotheosis_artifice:missing_lapis";
+
     @Inject(method = "register", at = @At("TAIL"), require = 1, remap = false)
     private void apotheosis_artifice_register(IWailaCommonRegistration registration, CallbackInfo ci) {
         if (Apotheosis.enableEnch) {
@@ -41,7 +45,10 @@ public class EnchHwylaPluginMixin {
     @Inject(method = "appendServerData(Lnet/minecraft/nbt/CompoundTag;Lsnownee/jade/api/BlockAccessor;)V", at = @At("TAIL"), require = 1, remap = false)
     private void apotheosis_artifice_appendServerData(CompoundTag data, BlockAccessor accessor, CallbackInfo ci) {
         if (accessor.getBlock() instanceof MechanicalRavenEnchantingTableBlock) {
-            data.putBoolean(APOTHEOSIS_ARTIFICE_REDSTONE_POWERED, accessor.getLevel().hasNeighborSignal(accessor.getPosition()));
+            boolean powered = accessor.getLevel().hasNeighborSignal(accessor.getPosition());
+            data.putBoolean(APOTHEOSIS_ARTIFICE_REDSTONE_POWERED, powered);
+            data.putBoolean(APOTHEOSIS_ARTIFICE_MISSING_LAPIS, Apotheosis.enableEnch && powered
+                && accessor.getBlockEntity() instanceof MechanicalRavenEnchantTile tile && tile.isMissingAutoEnchantLapis());
         }
     }
 
@@ -65,6 +72,7 @@ public class EnchHwylaPluginMixin {
             tooltip.add(Component.translatable("info.apotheosis.arcana.t", String.format("%.1f", a)).withStyle(ChatFormatting.DARK_PURPLE));
             tooltip.add(Component.translatable("info.apotheosis.rectification.t", String.format("%.1f", Mth.clamp(shelf.rectification(), -100, 100))).withStyle(ChatFormatting.YELLOW));
             tooltip.add(Component.translatable("info.apotheosis.clues.t", String.format("%d", shelf.clues())).withStyle(ChatFormatting.DARK_AQUA));
+            EnchantingDiscounts.appendBonuses(EnchantingDiscounts.gather(accessor.getLevel(), accessor.getPosition()), tooltip::add);
         }
         if (accessor.getBlock() instanceof MechanicalRavenEnchantingTableBlock && accessor.getServerData().contains(APOTHEOSIS_ARTIFICE_REDSTONE_POWERED)) {
             var theme = IThemeHelper.get();
@@ -72,6 +80,9 @@ public class EnchHwylaPluginMixin {
                 ? theme.success(Component.translatable("tooltip.jade.state_on"))
                 : theme.danger(Component.translatable("tooltip.jade.state_off"));
             tooltip.add(Component.translatable("tooltip.jade.state", state));
+        }
+        if (accessor.getBlock() instanceof MechanicalRavenEnchantingTableBlock && accessor.getServerData().getBoolean(APOTHEOSIS_ARTIFICE_MISSING_LAPIS)) {
+            tooltip.add(IThemeHelper.get().danger(Component.translatable("info.apotheosis_artifice.missing_lapis")));
         }
     }
 }

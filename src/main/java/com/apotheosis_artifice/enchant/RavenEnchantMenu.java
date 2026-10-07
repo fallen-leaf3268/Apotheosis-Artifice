@@ -26,6 +26,7 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
 
     public static MenuType<RavenEnchantMenu> TYPE;
     private final RavenTableStats ravenStats;
+    private TableStats pendingJeiStats;
 
     public static RavenEnchantMenu fromBuf(int id, Inventory inv, FriendlyByteBuf buf) {
         buf.readBlockPos();
@@ -101,19 +102,17 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
         }).orElse(this);
     }
 
-    private static volatile float[] JEI_SLIDERS = null;
-
-    public static float[] consumeJEISliders() {
-        float[] v = JEI_SLIDERS;
-        JEI_SLIDERS = null;
-        return v;
-    }
-
     public void transferJEI(float e, float q, float a) {
         float maxE = Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
-        JEI_SLIDERS = new float[]{e, q, a};
         this.stats = new TableStats(Mth.clamp(e, 0, maxE), Mth.clamp(q, 0, ApotheosisConfig.getMaxQuanta()), Mth.clamp(a, 0, ApotheosisConfig.getMaxArcana()),
             this.stats.rectification(), this.stats.clues(), this.stats.blacklist(), this.stats.treasure());
+        this.pendingJeiStats = this.stats;
+    }
+
+    public TableStats takePendingJeiStats() {
+        TableStats pending = this.pendingJeiStats;
+        this.pendingJeiStats = null;
+        return pending;
     }
 
     public void setPlayerStats(float eterna, float quanta, float arcana) {

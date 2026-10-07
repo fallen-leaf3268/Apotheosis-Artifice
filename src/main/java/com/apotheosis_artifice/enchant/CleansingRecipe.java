@@ -34,6 +34,7 @@ public class CleansingRecipe extends ApothSmithingRecipe implements ReactiveSmit
 
     @Override
     public boolean matches(Container pInv, Level pLevel) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return false;
         if (!pInv.getItem(0).isEmpty()) return false;
         ItemStack base = pInv.getItem(1);
         if (base.isEmpty()) return false;
@@ -51,6 +52,7 @@ public class CleansingRecipe extends ApothSmithingRecipe implements ReactiveSmit
 
     @Override
     public void onCraft(Container inv, Player player, ItemStack output) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         if (player.level().isClientSide) return;
         ItemStack base = inv.getItem(1);
         var gems = SocketHelper.getGems(base);

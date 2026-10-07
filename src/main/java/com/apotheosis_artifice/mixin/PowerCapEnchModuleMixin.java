@@ -7,7 +7,6 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import com.apotheosis_artifice.ApotheosisConfig;
 
 import dev.shadowsoffire.apotheosis.ench.EnchModule;
-import dev.shadowsoffire.apotheosis.ench.table.EnchantingStatRegistry;
 
 @Mixin(EnchModule.class)
 public class PowerCapEnchModuleMixin {
@@ -19,6 +18,6 @@ public class PowerCapEnchModuleMixin {
             remap = false),
         remap = false)
     private static float artifice_powerCap() {
-        return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
+        return ApotheosisConfig.getEnchantmentPowerCap();
     }
 }

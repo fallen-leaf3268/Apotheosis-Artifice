@@ -1,0 +1,16 @@
+{
+  "block": "apotheosis_artifice:lapis_shelf",
+  "stats": {
+    "maxEterna": 0,
+    "eterna": -2.5,
+    "quanta": 7.5,
+    "arcana": 7.5,
+    "lapis_discount": 1
+  },
+  "conditions": [
+    {
+      "type": "apotheosis:module",
+      "module": "enchantment"
+    }
+  ]
+}
