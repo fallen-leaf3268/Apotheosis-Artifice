@@ -1,6 +1,11 @@
 package com.apotheosis_artifice;
 
+import java.util.List;
 import java.util.Optional;
+
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.UnmodifiableConfig;
+import com.electronwill.nightconfig.core.utils.UnmodifiableConfigWrapper;
 
 import dev.shadowsoffire.apotheosis.Apotheosis;
 import dev.shadowsoffire.apotheosis.ench.EnchModule;
@@ -18,6 +23,7 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.IConfigSpec;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -32,6 +38,7 @@ public class ApotheosisConfig {
 
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
     private static final ForgeConfigSpec SPEC;
+    private static final MigratingConfigSpec REGISTERED_SPEC;
     private static volatile EnchantingConfigPacket synchronizedEnchantingConfig;
     private static volatile ReforgingConfigPacket synchronizedReforgingConfig;
     private static volatile ReforgingConfigPacket activeServerReforgingConfig;
@@ -39,12 +46,10 @@ public class ApotheosisConfig {
         new ResourceLocation(ApotheosisArtificeMod.MODID, "extra_level"));
     private static final ThreadLocal<Boolean> nativeEnchantmentDefaults = new ThreadLocal<>();
 
-    public static ForgeConfigSpec.BooleanValue CLEAR_SOCKETS_ON_RARITY_CHANGE;
     public static ForgeConfigSpec.BooleanValue ENABLE_CURIOS_REFORGING;
-    public static ForgeConfigSpec.BooleanValue USE_APOTH_ARMOR_FORMULA;
-    public static ForgeConfigSpec.BooleanValue USE_APOTH_PROT_FORMULA;
+    public static ForgeConfigSpec.BooleanValue CLEAR_SOCKETS_ON_RARITY_CHANGE;
     public static ForgeConfigSpec.BooleanValue ENABLE_CURIOS_LOOT_RARITY;
-    public static ForgeConfigSpec.BooleanValue USE_BETTERCOMBAT_HEAVY_OVERRIDE;
+
     public static ForgeConfigSpec.IntValue MAX_ETERNA;
     public static ForgeConfigSpec.IntValue MAX_QUANTA;
     public static ForgeConfigSpec.IntValue MAX_ARCANA;
@@ -53,66 +58,72 @@ public class ApotheosisConfig {
     public static ForgeConfigSpec.IntValue EXTRA_LEVEL_CAP;
     public static ForgeConfigSpec.IntValue EXTRA_LEVEL_POWER_PER_LEVEL;
 
+    public static ForgeConfigSpec.BooleanValue USE_APOTH_ARMOR_FORMULA;
+    public static ForgeConfigSpec.BooleanValue USE_APOTH_PROT_FORMULA;
+    public static ForgeConfigSpec.BooleanValue USE_BETTERCOMBAT_HEAVY_OVERRIDE;
+    public static ForgeConfigSpec.EnumValue<LootPinataEffect> LOOT_PINATA_EFFECT;
+
+    public enum LootPinataEffect { EXPLOSION, FIREWORKS, OFF }
+
     static {
-        BUILDER.push("Reforging");
+        BUILDER.comment("重铸").push("Reforging");
         ENABLE_CURIOS_REFORGING = BUILDER
-            .comment("是否开启饰品重铸。关闭后同时停止饰品词条战利品生成并隐藏相关 JEI 页面；已有词条仍生效。重启游戏或服务端后生效。")
+            .comment("启用饰品重铸；关闭时同时停用饰品重铸功能和词条战利品。")
             .worldRestart()
             .define("enable_curios_reforging", true);
         CLEAR_SOCKETS_ON_RARITY_CHANGE = BUILDER
-            .comment("用不同品质材料重铸时，是否清空镶孔并重新生成（设为 true 则清空原镶孔并按新品质重新生成；设为 false 则保持原版 Apotheosis 行为，总是保留最高品质的镶孔）")
+            .comment("品质改变时重置镶孔数量；关闭则采用神化原有规则。")
             .define("clear_sockets_on_rarity_change", false);
-        BUILDER.pop();
-
-        BUILDER.push("Combat_Formulas");
-        USE_APOTH_ARMOR_FORMULA = BUILDER
-            .comment("是否启用 Apothic Attributes 的护甲公式修改。")
-            .define("use_apoth_armor_formula", true);
-        USE_APOTH_PROT_FORMULA = BUILDER
-            .comment("是否启用 Apothic Attributes 的保护公式修改。")
-            .define("use_apoth_prot_formula", true);
-        BUILDER.pop();
-
-        BUILDER.push("Loot_Rarity");
         ENABLE_CURIOS_LOOT_RARITY = BUILDER
-            .comment("是否允许饰品（Curios）物品在战利品中生成重铸稀有度。")
+            .comment("生成带词条的饰品战利品，关闭本项不影响手动重铸。")
             .define("enable_curios_loot_rarity", true);
         BUILDER.pop();
 
-        BUILDER.push("BetterCombat");
-        USE_BETTERCOMBAT_HEAVY_OVERRIDE = BUILDER
-            .comment("是否启用 Better Combat 联动功能，开启后，双手武器将被判定为重型武器。")
-            .define("use_bettercombat_heavy_override", false);
-        BUILDER.pop();
-
-        BUILDER.push("Enchanting");
+        BUILDER.comment("附魔").push("Enchanting");
         MAX_ETERNA = BUILDER
-            .comment("附魔台 Eterna（位阶）的最大值。")
+            .comment("位阶")
             .defineInRange("max_eterna", 50, 1, 1000);
         MAX_QUANTA = BUILDER
-            .comment("附魔台 Quanta（量子化）的最大值。")
+            .comment("量子化。")
             .defineInRange("max_quanta", 100, 1, 1000);
         MAX_ARCANA = BUILDER
-            .comment("附魔台 Arcana（阿卡那）的最大值。")
+            .comment("阿卡那")
             .defineInRange("max_arcana", 100, 1, 1000);
         MAX_ENCHANTMENTS = BUILDER
-            .comment("单次附魔产出的魔咒数量上限（含保底与随机追加）。")
+            .comment("单次附魔数量上限。")
             .defineInRange("max_enchantments", 15, 1, 127);
         MECHANICAL_ENCHANT_INTERVAL = BUILDER
+            .comment("机械渡鸦自动附魔间隔。")
             .defineInRange("mechanical_enchant_interval", 20, 1, Integer.MAX_VALUE);
         EXTRA_LEVEL_CAP = BUILDER
-            .comment("加入 extra_level 标签的附魔的扩级上限；不降低神化配置中的基础上限，原始最高等级为 1 的附魔不受影响。")
+            .comment("apotheosis_artifice:extra_level 标签内附魔的等级上限。")
             .defineInRange("extra_level_cap", 127, 1, 127);
         EXTRA_LEVEL_POWER_PER_LEVEL = BUILDER
-            .comment("加入 extra_level 标签的附魔，超过原始最高等级后每提升 1 级所需的额外威力（线性）。数值越小等级涨得越快。")
-            .defineInRange("extra_level_power_per_level", 50, 1, 10000);
+            .comment("提升的附魔等级成长曲线。")
+            .defineInRange("extra_level_power_per_level", 15, 1, 10000);
+        BUILDER.pop();
+
+        BUILDER.comment("杂项").push("Combat_Formulas");
+        USE_APOTH_ARMOR_FORMULA = BUILDER
+            .comment("是否启用神化护甲公式；关闭时使用原版公式。")
+            .define("use_apoth_armor_formula", true);
+        USE_APOTH_PROT_FORMULA = BUILDER
+            .comment("是否启用神化保护附魔公式；关闭时使用原版公式。")
+            .define("use_apoth_prot_formula", true);
+        USE_BETTERCOMBAT_HEAVY_OVERRIDE = BUILDER
+            .comment("是否将 Better Combat 的双手剑武器归类为重型武器。")
+            .define("use_bettercombat_heavy_override", false);
+        LOOT_PINATA_EFFECT = BUILDER
+            .comment("战利品大爆发特效修改：FIREWORKS 烟花、EXPLOSION 爆炸、OFF 关闭特效和音效。")
+            .defineEnum("loot_pinata_effect", LootPinataEffect.EXPLOSION);
         BUILDER.pop();
 
         SPEC = BUILDER.build();
+        REGISTERED_SPEC = new MigratingConfigSpec(SPEC);
     }
 
     public static void init() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, REGISTERED_SPEC);
         MinecraftForge.EVENT_BUS.addListener(ApotheosisConfig::onPlayerLoggedIn);
         MinecraftForge.EVENT_BUS.addListener(ApotheosisConfig::onServerAboutToStart);
         MinecraftForge.EVENT_BUS.addListener(ApotheosisConfig::onServerStopped);
@@ -132,6 +143,10 @@ public class ApotheosisConfig {
 
     public static boolean isCuriosLootRarityEnabled() {
         return isCuriosReforgingEnabled() && ENABLE_CURIOS_LOOT_RARITY.get();
+    }
+
+    public static LootPinataEffect getLootPinataEffect() {
+        return Apotheosis.enableAdventure ? LOOT_PINATA_EFFECT.get() : LootPinataEffect.EXPLOSION;
     }
 
     private static void onServerAboutToStart(net.minecraftforge.event.server.ServerAboutToStartEvent event) {
@@ -258,9 +273,74 @@ public class ApotheosisConfig {
     }
 
     private static void onConfigReload(ModConfigEvent.Reloading event) {
-        if (event.getConfig().getSpec() != SPEC || ServerLifecycleHooks.getCurrentServer() == null) return;
+        if (event.getConfig().getSpec() != REGISTERED_SPEC || ServerLifecycleHooks.getCurrentServer() == null) return;
         ApotheosisNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), localEnchantingConfig());
         ApotheosisNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), effectiveServerReforgingConfig());
+    }
+
+    private static final class MigratingConfigSpec extends UnmodifiableConfigWrapper<ForgeConfigSpec>
+        implements IConfigSpec<MigratingConfigSpec> {
+
+        private volatile boolean correcting;
+
+        private MigratingConfigSpec(ForgeConfigSpec spec) {
+            super(spec);
+        }
+
+        @Override
+        public void acceptConfig(CommentedConfig values) {
+            correcting = true;
+            try {
+                if (values != null) migrate(values);
+                this.config.acceptConfig(values);
+            } finally {
+                correcting = false;
+            }
+        }
+
+        @Override
+        public boolean isCorrecting() {
+            return correcting || this.config.isCorrecting();
+        }
+
+        @Override
+        public boolean isCorrect(CommentedConfig values) {
+            return this.config.isCorrect(values);
+        }
+
+        @Override
+        public int correct(CommentedConfig values) {
+            correcting = true;
+            try {
+                migrate(values);
+                return this.config.correct(values);
+            } finally {
+                correcting = false;
+            }
+        }
+
+        @Override
+        public void afterReload() {
+            this.config.afterReload();
+        }
+
+        private void migrate(CommentedConfig values) {
+            migrateValue(values, "Loot_Rarity", "Reforging", "enable_curios_loot_rarity");
+            migrateValue(values, "BetterCombat", "Combat_Formulas", "use_bettercombat_heavy_override");
+        }
+
+        private void migrateValue(CommentedConfig values, String previousGroup, String group, String key) {
+            List<String> path = List.of(group, key);
+            ForgeConfigSpec.ValueSpec definition = this.config.getSpec().get(path);
+            Object previous = values.getRaw(previousGroup);
+            if (!(previous instanceof UnmodifiableConfig previousSection)) return;
+            Object previousValue = previousSection.getRaw(key);
+            if (!definition.test(previousValue)) return;
+            Object current = values.getRaw(group);
+            if (current instanceof UnmodifiableConfig currentSection && definition.test(currentSection.getRaw(key))) return;
+            if (!(current instanceof CommentedConfig)) values.set(group, values.createSubConfig());
+            values.set(path, previousValue);
+        }
     }
 
     public record ReforgingConfigPacket(boolean enableCuriosReforging) {}

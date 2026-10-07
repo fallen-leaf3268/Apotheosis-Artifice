@@ -76,12 +76,14 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        if (!Apotheosis.enableEnch) return false;
         if (id == 4) return EasyMagicCompat.tryReroll(this, player);
         return super.clickMenuButton(player, id);
     }
 
     @Override
     public boolean stillValid(Player player) {
+        if (!Apotheosis.enableEnch) return false;
         return this.access.evaluate((level, pos) ->
             (level.getBlockState(pos).getBlock() instanceof RavenEnchantingTableBlock)
             && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0,

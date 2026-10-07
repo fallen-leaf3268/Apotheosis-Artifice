@@ -65,6 +65,7 @@ public record SetRavenStatsPacket(float eterna, float quanta, float arcana, Item
 
     public static void handle(SetRavenStatsPacket pkt, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
+            if (!dev.shadowsoffire.apotheosis.Apotheosis.enableEnch) return;
             ServerPlayer player = ctx.get().getSender();
             if (player == null || !(player.containerMenu instanceof RavenEnchantMenu menu)) return;
             if (!menu.stillValid(player)) return;

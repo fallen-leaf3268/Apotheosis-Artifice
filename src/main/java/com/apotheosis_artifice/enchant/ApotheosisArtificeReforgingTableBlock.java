@@ -8,9 +8,11 @@ import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -26,6 +28,12 @@ public class ApotheosisArtificeReforgingTableBlock extends ReforgingTableBlock {
     public boolean canSurvive(BlockState state, net.minecraft.world.level.LevelReader level, BlockPos pos) {
         if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return false;
         return super.canSurvive(state, level, pos);
+    }
+
+    @Override
+    public MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return null;
+        return super.getMenuProvider(state, level, pos);
     }
 
     @Override

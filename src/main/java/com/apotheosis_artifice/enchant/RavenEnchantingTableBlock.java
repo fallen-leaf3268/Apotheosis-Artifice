@@ -66,7 +66,15 @@ public class RavenEnchantingTableBlock extends ApothEnchantBlock implements Book
     }
 
     @Override
+    @Nullable
+    public net.minecraft.world.MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableEnch) return null;
+        return super.getMenuProvider(state, level, pos);
+    }
+
+    @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableEnch) return InteractionResult.PASS;
         if (level.isClientSide) return InteractionResult.SUCCESS;
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof RavenEnchantTile rt) {

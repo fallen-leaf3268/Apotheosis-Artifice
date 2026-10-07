@@ -33,6 +33,8 @@ import com.apotheosis_artifice.spawner.SpawnerPreset;
 import com.apotheosis_artifice.spawner.SpawnerPresetRuneItem;
 
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
@@ -74,6 +76,12 @@ public class ApotheosisArtificeMod {
     public static final DeferredRegister<BlockEntityType<?>> TILE_TYPES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     public static final DeferredRegister<net.minecraft.world.item.crafting.RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, MODID);
+    public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES = DeferredRegister.create(ForgeRegistries.PARTICLE_TYPES, MODID);
+
+    public static final RegistryObject<SimpleParticleType> LOOT_PINATA_FIREWORK = PARTICLE_TYPES.register("loot_pinata_firework",
+        () -> new SimpleParticleType(true));
+    public static final RegistryObject<SimpleParticleType> LOOT_PINATA_SILENT = PARTICLE_TYPES.register("loot_pinata_silent",
+        () -> new SimpleParticleType(true));
 
     public static final RegistryObject<MenuType<PortableSalvagingMenu>> PORTABLE_SALVAGING_MENU = MENU_TYPES.register("portable_salvaging",
         () -> IForgeMenuType.create((id, inv, data) -> new PortableSalvagingMenu(id, inv)));
@@ -228,6 +236,7 @@ public class ApotheosisArtificeMod {
         MENU_TYPES.register(modBus);
         TILE_TYPES.register(modBus);
         RECIPE_SERIALIZERS.register(modBus);
+        PARTICLE_TYPES.register(modBus);
         modBus.addListener(this::commonSetup);
         CREATIVE_TABS.register(modBus);
         MinecraftForge.EVENT_BUS.register(new ApotheosisEvents());

@@ -77,8 +77,8 @@ public class ApotheosisNetwork {
             (pkt, ctx) -> {
                 ctx.get().enqueueWork(() -> {
                     ServerPlayer player = ctx.get().getSender();
-                    if (player == null) return;
-                    if (player.containerMenu instanceof GemCaseMenu menu) {
+                    if (player == null || player.isSpectator()) return;
+                    if (player.containerMenu instanceof GemCaseMenu menu && menu.stillValid(player)) {
                         menu.handleUpgradeClick(pkt.rarityOrdinal, pkt.shift, pkt.page);
                         menu.broadcastChanges();
                     }
@@ -197,7 +197,7 @@ public class ApotheosisNetwork {
         public static void handle(ToggleBinderPacket pkt, Supplier<NetworkEvent.Context> ctx) {
             ctx.get().enqueueWork(() -> {
                 var player = ctx.get().getSender();
-                if (player == null) return;
+                if (player == null || player.isSpectator()) return;
 
                 ItemStack found = ItemStack.EMPTY;
 

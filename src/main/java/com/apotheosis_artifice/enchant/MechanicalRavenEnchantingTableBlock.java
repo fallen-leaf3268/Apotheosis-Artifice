@@ -38,6 +38,7 @@ public class MechanicalRavenEnchantingTableBlock extends RavenEnchantingTableBlo
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableEnch) return InteractionResult.PASS;
         if (level.isClientSide) return InteractionResult.SUCCESS;
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof MechanicalRavenEnchantTile rt) {

@@ -114,6 +114,7 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        if (!dev.shadowsoffire.apotheosis.Apotheosis.enableEnch) return false;
         if ((id >= 0 && id < 3 || id == 4) && this.isOutputPending()) return false;
         boolean manualEnchant = id >= 0 && id < 3 && !player.level().isClientSide && this.tile != null;
         if (!manualEnchant) return super.clickMenuButton(player, id);

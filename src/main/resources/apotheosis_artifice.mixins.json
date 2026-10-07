@@ -18,6 +18,7 @@
         "GardenEnderLeadMixin",
         "AffixRegistryMixin",
         "AdventureEventsMixin",
+        "AdventureEventsMixin$LootPinataEffects",
         "LootCategoryMixin",
         "LootControllerMixin",
         "SigilAffixRangeMixin",
