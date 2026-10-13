@@ -111,17 +111,9 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, AffixDetailEntry entry, IFocusGroup focuses) {
-        Font font = Minecraft.getInstance().font;
-
         // 分类输入槽（左上角），用于 JEI 跳转（多物品循环）
         builder.addSlot(RecipeIngredientRole.INPUT, 2, 0)
-            .addItemStacks(AffixCodexEntry.getCategoryItems(entry.category()));
-
-        String tmp;
-        try { tmp = entry.affix().getName(true).getString(); }
-        catch (Exception e) { tmp = "???"; }
-        final String afxName = tmp;
-        final String rangeColor = entry.affix().getType() == dev.shadowsoffire.apotheosis.adventure.affix.AffixType.STAT ? "§9" : "§e";
+            .addItemStacks(entry.items());
 
         // 材料图标行靠左
         List<AffixDetailEntry.RarityEntry> rarities = entry.rarities();
@@ -142,7 +134,7 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
                         .replace("[", "").replace("]", "")
                         .replace("(", "").replace(")", "");
                     tooltip.add(Component.literal(matName).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(matColor)));
-                    tooltip.add(Component.literal("§e" + entry.affix().getName(true).getString()));
+                    tooltip.add(Component.literal("§e" + entry.name().getString()));
                     Component range = re.rangeTooltip();
                     if (range != null && !range.getString().isBlank()) {
                         tooltip.addAll(splitTooltipLines(range));
@@ -166,9 +158,7 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
         drawSourceHeader(gfx, font, catLocalized, mouseX, mouseY);
 
         // 词缀名
-        String name;
-        try { name = entry.affix().getName(true).getString(); }
-        catch (Exception e) { name = "???"; }
+        String name = entry.name().getString();
         gfx.drawString(font, name, 2, NAME_Y, 0xFFFF55, false);
     }
 }

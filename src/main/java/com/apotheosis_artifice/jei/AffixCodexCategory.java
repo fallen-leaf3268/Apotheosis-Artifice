@@ -74,7 +74,7 @@ public class AffixCodexCategory implements IRecipeCategory<AffixCodexEntry> {
             int sx = 8 + col * SLOT_SIZE;
             int sy = SLOT_START_Y + row * SLOT_SIZE;
             LootCategory cat = cats.get(i);
-            List<ItemStack> stacks = AffixCodexEntry.getCategoryItems(cat);
+            List<ItemStack> stacks = entry.items().getOrDefault(cat, List.of());
             builder.addSlot(RecipeIngredientRole.OUTPUT, sx, sy)
                 .addItemStacks(stacks)
                 .addTooltipCallback((slotView, tooltip) -> {

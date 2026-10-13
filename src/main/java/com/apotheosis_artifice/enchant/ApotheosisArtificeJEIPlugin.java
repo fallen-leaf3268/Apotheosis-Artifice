@@ -11,6 +11,7 @@ import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.ApotheosisConfig;
 import com.apotheosis_artifice.ApotheosisNetwork;
 import com.apotheosis_artifice.adventure.SigilUpgradeRecipe;
+import com.apotheosis_artifice.compat.AffixCompatibilityDiagnostics;
 import com.apotheosis_artifice.jei.AffixCodexCategory;
 import com.apotheosis_artifice.jei.AffixCodexEntry;
 import com.apotheosis_artifice.jei.AffixDetailCategory;
@@ -18,16 +19,20 @@ import com.apotheosis_artifice.jei.AffixDetailEntry;
 import com.apotheosis_artifice.jei.AffixGemCategory;
 import com.apotheosis_artifice.jei.AffixGemEntry;
 
-import dev.shadowsoffire.apotheosis.adventure.affix.Affix;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixType;
+import dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry;
 import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingTableBlock;
 import dev.shadowsoffire.apotheosis.adventure.compat.ApothSmithingCategory;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
+import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
+import dev.shadowsoffire.placebo.reload.RegistryCallback;
 import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
 import dev.shadowsoffire.apotheosis.ench.compat.EnchantingCategory;
 import dev.shadowsoffire.apotheosis.ench.table.EnchantingRecipe;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
+import mezz.jei.api.ingredients.IIngredientHelper;
+import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.IFocusGroup;
@@ -41,6 +46,7 @@ import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.runtime.IJeiRuntime;
+import mezz.jei.api.runtime.IIngredientManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.RegistryAccess;
@@ -67,7 +73,14 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     private AffixDetailCategory suffixCategory;
     private AffixDetailCategory prefixCategory;
     private static volatile ApotheosisArtificeJEIPlugin activePlugin;
+    private static boolean reloadHooksRegistered;
     private IJeiRuntime runtime;
+    private IIngredientManager ingredientManager;
+    private IIngredientManager.IIngredientListener ingredientListener;
+    private long ingredientGeneration;
+    private volatile boolean recipesDirty;
+    private List<AffixDetailEntry> suffixEntries = List.of();
+    private List<AffixDetailEntry> prefixEntries = List.of();
     private List<AffixDetailEntry> curioSuffixEntries = List.of();
     private List<AffixDetailEntry> curioPrefixEntries = List.of();
     private List<AffixGemEntry> curioGemEntries = List.of();
@@ -80,6 +93,13 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         if (dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) {
             ApothSmithingCategory.registerExtension(CleansingRecipe.class, new CleansingExtension());
             ApothSmithingCategory.registerExtension(SigilUpgradeRecipe.class, new SigilUpgradeExtension());
+            if (!reloadHooksRegistered) {
+                AffixRegistry.INSTANCE.addCallback(RegistryCallback.reloadOnly(registry -> markRecipesDirty()));
+                RarityRegistry.INSTANCE.addCallback(RegistryCallback.reloadOnly(registry -> markRecipesDirty()));
+                net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ApotheosisArtificeJEIPlugin::onClientTick);
+                net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ApotheosisArtificeJEIPlugin::onTagsUpdated);
+                reloadHooksRegistered = true;
+            }
         }
     }
 
@@ -132,86 +152,114 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         // 用 JEI 物品变体列表（含 NBT，如每个法术一支的卷轴）驱动类别物品扫描，
         // 修复"可重铸物品"里法术卷轴只显示一个空 NBT 卷轴的问题
         AffixCodexEntry.bindIngredientManager(reg.getIngredientManager());
-        AffixCodexEntry codex = AffixCodexEntry.create();
-        fullCodex = codex;
-        nativeCodex = codex == null ? null : codex.withoutCurios();
-        if (codex != null) reg.addRecipes(AffixCodexCategory.TYPE, List.of(codex));
+        bindIngredientListener(reg.getIngredientManager());
+        recipesDirty = false;
+        rebuildReforgingEntries();
+        if (fullCodex != null) reg.addRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
+        reg.addRecipes(SUFFIX_TYPE, suffixEntries);
+        reg.addRecipes(PREFIX_TYPE, prefixEntries);
+        List<AffixGemEntry> gemEntries = new ArrayList<>();
+        for (LootCategory cat : AffixCodexEntry.getCategories()) {
+            if (cat.isNone()) continue;
+            if (cat.getName().startsWith("curios:")) continue;
+            gemEntries.addAll(AffixGemEntry.createAll(cat));
+        }
+        curioGemEntries = gemEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
+        reg.addRecipes(AffixGemCategory.TYPE, gemEntries);
+    }
+
+    private void rebuildReforgingEntries() {
         List<AffixDetailEntry> suffixEntries = new ArrayList<>();
         List<AffixDetailEntry> prefixEntries = new ArrayList<>();
+        List<LootCategory> categories = AffixCodexEntry.getCategories();
         var availableCurioSlots = new java.util.HashSet<String>();
         try {
             for (var entry : top.theillusivec4.curios.api.CuriosApi.getSlots().entrySet()) {
                 availableCurioSlots.add("curios:" + entry.getKey());
             }
         } catch (Exception ignored) {}
-        for (LootCategory cat : LootCategory.VALUES) {
+        for (LootCategory cat : categories) {
             if (cat.isNone()) continue;
             String cn = cat.getName();
             if (cn.startsWith("curios:") && !availableCurioSlots.contains(cn)) continue;
-            if (cn.startsWith("curios:")) {
-                List<ItemStack> catItems = AffixCodexEntry.getCategoryItems(cat);
-                if (catItems.stream().noneMatch(s -> !s.is(net.minecraft.world.item.Items.BARRIER))) continue;
-            }
-            for (Affix affix : dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry.INSTANCE.getValues()) {
-                List<AffixDetailEntry.RarityEntry> supported = new ArrayList<>();
-                for (var holder : dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry.INSTANCE.getOrderedRarities()) {
-                    if (!holder.isBound()) continue;
-                    var rarity = holder.get();
-                    try {
-                        boolean match = affix.canApplyTo(ItemStack.EMPTY, cat, rarity);
-                        if (match && cn.startsWith("curios:") && !"curio".equals(cn)) {
-                            LootCategory genericCurio = LootCategory.byId("curio");
-                            if (genericCurio != null && affix.canApplyTo(ItemStack.EMPTY, genericCurio, rarity)) {
-                                match = false;
-                            }
-                        }
-                        if (match) supported.add(new AffixDetailEntry.RarityEntry(rarity, AffixDetailEntry.buildDescription(affix, rarity)));
-                    } catch (Exception ignored) {}
-                }
-                if (supported.isEmpty()) continue;
+            for (AffixDetailEntry entry : AffixDetailEntry.createAll(cat)) {
                 AffixType type;
-                try { type = affix.getType(); } catch (Exception e) { type = null; }
-                (type == AffixType.STAT ? suffixEntries : prefixEntries).add(new AffixDetailEntry(cat, affix, supported));
-            }
-        }
-
-        if (com.apotheosis_artifice.ApotheosisConfig.USE_BETTERCOMBAT_HEAVY_OVERRIDE.get()) {
-            LootCategory heavyCat = dev.shadowsoffire.apotheosis.adventure.loot.LootCategory.byId("heavy_weapon");
-            if (heavyCat != null && !heavyCat.isNone()) {
-                for (Affix affix : dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry.INSTANCE.getValues()) {
-                    String affixId = affix.getId().toString();
-                    if (!affixId.contains("heavy_weapon")) continue;
-                    List<AffixDetailEntry.RarityEntry> supported = new ArrayList<>();
-                    for (var holder : dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry.INSTANCE.getOrderedRarities()) {
-                        if (!holder.isBound()) continue;
-                        var rarity = holder.get();
-                        try {
-                            if (affix.canApplyTo(ItemStack.EMPTY, heavyCat, rarity)) {
-                                supported.add(new AffixDetailEntry.RarityEntry(rarity, AffixDetailEntry.buildDescription(affix, rarity)));
-                            }
-                        } catch (Exception ignored) {}
-                    }
-                    if (supported.isEmpty()) continue;
-                    AffixType type;
-                    try { type = affix.getType(); } catch (Exception e) { type = null; }
-                    (type == AffixType.STAT ? suffixEntries : prefixEntries).add(new AffixDetailEntry(heavyCat, affix, supported));
+                try { type = entry.affix().getType(); }
+                catch (Exception exception) {
+                    AffixCompatibilityDiagnostics.warnOnce(entry.affix().getId(), cn, "JEI type", exception);
+                    type = null;
                 }
+                (type == AffixType.STAT ? suffixEntries : prefixEntries).add(entry);
             }
         }
-        suffixEntries.sort(java.util.Comparator.comparing(a -> a.affix().getName(true).getString()));
-        prefixEntries.sort(java.util.Comparator.comparing(a -> a.affix().getName(true).getString()));
+        suffixEntries.sort(java.util.Comparator.comparing(entry -> entry.name().getString()));
+        prefixEntries.sort(java.util.Comparator.comparing(entry -> entry.name().getString()));
+        List<AffixDetailEntry> details = new ArrayList<>(suffixEntries);
+        details.addAll(prefixEntries);
+        fullCodex = AffixCodexEntry.create(details);
+        nativeCodex = fullCodex == null ? null : fullCodex.withoutCurios();
+        this.suffixEntries = List.copyOf(suffixEntries);
+        this.prefixEntries = List.copyOf(prefixEntries);
         curioSuffixEntries = suffixEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
         curioPrefixEntries = prefixEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
-        reg.addRecipes(SUFFIX_TYPE, suffixEntries);
-        reg.addRecipes(PREFIX_TYPE, prefixEntries);
-        List<AffixGemEntry> gemEntries = new ArrayList<>();
-        for (LootCategory cat : LootCategory.VALUES) {
-            if (cat.isNone()) continue;
-            if (cat.getName().startsWith("curios:") && !"curio".equals(cat.getName())) continue;
-            gemEntries.addAll(AffixGemEntry.createAll(cat));
-        }
-        curioGemEntries = gemEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
-        reg.addRecipes(AffixGemCategory.TYPE, gemEntries);
+    }
+
+    private void bindIngredientListener(IIngredientManager manager) {
+        if (ingredientManager == manager && ingredientListener != null) return;
+        ingredientManager = manager;
+        long generation = ++ingredientGeneration;
+        ingredientListener = new IIngredientManager.IIngredientListener() {
+            private <V> void changed(java.util.Collection<ITypedIngredient<V>> ingredients) {
+                if (ingredientManager == manager && ingredientGeneration == generation
+                    && ingredients.stream().anyMatch(ingredient -> ingredient.getIngredient() instanceof ItemStack)) {
+                    recipesDirty = true;
+                }
+            }
+
+            @Override
+            public <V> void onIngredientsAdded(IIngredientHelper<V> helper, java.util.Collection<ITypedIngredient<V>> ingredients) {
+                changed(ingredients);
+            }
+
+            @Override
+            public <V> void onIngredientsRemoved(IIngredientHelper<V> helper, java.util.Collection<ITypedIngredient<V>> ingredients) {
+                changed(ingredients);
+            }
+        };
+        manager.registerIngredientListener(ingredientListener);
+    }
+
+    private static void markRecipesDirty() {
+        var plugin = activePlugin;
+        if (plugin != null) plugin.recipesDirty = true;
+    }
+
+    private static void onTagsUpdated(net.minecraftforge.event.TagsUpdatedEvent event) {
+        if (event.getUpdateCause() == net.minecraftforge.event.TagsUpdatedEvent.UpdateCause.CLIENT_PACKET_RECEIVED)
+            markRecipesDirty();
+    }
+
+    private static void onClientTick(net.minecraftforge.event.TickEvent.ClientTickEvent event) {
+        var plugin = activePlugin;
+        if (event.phase == net.minecraftforge.event.TickEvent.Phase.END && plugin != null
+            && plugin.runtime != null && plugin.recipesDirty) plugin.reloadReforgingRecipes();
+    }
+
+    private void reloadReforgingRecipes() {
+        recipesDirty = false;
+        var manager = runtime.getRecipeManager();
+        manager.hideRecipes(SUFFIX_TYPE, suffixEntries);
+        manager.hideRecipes(PREFIX_TYPE, prefixEntries);
+        if (fullCodex != null) manager.hideRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
+        if (nativeCodexAdded && nativeCodex != null) manager.hideRecipes(AffixCodexCategory.TYPE, List.of(nativeCodex));
+        AffixCodexEntry.invalidate();
+        rebuildReforgingEntries();
+        manager.addRecipes(SUFFIX_TYPE, suffixEntries);
+        manager.addRecipes(PREFIX_TYPE, prefixEntries);
+        if (fullCodex != null) manager.addRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
+        nativeCodexAdded = false;
+        displayedCuriosEnabled = null;
+        updateReforgingViews();
     }
 
     @Override public void onRuntimeAvailable(IJeiRuntime runtime) {
@@ -224,7 +272,21 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
 
     @Override public void onRuntimeUnavailable() {
         runtime = null;
-        if (activePlugin == this) activePlugin = null;
+        ingredientManager = null;
+        ingredientListener = null;
+        ingredientGeneration++;
+        recipesDirty = false;
+        suffixEntries = List.of();
+        prefixEntries = List.of();
+        curioSuffixEntries = List.of();
+        curioPrefixEntries = List.of();
+        curioGemEntries = List.of();
+        fullCodex = null;
+        nativeCodex = null;
+        if (activePlugin == this) {
+            activePlugin = null;
+            AffixCodexEntry.unbindIngredientManager();
+        }
     }
 
     public static void refreshReforgingViews() {
