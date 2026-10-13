@@ -19,9 +19,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
-/**
- * Level 1: 显示所有可重铸的分类（不分品质分组）
- */
 public class AffixCodexCategory implements IRecipeCategory<AffixCodexEntry> {
 
     public static final ResourceLocation UID = new ResourceLocation(ApotheosisArtificeMod.MODID, "affix_codex");
@@ -91,7 +88,6 @@ public class AffixCodexCategory implements IRecipeCategory<AffixCodexEntry> {
     public void draw(AffixCodexEntry entry, IRecipeSlotsView slots, GuiGraphics gfx, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
 
-        // 标题
         String title = Component.translatable("jei.apotheosis_artifice.affix_codex").getString();
         int tw = font.width(title);
         gfx.drawString(font, title, (PANEL_W - tw) / 2, HEADER_Y + (HEADER_H - font.lineHeight) / 2, 0xFF97714F, false);

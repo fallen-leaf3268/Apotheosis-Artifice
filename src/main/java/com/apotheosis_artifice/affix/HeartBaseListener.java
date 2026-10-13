@@ -53,8 +53,6 @@ public class HeartBaseListener {
         apply(event.getEntity());
     }
 
-    // 栏位大小变化(玩家脱下 curio_slot_bonus affix → 目标槽位缩容 → 多出物品被自动取下)
-    // Curios 在 resize 时不触发 CurioChangeEvent,只触发 SlotModifiersUpdatedEvent
     @SubscribeEvent
     public void onSlotModifiersUpdated(SlotModifiersUpdatedEvent event) {
         if (event.getEntity().level().isClientSide()) return;
@@ -114,7 +112,6 @@ public class HeartBaseListener {
         }
         CompoundTag nextBonuses = new CompoundTag();
 
-        // 合并所有相关 attribute(当前 + 之前),保证脱下最后一个时仍能撤销
         Set<Attribute> allAttrs = new HashSet<>();
         allAttrs.addAll(currentBonuses.keySet());
         allAttrs.addAll(prevBonuses.keySet());

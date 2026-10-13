@@ -77,7 +77,6 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
         this.addSlot(new Slot(this.ioInv, 0, 142, 99) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                // adventure 模块禁用时 GemItem.getGem 会触发 Adventure$Items 的失败初始化并崩溃
                 if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return false;
                 return GemItem.getGem(stack).isBound();
             }
@@ -95,7 +94,7 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
                 ItemStack inSlot = this.getItem();
                 if (!inSlot.isEmpty()) {
                     int before = inSlot.getCount();
-                    GemCaseMenu.this.tile.depositGem(inSlot); // 原地 shrink，超容部分保留
+                    GemCaseMenu.this.tile.depositGem(inSlot);
                     if (inSlot.getCount() != before) {
                         GemCaseMenu.this.player.level().playSound(GemCaseMenu.this.player, GemCaseMenu.this.pos,
                             SoundEvents.AMETHYST_BLOCK_BREAK, SoundSource.NEUTRAL, 0.5F, 0.7F);
@@ -210,7 +209,6 @@ public class GemCaseMenu extends BlockEntityMenu<GemCaseTile> {
 
     public void setPage(int page) {
         List<ResourceLocation> order = this.rarityOrder;
-        // page 来自网络包，必须钳制下界与上界，否则负 page → order.get(负) 服务端越界崩溃。
         int maxPage = this.getMaxPage();
         page = Math.max(0, Math.min(page, maxPage));
         this.page = page;

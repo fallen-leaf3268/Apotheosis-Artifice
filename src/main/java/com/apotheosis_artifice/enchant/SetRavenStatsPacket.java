@@ -32,7 +32,6 @@ public record SetRavenStatsPacket(float eterna, float quanta, float arcana, Item
     private static ItemStack returnToPlayer(ServerPlayer player, ItemStack stack) {
         if (stack.isEmpty()) return stack;
         var rawInv = new net.minecraftforge.items.wrapper.InvWrapper(player.getInventory());
-        // 优先背包栏 9-35，再快捷栏 0-8
         var backpack = new net.minecraftforge.items.wrapper.RangedWrapper(rawInv, 9, 36);
         var hotbar = new net.minecraftforge.items.wrapper.RangedWrapper(rawInv, 0, 9);
         stack = net.minecraftforge.items.ItemHandlerHelper.insertItemStacked(backpack, stack, false);
@@ -42,7 +41,6 @@ public record SetRavenStatsPacket(float eterna, float quanta, float arcana, Item
         return stack;
     }
 
-    /** 从玩家背包真实移除最多 amount 个与 match 可堆叠的物品，返回实际取出的栈（数量 ≤ amount）。 */
     private static ItemStack extractFromInventory(Inventory inv, ItemStack match, int amount) {
         ItemStack result = ItemStack.EMPTY;
         int need = amount;

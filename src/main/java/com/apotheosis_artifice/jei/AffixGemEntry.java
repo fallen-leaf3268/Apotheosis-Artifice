@@ -28,7 +28,6 @@ public record AffixGemEntry(LootCategory category, Gem gem, List<RarityEntry> ra
         List<AffixGemEntry> entries = new ArrayList<>();
         Set<ResourceLocation> seen = new HashSet<>();
 
-        // 如果是通用 curio，也扫描所有 curios:xxx 子槽位
         boolean isGenericCurio = "curio".equals(cat.getName());
         List<LootCategory> scanCats = new ArrayList<>();
         scanCats.add(cat);

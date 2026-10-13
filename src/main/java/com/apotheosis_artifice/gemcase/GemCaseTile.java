@@ -39,7 +39,6 @@ import net.minecraftforge.registries.ForgeRegistries;
 
 public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placebo.block_entity.TickingBlockEntity {
 
-    // gemId -> rarityId -> count
     private final Map<ResourceLocation, Map<ResourceLocation, Integer>> gems = new HashMap<>();
     protected final Set<GemCaseMenu> activeContainers = new HashSet<>();
     protected final int maxCount;
@@ -111,7 +110,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         this.activeContainers.forEach(GemCaseMenu::onChanged);
     }
 
-    // ---- 存入 ----
 
     public void depositGem(ItemStack stack) {
         if (!this.canAcceptGem(stack)) return;
@@ -125,7 +123,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
 
         Map<ResourceLocation, Integer> rarities = this.gems.computeIfAbsent(gemId, k -> autoFillRarities());
         int stored = rarities.getOrDefault(rarityId, 0);
-        // 用 long 防 int 溢出；只存放得下的部分，余量留在输入栈里（原地 shrink），避免吞宝石。
         long space = (long) this.maxCount - stored;
         if (space <= 0) return;
         int toStore = (int) Math.min(space, stack.getCount());
@@ -139,9 +136,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         }
     }
 
-    // ---- 漏斗输入：四面八方接受宝石、只进不出 ----
 
-    /** 该物品能否被宝石柜接收（必须是已绑定的宝石且带稀有度）。 */
     public boolean canAcceptGem(ItemStack stack) {
         return !stack.isEmpty()
             && dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure
@@ -149,7 +144,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
             && AffixHelper.getRarity(stack).isBound();
     }
 
-    /** 不改状态地计算该宝石栈还能存入多少（受 maxCount 限制，long 防溢出）。 */
     public int getStorableAmount(ItemStack stack) {
         if (!canAcceptGem(stack)) return 0;
         ResourceLocation gemId = GemItem.getGem(stack).getId();
@@ -161,7 +155,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         return (int) Math.min(space, stack.getCount());
     }
 
-    // 只进不出的虚拟输入口：插入即存进柜子，不能抽取。
     private final IItemHandler hopperInput = new IItemHandler() {
         @Override public int getSlots() { return 1; }
         @Override public ItemStack getStackInSlot(int slot) { return ItemStack.EMPTY; }
@@ -173,10 +166,10 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             if (stack.isEmpty() || !GemCaseTile.this.canAcceptGem(stack)) return stack;
             int storable = GemCaseTile.this.getStorableAmount(stack);
-            if (storable <= 0) return stack; // 满了，原样退回
+            if (storable <= 0) return stack;
             if (!simulate) {
                 ItemStack toDeposit = stack.copy();
-                GemCaseTile.this.depositGem(toDeposit); // 原地 shrink，存入能放下的部分
+                GemCaseTile.this.depositGem(toDeposit);
                 return toDeposit.isEmpty() ? ItemStack.EMPTY : toDeposit;
             }
             if (storable >= stack.getCount()) return ItemStack.EMPTY;
@@ -191,7 +184,7 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
     @Override
     public <T> LazyOptional<T> getCapability(Capability<T> cap, @Nullable Direction side) {
         if (cap == ForgeCapabilities.ITEM_HANDLER) {
-            return this.hopperInputCap.cast(); // 任意方向都接受输入
+            return this.hopperInputCap.cast();
         }
         return super.getCapability(cap, side);
     }
@@ -216,7 +209,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         return map;
     }
 
-    // ---- 提取 ----
 
     public ItemStack extractGem(ResourceLocation gemId, ResourceLocation rarityId, int count) {
         if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return ItemStack.EMPTY;
@@ -247,7 +239,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         return stack;
     }
 
-    // ---- 升级 ----
 
     private static final int NEXT_MAT_COST = 1;
     private static final int STD_MAT_COST = 3;
@@ -368,7 +359,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         public boolean hasMaterial() { return materialRarity != null && matFound >= matNeeded; }
     }
 
-    // ---- 查询 ----
 
     public int getCount(ResourceLocation gemId, ResourceLocation rarityId) {
         Map<ResourceLocation, Integer> rarities = this.gems.get(gemId);
@@ -391,7 +381,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         return this.gems;
     }
 
-    // ---- 监听器 ----
 
     public void addListener(GemCaseMenu menu) {
         this.activeContainers.add(menu);
@@ -401,7 +390,6 @@ public class GemCaseTile extends BlockEntity implements dev.shadowsoffire.placeb
         this.activeContainers.remove(menu);
     }
 
-    // ---- NBT ----
 
     public void saveGemData(CompoundTag tag) {
         CompoundTag gemsTag = new CompoundTag();

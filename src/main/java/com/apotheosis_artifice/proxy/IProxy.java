@@ -7,9 +7,7 @@ import java.util.List;
 public interface IProxy {
     default void handleGemCaseMaterials(int menuId, List<ItemStack> materials) {}
 
-    /** 强制设置客户端附魔槽 slot0 */
     default void handleForceSlot0(ItemStack stack) {}
 
-    /** 同步附魔线索到客户端界面 */
     default void handleSyncClues(int slot, List<EnchantmentInstance> clues) {}
 }

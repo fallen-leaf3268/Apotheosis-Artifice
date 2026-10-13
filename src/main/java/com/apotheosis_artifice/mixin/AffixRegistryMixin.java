@@ -28,7 +28,6 @@ public class AffixRegistryMixin {
     @SuppressWarnings("unchecked")
     @Inject(method = "registerBuiltinCodecs", at = @At("TAIL"))
     private void apotheosis_artifice_registerCodecs(CallbackInfo ci) {
-        // registerCodec 是 DynamicRegistry 上的 public final 方法，直接调用即可（无需反射）。
         DynamicRegistry<Affix> self = (DynamicRegistry<Affix>) (Object) this;
         self.registerCodec(new ResourceLocation("apotheosis_artifice", "damage_resistance"), DamageResistanceAffix.CODEC);
         self.registerCodec(new ResourceLocation("apotheosis_artifice", "effect_immunity"), EffectImmunityAffix.CODEC);

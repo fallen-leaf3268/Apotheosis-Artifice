@@ -475,7 +475,6 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
     @Override
     protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {}
 
-    // ---- 共享渲染工具 ----
 
     public static void renderGhostItem(GuiGraphics gfx, ItemStack stack, int x, int y) {
         RenderSystem.enableBlend();
@@ -498,7 +497,6 @@ public class GemCaseScreen extends AdventureContainerScreen<GemCaseMenu> {
         gfx.pose().popPose();
     }
 
-    // ---- 升级按钮 ----
 
     static class UpgradeButton extends AbstractWidget {
         private final GemCaseScreen screen;

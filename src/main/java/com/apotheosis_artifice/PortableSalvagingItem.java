@@ -30,7 +30,6 @@ public class PortableSalvagingItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (!level.isClientSide) {
-            // 给每把工具分配唯一 ID
             if (!stack.getOrCreateTag().hasUUID("ToolId")) {
                 stack.getTag().putUUID("ToolId", UUID.randomUUID());
             }

@@ -16,10 +16,6 @@ import dev.shadowsoffire.attributeslib.api.ALCombatRules;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 
-/**
- * 根据 ApotheosisConfig 的开关，控制是否应用 Apothic Attributes 的护甲/保护公式修改。
- * 关闭时：穿透/护甲削减仍然生效，仅伤害减免计算降回原版公式。
- */
 @Mixin(value = ALCombatRules.class, remap = false)
 public class ALCombatRulesMixin {
 

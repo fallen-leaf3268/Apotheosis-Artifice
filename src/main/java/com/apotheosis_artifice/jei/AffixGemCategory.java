@@ -80,11 +80,9 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, AffixGemEntry entry, IFocusGroup focuses) {
         if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
-        // 分类输入槽
         builder.addSlot(RecipeIngredientRole.INPUT, 2, 0)
             .addItemStacks(AffixCodexEntry.getCategoryItems(entry.category()));
 
-        // 宝石名（固定史诗品质颜色）
         Component gemNameComp = Component.literal(entry.gem().getId().getPath());
         try {
             var epicHolder = dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry.INSTANCE.holder(new ResourceLocation("apotheosis:epic"));
@@ -96,13 +94,11 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
         } catch (Exception ignored) {}
         final Component finalGemName = gemNameComp;
 
-        // 从左到右：低稀有度 → 高稀有度
         List<AffixGemEntry.RarityEntry> rarities = entry.rarities();
         for (int j = 0; j < rarities.size(); j++) {
             AffixGemEntry.RarityEntry re = rarities.get(j);
             int sx = 2 + j * SLOT_SIZE;
 
-            // 创建该稀有度的宝石物品栈
             ItemStack gemStack = new ItemStack(Adventure.Items.GEM.get());
             GemItem.setGem(gemStack, entry.gem());
             AffixHelper.setRarity(gemStack, re.rarity());
@@ -111,15 +107,12 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
                 .addItemStack(gemStack)
                 .addTooltipCallback((slotView, tooltip) -> {
                     tooltip.clear();
-                    // 第1行：宝石名（保留稀有度颜色，去括号）
                     String raw = gemStack.getDisplayName().getString().replace("[", "").replace("]", "").replace("(", "").replace(")", "");
                     int gemColor = re.rarity().getColor().getValue();
                     tooltip.add(Component.literal(raw).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(gemColor)));
-                    // 唯一属性
                     if (entry.gem().isUnique()) {
                         tooltip.add(Component.translatable("text.apotheosis.unique").withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xC73912)));
                     }
-                    // 该栏位 + 属性
                     Component bonus = re.bonusTooltip();
                     String catLocal;
                     if (entry.category().getName().startsWith("curios:")) {
@@ -138,7 +131,6 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
     public void draw(AffixGemEntry entry, IRecipeSlotsView slots, GuiGraphics gfx, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
 
-        // 分类名（金色）
         String catRaw = entry.category().getName();
         String catLocalized;
         if (catRaw.startsWith("curios:")) {
@@ -148,7 +140,6 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
         }
         AffixDetailCategory.drawSourceHeader(gfx, font, catLocalized, mouseX, mouseY);
 
-        // 宝石名（去掉稀有度前缀，保留颜色）
         String name;
         try {
             var topRarity = entry.rarities().get(entry.rarities().size() - 1).rarity();

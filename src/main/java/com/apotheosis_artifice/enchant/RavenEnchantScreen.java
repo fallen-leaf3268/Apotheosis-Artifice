@@ -70,9 +70,6 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
         }
     }
 
-    /**
-     * 获取用于同步的输入物品。子类可覆写以使用不同的槽位索引。
-     */
     protected ItemStack getInputItem() {
         return this.menu.getSlot(0).getItem();
     }
@@ -143,10 +140,8 @@ public class RavenEnchantScreen extends ApothEnchantScreen {
     protected void renderBg(GuiGraphics gfx, float pt, int mx, int my) {
         float displayMaxQ = ApotheosisConfig.getMaxQuanta();
         float displayMaxA = ApotheosisConfig.getMaxArcana();
-        // 转换为百分比给父类渲染条
         this.quanta = displayMaxQ > 0 ? (this.curQ / displayMaxQ) * 100.0f : 0;
         this.arcana = displayMaxA > 0 ? (this.curA / displayMaxA) * 100.0f : 0;
-        // 父类按 curE/getAbsoluteMaxEterna 计算条宽；若我们的上限更大需按比例缩放，防止填充条溢出
         float absMaxE = EnchantingStatRegistry.getAbsoluteMaxEterna();
         this.eterna = eternaMax() > 0 ? this.curE * (absMaxE / eternaMax()) : this.curE;
         this.lastEterna = this.eterna;

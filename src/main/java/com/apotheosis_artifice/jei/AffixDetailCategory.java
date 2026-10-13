@@ -16,10 +16,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
-/**
- * Level 2: 词缀/宝石详情。每页一个条目，词缀名置前，材料图标紧随其后。
- * 可创建多个实例（后缀/前缀/宝石），通过不同的 RecipeType 区分。
- */
 public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
 
     private final RecipeType<AffixDetailEntry> type;
@@ -111,11 +107,9 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, AffixDetailEntry entry, IFocusGroup focuses) {
-        // 分类输入槽（左上角），用于 JEI 跳转（多物品循环）
         builder.addSlot(RecipeIngredientRole.INPUT, 2, 0)
             .addItemStacks(entry.items());
 
-        // 材料图标行靠左
         List<AffixDetailEntry.RarityEntry> rarities = entry.rarities();
         int slotStartX = 2;
 
@@ -128,7 +122,6 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
                 .addItemStack(matStack)
                 .addTooltipCallback((slotView, tooltip) -> {
                     tooltip.clear();
-                    // 材料名去括号，颜色来自稀有度
                     int matColor = re.rarity().getColor().getValue();
                     String matName = matStack.getDisplayName().getString()
                         .replace("[", "").replace("]", "")
@@ -147,7 +140,6 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
     public void draw(AffixDetailEntry entry, IRecipeSlotsView slots, GuiGraphics gfx, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
 
-        // 分类名（翻译）
         String catRaw = entry.category().getName();
         String catLocalized;
         if (catRaw.startsWith("curios:")) {
@@ -157,7 +149,6 @@ public class AffixDetailCategory implements IRecipeCategory<AffixDetailEntry> {
         }
         drawSourceHeader(gfx, font, catLocalized, mouseX, mouseY);
 
-        // 词缀名
         String name = entry.name().getString();
         gfx.drawString(font, name, 2, NAME_Y, 0xFFFF55, false);
     }

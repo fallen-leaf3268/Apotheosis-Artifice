@@ -43,7 +43,6 @@ public class MechanicalRavenEnchantingTableBlock extends RavenEnchantingTableBlo
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof MechanicalRavenEnchantTile rt) {
             RavenTableStats stats = rt.getRavenStats();
-            // 保存 menu 引用，供 buf 回调写入附魔槽内容
             final MechanicalRavenEnchantMenu[] menuRef = new MechanicalRavenEnchantMenu[1];
             NetworkHooks.openScreen((ServerPlayer) player,
                 new net.minecraft.world.SimpleMenuProvider(
@@ -69,7 +68,6 @@ public class MechanicalRavenEnchantingTableBlock extends RavenEnchantingTableBlo
         if (!state.is(newState.getBlock())) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof MechanicalRavenEnchantTile rt) {
-                // 物品保存在附魔台中，不掉落
                 level.removeBlockEntity(pos);
             } else {
                 super.onRemove(state, level, pos, newState, moved);

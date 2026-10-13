@@ -134,7 +134,6 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     public String getLibName() { return libName; }
     public String getContName() { return contName; }
 
-    /** 直接存入绑定的容器/图书馆，不经过输出槽 */
     public ItemStack depositDirectToBound(ItemStack stack) {
         if (stack.isEmpty()) return ItemStack.EMPTY;
         if (libBound && libDim != null && stack.getItem() == Items.ENCHANTED_BOOK) {
@@ -293,7 +292,6 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         this.refillEnchantSlot();
     }
 
-    /** 核心附魔逻辑：输入物品，返回已附魔的物品 */
     public ItemStack doEnchant(ItemStack input, RavenTableStats stats) {
         if (input.isEmpty()) return ItemStack.EMPTY;
 

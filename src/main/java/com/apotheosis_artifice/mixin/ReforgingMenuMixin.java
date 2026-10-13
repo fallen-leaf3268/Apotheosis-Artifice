@@ -230,8 +230,6 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
                 Set<LootCategory> types = af.curiosforge_getTypes();
                 if (types.contains(cat) || AffixTypes.curiosforge_typeMatches(types, cat)) return true;
             } else if (curiosforge_canApplyAnyRarity(a, stack, cat)) {
-                // 第三方自定义 Affix 类（如 apotheosis_spells 的法术词条）没有被 AffixTypes mixin
-                // 覆盖到，用 canApplyTo 兜底，避免其物品被挡在重铸台输入槽外。
                 return true;
             }
         }

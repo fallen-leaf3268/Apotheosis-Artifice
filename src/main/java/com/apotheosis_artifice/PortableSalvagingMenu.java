@@ -63,7 +63,6 @@ public class PortableSalvagingMenu extends PlaceboContainerMenu {
         this.mover.registerRule((stack, slot) -> slot < this.playerInvStart, this.playerInvStart, this.hotbarStart + 9);
         this.registerInvShuffleRules();
 
-        // 从工具物品 NBT 恢复输出物品
         if (!this.level.isClientSide) {
             ItemStack tool = findToolByUUID(this.player);
             if (!tool.isEmpty()) {
@@ -74,7 +73,6 @@ public class PortableSalvagingMenu extends PlaceboContainerMenu {
         this.outputReady = true;
     }
 
-    /** 根据 UUID 在背包中查找便携回收工具 */
     private ItemStack findToolByUUID(Player player) {
         UUID targetId = this.toolId;
         if (targetId == null) return ItemStack.EMPTY;
@@ -138,7 +136,6 @@ public class PortableSalvagingMenu extends PlaceboContainerMenu {
                 if (!out.isEmpty()) this.giveItem(this.player, out);
             }
         }
-        // 输出槽变化由 slotListener 自动保存
     }
 
     private void saveOutput() {

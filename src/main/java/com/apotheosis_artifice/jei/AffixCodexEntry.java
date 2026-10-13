@@ -18,10 +18,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
-/**
- * Level 1: 显示所有可重铸的 LootCategory。<br>
- * 每个分类自动扫描所有注册物品，JEI 自动循环切换展示。
- */
 public record AffixCodexEntry(List<LootCategory> categories, Map<LootCategory, List<ItemStack>> items) {
 
     @Nullable
@@ -49,16 +45,10 @@ public record AffixCodexEntry(List<LootCategory> categories, Map<LootCategory, L
         return cats.isEmpty() ? null : new AffixCodexEntry(cats, Map.copyOf(items));
     }
 
-    /** 全物品自动扫描结果 */
     private static final Map<String, List<ItemStack>> CATEGORY_ITEMS = new HashMap<>();
 
     private static volatile boolean initialized = false;
 
-    /**
-     * JEI 的物品变体列表（含 NBT 变体，例如 Iron's Spellbooks 每个法术一支的卷轴）。
-     * 由 JEI 插件在 registerRecipes 时绑定；扫描优先用它，这样带 NBT 才有意义的物品
-     * （法术卷轴等）会以全部变体进入类别列表，JEI 槽位自动轮播展示。
-     */
     private static volatile mezz.jei.api.runtime.IIngredientManager ingredientManager;
 
     public static synchronized void bindIngredientManager(mezz.jei.api.runtime.IIngredientManager manager) {
@@ -76,18 +66,11 @@ public record AffixCodexEntry(List<LootCategory> categories, Map<LootCategory, L
         invalidate();
     }
 
-    /**
-     * 惰性、幂等的一次性初始化。原先在 static 块里执行：类加载期就调用
-     * {@code CuriosApi.getSlotHelper()}（可能为 null）并修改全局 LootCategory 注册表，
-     * 一旦 NPE 就用 ExceptionInInitializerError 污染整个类、后续 JEI 全挂。
-     * 改为由 registerRecipes / getCategoryItems 触发，并对 null 做守卫、未就绪则下次再试。
-     */
     private static synchronized void ensureInit() {
         if (initialized) return;
         var slotHelper = top.theillusivec4.curios.api.CuriosApi.getSlotHelper();
         if (slotHelper == null) return;
         var slotIds = List.copyOf(slotHelper.getSlotTypeIds());
-        // 为所有已注册的 Curios 槽位创建 LootCategory（确保法术书等能独立显示）
         for (String slotId : slotIds) {
             String catName = "curios:" + slotId;
             if (LootCategory.byId(catName) == null || LootCategory.byId(catName).isNone()) {
@@ -97,7 +80,6 @@ public record AffixCodexEntry(List<LootCategory> categories, Map<LootCategory, L
             }
         }
 
-        // 物品来源：优先 JEI 物品变体列表（含 NBT 变体），JEI 未就绪时退回注册表裸物品
         java.util.Collection<ItemStack> universe;
         var manager = ingredientManager;
         if (manager != null) {
@@ -111,7 +93,6 @@ public record AffixCodexEntry(List<LootCategory> categories, Map<LootCategory, L
             universe = all;
         }
 
-        // 遍历所有物品（含变体），统计每个物品的饰品槽位数量
         var nativeCategories = LootCategory.VALUES.stream()
             .filter(cat -> !cat.isNone() && !cat.getName().equals("curio") && !cat.getName().startsWith("curios:"))
             .toList();
@@ -120,13 +101,11 @@ public record AffixCodexEntry(List<LootCategory> categories, Map<LootCategory, L
             if (ingredient.isEmpty()) continue;
             ItemStack stack = ingredient.copy();
 
-            // 手动找原生非 curio 分类（绕过注册顺序影响）
             LootCategory nativeCat = LootCategory.NONE;
             for (LootCategory c : nativeCategories) {
                 if (c.isValid(stack)) { nativeCat = c; break; }
             }
 
-            // 收集该物品匹配的所有 curio 槽位
             List<String> matchedCurioSlots = new ArrayList<>();
             for (String slotId : slotIds) {
                 String catName = "curios:" + slotId;
@@ -139,12 +118,10 @@ public record AffixCodexEntry(List<LootCategory> categories, Map<LootCategory, L
             }
 
             if (!matchedCurioSlots.isEmpty() || (genericCurio != null && !genericCurio.isNone() && genericCurio.isValid(stack))) {
-                    // 多槽位物品：同时加入每个具体槽位 + 通用 curio
                     for (String slotCat : matchedCurioSlots) {
                         CATEGORY_ITEMS.computeIfAbsent(slotCat, k -> new ArrayList<>()).add(stack);
                     }
                     CATEGORY_ITEMS.computeIfAbsent("curio", k -> new ArrayList<>()).add(stack);
-                // 双类别物品（如胸甲+背饰）：也加入原生非 curio 类别
                 if (nativeCat != null && !nativeCat.isNone() && !nativeCat.getName().equals("curio") && !nativeCat.getName().startsWith("curios:")) {
                     CATEGORY_ITEMS.computeIfAbsent(nativeCat.getName(), k -> new ArrayList<>()).add(stack);
                 }

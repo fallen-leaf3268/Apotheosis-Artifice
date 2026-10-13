@@ -39,20 +39,16 @@ import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 @Mod.EventBusSubscriber(modid = ApotheosisArtificeMod.MODID)
 public class GemBinderItem extends Item {
 
-    // ---- NBT 键前缀 ----
-    private static final String PREFIX_GC = "gc_"; // 宝石柜
-    private static final String PREFIX_LB = "lb_"; // 图书馆
+    private static final String PREFIX_GC = "gc_";
+    private static final String PREFIX_LB = "lb_";
     private static final String TAG_MODE = "binder_mode";
     private static final String TAG_SALVAGE_TYPE = "salvage_type";
 
-    // mode: 0=deposit, 1=salvage
-    // salvage_type: 0=gems, 1=equipment, 2=all
 
     public GemBinderItem(Properties props) {
         super(props);
     }
 
-    // ---- 模式 API ----
 
     private static int getMode(ItemStack stack) {
         CompoundTag tag = stack.getTag();
@@ -79,10 +75,6 @@ public class GemBinderItem extends Item {
         };
     }
 
-    /**
-     * 循环模式（由 ToggleBinderPacket 调用）
-     * deposit → salvage_gems → salvage_equip → salvage_all → 循环
-     */
     public static void cycleMode(ItemStack stack, Player player) {
         int mode = getMode(stack);
         if (mode == 0) {
@@ -97,7 +89,6 @@ public class GemBinderItem extends Item {
             Component.translatable(getModeTranslationKey(stack)).withStyle(ChatFormatting.YELLOW), true);
     }
 
-    // ---- 独立绑定存取 ----
 
     private static void saveBinding(CompoundTag tag, String prefix, BlockPos pos, ResourceLocation dim, ResourceLocation blockId) {
         tag.putBoolean(prefix + "bound", true);
@@ -123,7 +114,6 @@ public class GemBinderItem extends Item {
         return dim.isEmpty() ? null : ResourceLocation.tryParse(dim);
     }
 
-    // ---- 绑定 ----
 
     @Override
     public InteractionResult useOn(UseOnContext ctx) {
@@ -154,7 +144,6 @@ public class GemBinderItem extends Item {
         return InteractionResult.PASS;
     }
 
-    // ---- 模式切换 ----
 
     @Override
     public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level, Player player, net.minecraft.world.InteractionHand hand) {
@@ -167,7 +156,6 @@ public class GemBinderItem extends Item {
         return net.minecraft.world.InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
 
-    // ---- 拾取处理 ----
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onPickup(EntityItemPickupEvent event) {
@@ -187,7 +175,6 @@ public class GemBinderItem extends Item {
                     ItemStack binder = stackHandler.getStackInSlot(i);
                     if (binder.isEmpty() || !(binder.getItem() instanceof GemBinderItem)) continue;
 
-                    // 图书馆独立绑定 → 自动存入附魔书
                     BlockPos libPos = getBoundPos(binder, PREFIX_LB);
                     BlockEntity libBe = libPos != null ? getBoundTile(player, binder, libPos, PREFIX_LB) : null;
                     if (libBe instanceof EnchLibraryTile lib && pickedUp.getItem() == Items.ENCHANTED_BOOK) {
@@ -203,7 +190,6 @@ public class GemBinderItem extends Item {
                         return;
                     }
 
-                    // 分解模式：根据子类型处理宝石/装备/全部
                     if (isSalvageMode(binder)) {
                         int st = getSalvageType(binder);
                         boolean isGemItem = isGem(pickedUp);
@@ -219,10 +205,8 @@ public class GemBinderItem extends Item {
                             handleSalvage(player, pickedUp, event);
                             return;
                         }
-                        // salvage 不 return，允许继续处理其他绑定
                     }
 
-                    // 存入模式：宝石 → 宝石柜（每份 count=1）
                     if (!isSalvageMode(binder)) {
                         BlockPos gcPos = getBoundPos(binder, PREFIX_GC);
                         BlockEntity gcBe = gcPos != null ? getBoundTile(player, binder, gcPos, PREFIX_GC) : null;
@@ -297,7 +281,6 @@ public class GemBinderItem extends Item {
         }
     }
 
-    // ---- Curios 能力 ----
 
     @Override
     @Nullable
@@ -316,7 +299,6 @@ public class GemBinderItem extends Item {
         };
     }
 
-    // ---- Tooltip ----
 
     private static Component getBlockDisplayName(ItemStack stack, String prefix) {
         CompoundTag tag = stack.getTag();
@@ -343,7 +325,6 @@ public class GemBinderItem extends Item {
         Component gcName = getBlockDisplayName(stack, PREFIX_GC);
         Component lbName = getBlockDisplayName(stack, PREFIX_LB);
 
-        // 模式
         list.add(Component.translatable(getModeTranslationKey(stack)).withStyle(ChatFormatting.GOLD));
         if (isSalvageMode(stack)) {
             int st = getSalvageType(stack);
@@ -356,7 +337,6 @@ public class GemBinderItem extends Item {
             list.add(Component.translatable(descKey).withStyle(ChatFormatting.GRAY));
         }
 
-        // 宝石柜坐标（仅在不涉及宝石分解的模式下显示）
         boolean showGcInfo = !isSalvageMode(stack) || getSalvageType(stack) == 1;
         if (showGcInfo) {
             if (gcName != null && gcPos != null) {
@@ -368,7 +348,6 @@ public class GemBinderItem extends Item {
             }
         }
 
-        // 图书馆（独立）
         if (lbName != null && lbPos != null) {
             list.add(Component.translatable("info.apotheosis_artifice.binder.library_bound", lbName, lbPos.getX(), lbPos.getY(), lbPos.getZ(), lbDim != null ? lbDim.toString() : "?").withStyle(ChatFormatting.LIGHT_PURPLE));
         } else {

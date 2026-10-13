@@ -25,7 +25,6 @@ public class EnchantScreenEternaMaxMixin {
         return Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
     }
 
-    // 原版附魔台进度条：位阶条按上限缩放；渡鸦台已自行预缩放，返回原值避免双重缩放
     @Redirect(
         method = "renderBg",
         at = @At(value = "INVOKE",
@@ -49,7 +48,6 @@ public class EnchantScreenEternaMaxMixin {
         return ApotheosisConfig.getMaxArcana();
     }
 
-    // 主界面「威力范围」tooltip 的 *4 天花板（render 内 getAbsoluteMaxEterna 第2、3次）
     @Redirect(
         method = "render",
         at = @At(value = "INVOKE",

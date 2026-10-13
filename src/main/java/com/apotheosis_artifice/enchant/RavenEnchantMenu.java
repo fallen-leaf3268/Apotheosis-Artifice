@@ -118,8 +118,6 @@ public class RavenEnchantMenu extends ApothEnchantmentMenu {
     }
 
     public void setPlayerStats(float eterna, float quanta, float arcana) {
-        // 设计上是"滑条自由选"：玩家可在 [0, 绝对上限] / [0,100] 范围内自由设定 e/q/a。
-        // 钳到绝对上限即可——既保留自由选玩法，又防止伪造包发送超出滑条范围的离谱值。
         float maxEterna = Math.max(EnchantingStatRegistry.getAbsoluteMaxEterna(), ApotheosisConfig.getMaxEterna());
         this.ravenStats.set(
             Mth.clamp(eterna, 0, maxEterna),

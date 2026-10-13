@@ -88,18 +88,14 @@ dependencies {
 
     annotationProcessor "org.spongepowered:mixin:${mixin_version}:processor"
 
-    // Apotheosis & deps
     implementation fg.deobf("dev.shadowsoffire:Placebo:${minecraft_version}-${placebo_version}")
     implementation fg.deobf("dev.shadowsoffire:ApothicAttributes:${minecraft_version}-${attributeslib_version}")
     implementation fg.deobf("dev.shadowsoffire:Apotheosis:${minecraft_version}-${apotheosis_version}")
 
-    // Curios
     implementation fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")
 
-    // JEI (compile only, provided at runtime by Apotheosis)
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
 
-    // Jade (compile only, provided at runtime)
     compileOnly fg.deobf("curse.maven:jade-324717:${jade_file_id}")
 
     testImplementation platform('org.junit:junit-bom:5.10.2')
