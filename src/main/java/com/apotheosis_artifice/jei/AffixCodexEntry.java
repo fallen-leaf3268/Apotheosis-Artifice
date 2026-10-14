@@ -122,10 +122,10 @@ public record AffixCodexEntry(List<LootCategory> categories, Map<LootCategory, L
                         CATEGORY_ITEMS.computeIfAbsent(slotCat, k -> new ArrayList<>()).add(stack);
                     }
                     CATEGORY_ITEMS.computeIfAbsent("curio", k -> new ArrayList<>()).add(stack);
-                if (nativeCat != null && !nativeCat.isNone() && !nativeCat.getName().equals("curio") && !nativeCat.getName().startsWith("curios:")) {
+                if (!nativeCat.isNone()) {
                     CATEGORY_ITEMS.computeIfAbsent(nativeCat.getName(), k -> new ArrayList<>()).add(stack);
                 }
-            } else if (nativeCat != null && !nativeCat.isNone()) {
+            } else if (!nativeCat.isNone()) {
                 if (ApotheosisConfig.USE_BETTERCOMBAT_HEAVY_OVERRIDE.get()
                     && (nativeCat == LootCategory.SWORD || nativeCat == LootCategory.TRIDENT)
                     && BetterCombatCompat.isTwoHanded(stack)) {

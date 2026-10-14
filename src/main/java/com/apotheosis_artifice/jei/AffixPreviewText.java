@@ -1,6 +1,7 @@
 package com.apotheosis_artifice.jei;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.text.DecimalFormat;
 import java.text.ParsePosition;
 import java.util.Objects;
@@ -84,6 +85,8 @@ final class AffixPreviewText {
             return result == null ? UNSUPPORTED : result;
         }
         if (Objects.equals(example, lower) && Objects.equals(example, upper)) return example;
+        if (example instanceof Byte || example instanceof Short || example instanceof Integer
+            || example instanceof Long || example instanceof BigInteger) return example;
         if (!(example instanceof String && lower instanceof String && upper instanceof String)
             && !(example instanceof Number && lower instanceof Number && upper instanceof Number)) return UNSUPPORTED;
         BigDecimal current = number(example, format);

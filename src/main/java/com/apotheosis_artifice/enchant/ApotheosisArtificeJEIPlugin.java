@@ -328,12 +328,10 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
 
     @Override public void registerRecipeTransferHandlers(IRecipeTransferRegistration reg) {
         if (!dev.shadowsoffire.apotheosis.Apotheosis.enableEnch) return;
-        TRANSFER_HELPER = reg.getTransferHelper();
-        reg.addRecipeTransferHandler(new MechanicalRavenTransferHandler(), EnchantingCategory.TYPE);
-        reg.addRecipeTransferHandler(new RavenTransferHandler(), EnchantingCategory.TYPE);
+        IRecipeTransferHandlerHelper helper = reg.getTransferHelper();
+        reg.addRecipeTransferHandler(new MechanicalRavenTransferHandler(helper), EnchantingCategory.TYPE);
+        reg.addRecipeTransferHandler(new RavenTransferHandler(helper), EnchantingCategory.TYPE);
     }
-
-    private static IRecipeTransferHandlerHelper TRANSFER_HELPER;
 
     static ItemStack findMechanicalTransferInput(Inventory inventory, Ingredient ingredient, boolean maxTransfer) {
         for (int i = 0; i < inventory.getContainerSize(); i++) {
@@ -372,6 +370,12 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     }
 
     private static class RavenTransferHandler implements IRecipeTransferHandler<RavenEnchantMenu, EnchantingRecipe> {
+        private final IRecipeTransferHandlerHelper helper;
+
+        private RavenTransferHandler(IRecipeTransferHandlerHelper helper) {
+            this.helper = helper;
+        }
+
         @Override public Class<? extends RavenEnchantMenu> getContainerClass() { return RavenEnchantMenu.class; }
         @Override public Optional<MenuType<RavenEnchantMenu>> getMenuType() {
             if (RavenEnchantMenu.TYPE != null) return Optional.of(RavenEnchantMenu.TYPE);
@@ -392,11 +396,8 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
                 }
             }
             if (inputItem.isEmpty()) {
-                if (TRANSFER_HELPER != null) {
-                    return TRANSFER_HELPER.createUserErrorWithTooltip(
-                        Component.translatable("jei.apotheosis_artifice.transfer.no_matching_item"));
-                }
-                return null;
+                return helper.createUserErrorWithTooltip(
+                    Component.translatable("jei.apotheosis_artifice.transfer.no_matching_item"));
             }
             if (!doTransfer) return null;
             float e = recipe.getRequirements().eterna();
@@ -409,6 +410,12 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     }
 
     private static class MechanicalRavenTransferHandler implements IRecipeTransferHandler<MechanicalRavenEnchantMenu, EnchantingRecipe> {
+        private final IRecipeTransferHandlerHelper helper;
+
+        private MechanicalRavenTransferHandler(IRecipeTransferHandlerHelper helper) {
+            this.helper = helper;
+        }
+
         @Override public Class<? extends MechanicalRavenEnchantMenu> getContainerClass() { return MechanicalRavenEnchantMenu.class; }
         @Override public Optional<MenuType<MechanicalRavenEnchantMenu>> getMenuType() {
             return Optional.ofNullable(ApotheosisArtificeMod.MECHANICAL_RAVEN_TABLE_MENU.get());
@@ -419,7 +426,7 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
             IRecipeSlotsView recipeSlots, Player player, boolean maxTransfer, boolean doTransfer) {
             ItemStack inputItem = findMechanicalTransferInput(player.getInventory(), recipe.getInput(), maxTransfer);
             if (inputItem.isEmpty()) {
-                return TRANSFER_HELPER == null ? null : TRANSFER_HELPER.createUserErrorWithTooltip(
+                return helper.createUserErrorWithTooltip(
                     Component.translatable("jei.apotheosis_artifice.transfer.no_matching_item"));
             }
             if (!doTransfer) return null;

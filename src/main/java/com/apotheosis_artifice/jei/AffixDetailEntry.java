@@ -12,7 +12,10 @@ import java.util.Map;
 import com.apotheosis_artifice.compat.AffixCompatibilityDiagnostics;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.Affix;
+import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry;
+import dev.shadowsoffire.apotheosis.adventure.affix.AffixType;
+import dev.shadowsoffire.apotheosis.adventure.affix.effect.DurableAffix;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
 import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
@@ -62,9 +65,11 @@ public record AffixDetailEntry(LootCategory category, Affix affix, List<RarityEn
                         AffixCompatibilityDiagnostics.warnOnce(affix.getId(), cat.getName(), "JEI applicability", exception);
                         continue;
                     }
+                    float level = previewLevel(affix, rarity);
+                    if (affix instanceof DurableAffix && !(level > 0F)) continue;
                     Component catalog = catalogDescriptions.computeIfAbsent(rarity,
-                        key -> description(affix, ItemStack.EMPTY, key, cat, "JEI catalog description"));
-                    Component actual = description(affix, stack, rarity, cat, "JEI description");
+                        key -> description(affix, ItemStack.EMPTY, key, level, cat, "JEI catalog description"));
+                    Component actual = description(affix, stack, rarity, level, cat, "JEI description");
                     supported.add(new RarityEntry(rarity, mergeDescriptions(actual, catalog)));
                 }
                 if (!supported.isEmpty()) {
@@ -79,11 +84,29 @@ public record AffixDetailEntry(LootCategory category, Affix affix, List<RarityEn
         return entries;
     }
 
-    private static Component description(Affix affix, ItemStack stack, LootRarity rarity, LootCategory category, String stage) {
+    private static float previewLevel(Affix affix, LootRarity rarity) {
+        if (!(affix instanceof DurableAffix)) return 0.5F;
+        float level = 0F;
+        for (LootRarity.LootRule rule : rarity.getRules()) {
+            if (rule.type() == AffixType.DURABILITY) level = rule.chance();
+        }
+        return level;
+    }
+
+    private static Component description(Affix affix, ItemStack stack, LootRarity rarity, float level, LootCategory category, String stage) {
         try {
-            Component desc = affix.getAugmentingText(stack, rarity, 0.5f);
+            Component desc = affix.getAugmentingText(stack, rarity, level);
             if (desc != null && !desc.getString().isBlank()) {
-                Component example = desc.copy();
+                MutableComponent example = desc.copy();
+                if (affix instanceof DurableAffix) {
+                    if (!AffixPreviewText.hasBounds(example)) {
+                        var variation = AffixHelper.step(-0.07F, 14, 0.01F);
+                        example.append(Affix.valueBounds(
+                            Component.translatable("attributeslib.value.percent", Affix.fmt((level + variation.get(0F)) * 100F)),
+                            Component.translatable("attributeslib.value.percent", Affix.fmt((level + variation.get(1F)) * 100F))));
+                    }
+                    return example;
+                }
                 if (AffixPreviewText.hasBounds(example)) {
                     try {
                         Component lower = affix.getAugmentingText(stack, rarity, 0F);
