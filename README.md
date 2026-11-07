@@ -19,6 +19,7 @@ Apotheosis Artifice 是 fallen-leaf3268 开发的非官方 Apotheosis 附属模�
 - 饰品重铸：支持饰品重铸，并内置了一些词条和宝石。
 - 神化重铸台：能根据当前最高稀有度自动调节重铸等级。
 - 宝石柜：集中存储、搜索、筛选和批量升级宝石。
+- 宝石数据包补充：扩展已有宝石的适用装备，或为未覆盖的装备类别追加能力。
 - 附魔台：自由调节位阶、量子化和阿卡那；机械版支持红石控制的自动附魔与灌注。
 - 书架：天青书架减少青金石消耗，知识满溢书架减少经验消耗，属性支持数据包调整。
 - 便携工具：便携回收台随身分解装备；万能神化护符支持自动收纳宝石、附魔书和自动回收。
@@ -31,3 +32,51 @@ Apotheosis Artifice 是 fallen-leaf3268 开发的非官方 Apotheosis 附属模�
 
 - 饰品神化支持整体停用，已有数据保留，重新开启后恢复。
 - 修复 JEI 词条显示与重铸材料结算，改善 Easy Magic 兼容。
+
+## 宝石数据包补充
+
+在数据包的 `data/<命名空间>/apotheosis_artifice/gem_additions/<文件名>.json` 中编写补充，`target` 填已有宝石 ID。原有独立宝石的数据包格式保持不变。
+
+例如，让守护者宝石的胸甲能力也适用于饰品：
+
+```json
+{
+  "target": "apotheosis:core/guardian",
+  "extend_bonuses": [
+    { "match_category": "chestplate", "add_types": ["curio"] }
+  ]
+}
+```
+
+`match_category` 选中直接声明该类别的能力，新增类别沿用这项能力的数值；不会通过饰品类别回退查找。实际适用范围、宝石“可镶嵌于”列表和 JEI 会更新。此操作保留原有 `gem_class.key`，因此每条效果前的分组标题仍沿用原翻译。
+
+也可以为守护者宝石尚未覆盖的靴子类别添加独立的生命值能力：
+
+```json
+{
+  "target": "apotheosis:core/guardian",
+  "add_bonuses": [
+    {
+      "type": "apotheosis:attribute",
+      "gem_class": { "key": "boots", "types": ["boots"] },
+      "attribute": "minecraft:generic.max_health",
+      "operation": "ADDITION",
+      "values": {
+        "common": 1,
+        "uncommon": 2,
+        "rare": 3,
+        "epic": 4,
+        "mythic": 5,
+        "ancient": 6
+      }
+    }
+  ]
+}
+```
+
+两种操作可写在同一个补充文件中。`add_bonuses` 沿用原生完整能力格式；目前不支持修改已有数值或补齐已有能力的品质数据。
+
+- 同一路径采用高优先级数据包的文件；不同路径先处理高优先级数据包，同优先级按资源 ID 排序。
+- 相同补充重复加载不会叠加。类别被其他能力占用或格式无效时，该补充文件整体不生效，日志会标出来源和原因。
+- 支持 `conditions` 和 `forge:conditions`，目标宝石自身的加载条件也必须成立。仅在饰品神化开启时生效的补充，可添加 `"conditions": [{ "type": "apotheosis_artifice:curios_module" }]`。
+- 使用 `/reload` 应用变更；删除补充文件后再次重载即可恢复。宝石原有数值与品质范围保持不变，JEI 随重载和服务端同步刷新。

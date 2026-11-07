@@ -38,6 +38,7 @@
         "SigilPotionRangeMixin",
         "ReforgingMenuMixin",
         "GemAccessor",
+        "GemAdditionsMixin",
         "SocketingRecipeMixin",
         "GemMixin",
         "GemInstanceMixin",

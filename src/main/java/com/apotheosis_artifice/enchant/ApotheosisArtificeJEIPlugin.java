@@ -26,6 +26,7 @@ import dev.shadowsoffire.apotheosis.adventure.affix.reforging.ReforgingTableBloc
 import dev.shadowsoffire.apotheosis.adventure.compat.ApothSmithingCategory;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
 import dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry;
+import dev.shadowsoffire.apotheosis.adventure.socket.gem.GemRegistry;
 import dev.shadowsoffire.placebo.reload.RegistryCallback;
 import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
 import dev.shadowsoffire.apotheosis.ench.compat.EnchantingCategory;
@@ -82,6 +83,7 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     private volatile boolean recipesDirty;
     private List<AffixDetailEntry> suffixEntries = List.of();
     private List<AffixDetailEntry> prefixEntries = List.of();
+    private List<AffixGemEntry> gemEntries = List.of();
     private List<AffixGemEntry> curioGemEntries = List.of();
     private AffixCodexEntry fullCodex;
     private Boolean entriesCuriosEnabled;
@@ -94,6 +96,7 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
             if (!reloadHooksRegistered) {
                 AffixRegistry.INSTANCE.addCallback(RegistryCallback.reloadOnly(registry -> markRecipesDirty()));
                 RarityRegistry.INSTANCE.addCallback(RegistryCallback.reloadOnly(registry -> markRecipesDirty()));
+                GemRegistry.INSTANCE.addCallback(RegistryCallback.reloadOnly(registry -> markRecipesDirty()));
                 net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ApotheosisArtificeJEIPlugin::onClientTick);
                 net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ApotheosisArtificeJEIPlugin::onTagsUpdated);
                 reloadHooksRegistered = true;
@@ -145,19 +148,24 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         if (!dev.shadowsoffire.apotheosis.Apotheosis.enableAdventure) return;
         AffixCodexEntry.bindIngredientManager(reg.getIngredientManager());
         bindIngredientListener(reg.getIngredientManager());
+        activePlugin = this;
         recipesDirty = false;
         rebuildReforgingEntries();
         if (fullCodex != null) reg.addRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
         reg.addRecipes(SUFFIX_TYPE, suffixEntries);
         reg.addRecipes(PREFIX_TYPE, prefixEntries);
+        reg.addRecipes(AffixGemCategory.TYPE, gemEntries);
+    }
+
+    private void rebuildGemEntries() {
         List<AffixGemEntry> gemEntries = new ArrayList<>();
         for (LootCategory cat : AffixCodexEntry.getCategories()) {
             if (cat.isNone()) continue;
             if (cat.getName().startsWith("curios:")) continue;
             gemEntries.addAll(AffixGemEntry.createAll(cat));
         }
+        this.gemEntries = List.copyOf(gemEntries);
         curioGemEntries = gemEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
-        reg.addRecipes(AffixGemCategory.TYPE, gemEntries);
     }
 
     private void rebuildReforgingEntries() {
@@ -198,6 +206,7 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         fullCodex = AffixCodexEntry.create(details);
         this.suffixEntries = List.copyOf(suffixEntries);
         this.prefixEntries = List.copyOf(prefixEntries);
+        rebuildGemEntries();
         entriesCuriosEnabled = enabled;
     }
 
@@ -247,11 +256,13 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         var manager = runtime.getRecipeManager();
         manager.hideRecipes(SUFFIX_TYPE, suffixEntries);
         manager.hideRecipes(PREFIX_TYPE, prefixEntries);
+        manager.hideRecipes(AffixGemCategory.TYPE, gemEntries);
         if (fullCodex != null) manager.hideRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
         AffixCodexEntry.invalidate();
         rebuildReforgingEntries();
         manager.addRecipes(SUFFIX_TYPE, suffixEntries);
         manager.addRecipes(PREFIX_TYPE, prefixEntries);
+        manager.addRecipes(AffixGemCategory.TYPE, gemEntries);
         if (fullCodex != null) manager.addRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
         displayedCuriosEnabled = null;
         updateReforgingViews();
@@ -272,9 +283,11 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         recipesDirty = false;
         suffixEntries = List.of();
         prefixEntries = List.of();
+        gemEntries = List.of();
         curioGemEntries = List.of();
         fullCodex = null;
         entriesCuriosEnabled = null;
+        displayedCuriosEnabled = null;
         if (activePlugin == this) {
             activePlugin = null;
             AffixCodexEntry.unbindIngredientManager();
