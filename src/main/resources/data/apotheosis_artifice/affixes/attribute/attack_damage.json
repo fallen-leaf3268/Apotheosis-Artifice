@@ -1,4 +1,9 @@
 {
+  "conditions": [
+    {
+      "type": "apotheosis_artifice:curios_module"
+    }
+  ],
   "type": "apotheosis:attribute",
   "attribute": "minecraft:generic.attack_damage",
   "operation": "ADDITION",

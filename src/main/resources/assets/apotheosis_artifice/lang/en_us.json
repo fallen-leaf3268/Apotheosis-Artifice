@@ -53,7 +53,7 @@
     "affix.apotheosis_artifice.curio_slot_bonus": "%1$s Slot +%2$s",
     "affix.apotheosis_artifice.curio_slot_bonus.unique": "(Unique)",
     "affix.apotheosis_artifice.damage_immunity": "Immune to %s",
-    "affix.apotheosis_artifice.damage_resistance": "%s%% Resistance to %s",
+    "affix.apotheosis_artifice.damage_resistance": "%2$s%% Resistance to %1$s",
     "affix.apotheosis_artifice.effect_immunity": "Immune to %s",
 
     "affix.apotheosis_artifice:attribute/movement_speed": "Agility",

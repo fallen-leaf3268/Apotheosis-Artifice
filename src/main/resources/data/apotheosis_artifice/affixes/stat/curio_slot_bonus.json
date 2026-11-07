@@ -1,4 +1,9 @@
 {
+  "conditions": [
+    {
+      "type": "apotheosis_artifice:curios_module"
+    }
+  ],
   "type": "apotheosis_artifice:curio_slot_bonus",
   "slot": "curios:charm",
   "values": {

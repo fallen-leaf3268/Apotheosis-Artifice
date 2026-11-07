@@ -1,4 +1,9 @@
 {
+  "conditions": [
+    {
+      "type": "apotheosis_artifice:curios_module"
+    }
+  ],
   "weight": 8,
   "quality": 0,
   "dimensions": [],

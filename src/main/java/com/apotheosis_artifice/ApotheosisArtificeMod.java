@@ -227,6 +227,7 @@ public class ApotheosisArtificeMod {
         var modBus = FMLJavaModLoadingContext.get().getModEventBus();
         ApotheosisConfig.init();
         ApotheosisNetwork.init();
+        com.apotheosis_artifice.curios.CuriosApotheosisModule.init();
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
         if (!dev.shadowsoffire.apotheosis.Apotheosis.enableGarden) {

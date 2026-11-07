@@ -28,6 +28,10 @@ public class LootControllerMixin {
     @Inject(method = "createLootItem(Lnet/minecraft/world/item/ItemStack;Ldev/shadowsoffire/apotheosis/adventure/loot/LootCategory;Ldev/shadowsoffire/apotheosis/adventure/loot/LootRarity;Lnet/minecraft/util/RandomSource;)Lnet/minecraft/world/item/ItemStack;", at = @At("HEAD"), cancellable = true)
     private static void artifice$gateCurioLoot(ItemStack stack, LootCategory cat, LootRarity rarity,
         net.minecraft.util.RandomSource rand, CallbackInfoReturnable<ItemStack> cir) {
+        if (artifice$blocksCurioReforging(stack, cat)) {
+            cir.setReturnValue(stack);
+            return;
+        }
         if (!artifice$isCurioCategory(cat) || artifice$canGenerateCurioLoot()) return;
         LootCategory nativeCategory = com.apotheosis_artifice.CatOverride.forNativeItem(stack);
         if (nativeCategory.isNone() || artifice$isCurioCategory(nativeCategory)) {
@@ -54,6 +58,12 @@ public class LootControllerMixin {
     }
 
     @Unique
+    private static boolean artifice$blocksCurioReforging(ItemStack stack, LootCategory category) {
+        return !com.apotheosis_artifice.ApotheosisConfig.isCuriosReforgingEnabled()
+            && (category.isNone() || artifice$isCurioCategory(category) || com.apotheosis_artifice.CatOverride.isApotheosisBlocked(stack));
+    }
+
+    @Unique
     private static boolean artifice$canGenerateCurioLoot() {
         return com.apotheosis_artifice.ApotheosisConfig.isCuriosReforgingEnabled()
             && (com.apotheosis_artifice.CatOverride.isReforging()
@@ -63,7 +73,8 @@ public class LootControllerMixin {
     @Inject(method = "createLootItem(Lnet/minecraft/world/item/ItemStack;Ldev/shadowsoffire/apotheosis/adventure/loot/LootCategory;Ldev/shadowsoffire/apotheosis/adventure/loot/LootRarity;Lnet/minecraft/util/RandomSource;)Lnet/minecraft/world/item/ItemStack;", at = @At("RETURN"))
     private static void artifice$clearMaliceOnReforge(ItemStack stack, dev.shadowsoffire.apotheosis.adventure.loot.LootCategory cat,
         LootRarity rarity, net.minecraft.util.RandomSource rand, CallbackInfoReturnable<ItemStack> cir) {
-        if (artifice$isCurioCategory(cat) && !artifice$canGenerateCurioLoot()) return;
+        if (artifice$blocksCurioReforging(stack, cat)
+            || (artifice$isCurioCategory(cat) && !artifice$canGenerateCurioLoot())) return;
         com.apotheosis_artifice.adventure.SigilAffixHelper.clearMaliceState(cir.getReturnValue());
     }
 

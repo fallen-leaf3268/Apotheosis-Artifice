@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
-import com.electronwill.nightconfig.core.UnmodifiableConfig;
 import com.electronwill.nightconfig.core.utils.UnmodifiableConfigWrapper;
+import com.apotheosis_artifice.curios.CuriosApotheosisModule;
 
 import dev.shadowsoffire.apotheosis.Apotheosis;
 import dev.shadowsoffire.apotheosis.ench.EnchModule;
@@ -40,13 +40,11 @@ public class ApotheosisConfig {
     private static final ForgeConfigSpec SPEC;
     private static final MigratingConfigSpec REGISTERED_SPEC;
     private static volatile EnchantingConfigPacket synchronizedEnchantingConfig;
-    private static volatile ReforgingConfigPacket synchronizedReforgingConfig;
-    private static volatile ReforgingConfigPacket activeServerReforgingConfig;
     private static final TagKey<Enchantment> ARTIFICE_EXTRA_LEVEL = TagKey.create(Registries.ENCHANTMENT,
         new ResourceLocation(ApotheosisArtificeMod.MODID, "extra_level"));
     private static final ThreadLocal<Boolean> nativeEnchantmentDefaults = new ThreadLocal<>();
 
-    public static ForgeConfigSpec.BooleanValue ENABLE_CURIOS_REFORGING;
+    public static ForgeConfigSpec.BooleanValue ENABLE_CURIOS_APOTHEOSIS;
     public static ForgeConfigSpec.BooleanValue CLEAR_SOCKETS_ON_RARITY_CHANGE;
     public static ForgeConfigSpec.BooleanValue ENABLE_CURIOS_LOOT_RARITY;
 
@@ -67,10 +65,13 @@ public class ApotheosisConfig {
 
     static {
         BUILDER.comment("重铸").push("Reforging");
-        ENABLE_CURIOS_REFORGING = BUILDER
-            .comment("启用饰品重铸；关闭时同时停用饰品重铸功能和词条战利品。")
+        ENABLE_CURIOS_APOTHEOSIS = BUILDER
+            .comment("是否开启饰品重铸功能")
             .worldRestart()
-            .define("enable_curios_reforging", true);
+            .define("enable_curios_apotheosis", true);
+        USE_BETTERCOMBAT_HEAVY_OVERRIDE = BUILDER
+            .comment("是否将 Better Combat 的双手剑武器归类为重型武器。")
+            .define("use_bettercombat_heavy_override", false);
         CLEAR_SOCKETS_ON_RARITY_CHANGE = BUILDER
             .comment("品质改变时重置镶孔数量；关闭则采用神化原有规则。")
             .define("clear_sockets_on_rarity_change", false);
@@ -110,9 +111,6 @@ public class ApotheosisConfig {
         USE_APOTH_PROT_FORMULA = BUILDER
             .comment("是否启用神化保护附魔公式；关闭时使用原版公式。")
             .define("use_apoth_prot_formula", true);
-        USE_BETTERCOMBAT_HEAVY_OVERRIDE = BUILDER
-            .comment("是否将 Better Combat 的双手剑武器归类为重型武器。")
-            .define("use_bettercombat_heavy_override", false);
         LOOT_PINATA_EFFECT = BUILDER
             .comment("战利品大爆发特效修改：FIREWORKS 烟花、EXPLOSION 爆炸、OFF 关闭特效和音效。")
             .defineEnum("loot_pinata_effect", LootPinataEffect.EXPLOSION);
@@ -125,8 +123,6 @@ public class ApotheosisConfig {
     public static void init() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, REGISTERED_SPEC);
         MinecraftForge.EVENT_BUS.addListener(ApotheosisConfig::onPlayerLoggedIn);
-        MinecraftForge.EVENT_BUS.addListener(ApotheosisConfig::onServerAboutToStart);
-        MinecraftForge.EVENT_BUS.addListener(ApotheosisConfig::onServerStopped);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(ApotheosisConfig::onConfigReload);
     }
 
@@ -136,25 +132,15 @@ public class ApotheosisConfig {
     }
 
     public static boolean isCuriosReforgingEnabled() {
-        ReforgingConfigPacket snapshot = EffectiveSide.get().isClient()
-            ? synchronizedReforgingConfig : activeServerReforgingConfig;
-        return snapshot == null ? ENABLE_CURIOS_REFORGING.get() : snapshot.enableCuriosReforging();
+        return CuriosApotheosisModule.isEnabled();
     }
 
     public static boolean isCuriosLootRarityEnabled() {
-        return isCuriosReforgingEnabled() && ENABLE_CURIOS_LOOT_RARITY.get();
+        return CuriosApotheosisModule.isEnabled() && ENABLE_CURIOS_LOOT_RARITY.get();
     }
 
     public static LootPinataEffect getLootPinataEffect() {
         return Apotheosis.enableAdventure ? LOOT_PINATA_EFFECT.get() : LootPinataEffect.EXPLOSION;
-    }
-
-    private static void onServerAboutToStart(net.minecraftforge.event.server.ServerAboutToStartEvent event) {
-        activeServerReforgingConfig = new ReforgingConfigPacket(ENABLE_CURIOS_REFORGING.get());
-    }
-
-    private static void onServerStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
-        activeServerReforgingConfig = null;
     }
 
     public static int getMaxQuanta() {
@@ -247,35 +233,32 @@ public class ApotheosisConfig {
             MAX_ENCHANTMENTS.get(), EXTRA_LEVEL_CAP.get(), EXTRA_LEVEL_POWER_PER_LEVEL.get());
     }
 
-    public static void registerReforgingNetwork(SimpleChannel channel, int messageId) {
-        channel.registerMessage(messageId, ReforgingConfigPacket.class,
-            (packet, buffer) -> buffer.writeBoolean(packet.enableCuriosReforging()),
-            buffer -> new ReforgingConfigPacket(buffer.readBoolean()),
+    public static void registerCuriosModuleNetwork(SimpleChannel channel, int messageId) {
+        channel.registerMessage(messageId, CuriosModuleConfigPacket.class,
+            (packet, buffer) -> buffer.writeBoolean(packet.enabled()),
+            buffer -> new CuriosModuleConfigPacket(buffer.readBoolean()),
             (packet, context) -> {
-                context.get().enqueueWork(() -> {
-                    synchronizedReforgingConfig = packet;
-                    ClientEvents.refreshReforgingViews();
-                });
+                var connection = context.get().getNetworkManager();
+                context.get().enqueueWork(() -> ClientEvents.acceptModuleState(connection, packet));
                 context.get().setPacketHandled(true);
             }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
-    private static ReforgingConfigPacket effectiveServerReforgingConfig() {
-        ReforgingConfigPacket snapshot = activeServerReforgingConfig;
-        return snapshot == null ? new ReforgingConfigPacket(ENABLE_CURIOS_REFORGING.get()) : snapshot;
+    private static CuriosModuleConfigPacket effectiveServerModuleConfig() {
+        return new CuriosModuleConfigPacket(CuriosApotheosisModule.serverState().enabled());
     }
 
     private static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ApotheosisNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), localEnchantingConfig());
-            ApotheosisNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), effectiveServerReforgingConfig());
+            ApotheosisNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), effectiveServerModuleConfig());
         }
     }
 
     private static void onConfigReload(ModConfigEvent.Reloading event) {
         if (event.getConfig().getSpec() != REGISTERED_SPEC || ServerLifecycleHooks.getCurrentServer() == null) return;
         ApotheosisNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), localEnchantingConfig());
-        ApotheosisNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), effectiveServerReforgingConfig());
+        ApotheosisNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), effectiveServerModuleConfig());
     }
 
     private static final class MigratingConfigSpec extends UnmodifiableConfigWrapper<ForgeConfigSpec>
@@ -325,25 +308,29 @@ public class ApotheosisConfig {
         }
 
         private void migrate(CommentedConfig values) {
-            migrateValue(values, "Loot_Rarity", "Reforging", "enable_curios_loot_rarity");
-            migrateValue(values, "BetterCombat", "Combat_Formulas", "use_bettercombat_heavy_override");
+            List<String> modulePath = List.of("Reforging", "enable_curios_apotheosis");
+            migrateValue(values, List.of("Modules", "enable_curios_apotheosis"), modulePath);
+            migrateValue(values, List.of("Reforging", "enable_curios_reforging"), modulePath);
+            migrateValue(values, List.of("Loot_Rarity", "enable_curios_loot_rarity"),
+                List.of("Reforging", "enable_curios_loot_rarity"));
+            List<String> combatPath = List.of("Reforging", "use_bettercombat_heavy_override");
+            migrateValue(values, List.of("Combat_Formulas", "use_bettercombat_heavy_override"), combatPath);
+            migrateValue(values, List.of("BetterCombat", "use_bettercombat_heavy_override"), combatPath);
         }
 
-        private void migrateValue(CommentedConfig values, String previousGroup, String group, String key) {
-            List<String> path = List.of(group, key);
+        private void migrateValue(CommentedConfig values, List<String> previousPath, List<String> path) {
             ForgeConfigSpec.ValueSpec definition = this.config.getSpec().get(path);
-            Object previous = values.getRaw(previousGroup);
-            if (!(previous instanceof UnmodifiableConfig previousSection)) return;
-            Object previousValue = previousSection.getRaw(key);
-            if (!definition.test(previousValue)) return;
-            Object current = values.getRaw(group);
-            if (current instanceof UnmodifiableConfig currentSection && definition.test(currentSection.getRaw(key))) return;
-            if (!(current instanceof CommentedConfig)) values.set(group, values.createSubConfig());
-            values.set(path, previousValue);
+            Object previous = values.getRaw(previousPath);
+            if (definition.test(previous) && !definition.test(values.getRaw(path))) {
+                String group = path.get(0);
+                if (!(values.getRaw(group) instanceof CommentedConfig)) values.set(group, values.createSubConfig());
+                values.set(path, previous);
+            }
+            values.remove(previousPath);
         }
     }
 
-    public record ReforgingConfigPacket(boolean enableCuriosReforging) {}
+    public record CuriosModuleConfigPacket(boolean enabled) {}
 
     public record EnchantingConfigPacket(int maxEterna, int maxQuanta, int maxArcana,
         int maxEnchantments, int extraLevelCap, int extraLevelPowerPerLevel) {
@@ -359,10 +346,17 @@ public class ApotheosisConfig {
 
     @Mod.EventBusSubscriber(modid = ApotheosisArtificeMod.MODID, value = Dist.CLIENT)
     public static class ClientEvents {
+        private static void acceptModuleState(net.minecraft.network.Connection source, CuriosModuleConfigPacket packet) {
+            var listener = net.minecraft.client.Minecraft.getInstance().getConnection();
+            if (listener == null || listener.getConnection() != source) return;
+            CuriosApotheosisModule.acceptServerState(packet.enabled());
+            refreshReforgingViews();
+        }
+
         @SubscribeEvent
         public static void onLoggingOut(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
             synchronizedEnchantingConfig = null;
-            synchronizedReforgingConfig = null;
+            CuriosApotheosisModule.clearClientState();
             refreshReforgingViews();
         }
 

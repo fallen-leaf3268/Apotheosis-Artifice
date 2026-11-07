@@ -17,6 +17,7 @@ public class GemMixin {
 
     @Inject(method = "isValidIn", at = @At("RETURN"), cancellable = true)
     private void cf_isValidIn(ItemStack socketed, ItemStack gem, dev.shadowsoffire.apotheosis.adventure.loot.LootRarity rarity, CallbackInfoReturnable<Boolean> cir) {
+        if (!com.apotheosis_artifice.curios.CuriosApotheosisModule.isEnabled()) return;
         if (cir.getReturnValue()) return;
 
         LootCategory cat = LootCategory.forItem(socketed);

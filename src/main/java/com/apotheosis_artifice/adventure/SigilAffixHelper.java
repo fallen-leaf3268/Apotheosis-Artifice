@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.apotheosis_artifice.CatOverride;
 import com.apotheosis_artifice.affix.AttributeBaseAffix;
 import com.apotheosis_artifice.affix.CurioSlotBonusAffix;
 import com.apotheosis_artifice.affix.DamageResistanceAffix;
@@ -66,7 +67,7 @@ public final class SigilAffixHelper {
     public static final String SUPREMACY_USED = "apotheosis_artifice:supremacy_used";
 
     public static boolean canApplySupremacy(ItemStack stack) {
-        if (!Apotheosis.enableAdventure || stack.isEmpty()) {
+        if (!Apotheosis.enableAdventure || stack.isEmpty() || CatOverride.isApotheosisBlocked(stack)) {
             return false;
         }
         CompoundTag data = stack.getTagElement(AffixHelper.AFFIX_DATA);
@@ -75,18 +76,19 @@ public final class SigilAffixHelper {
         }
         CompoundTag values = data.getCompound(AffixHelper.AFFIXES);
         return values.getAllKeys().stream().anyMatch(id -> values.contains(id, Tag.TAG_ANY_NUMERIC)
-            && Float.isFinite(values.getFloat(id)) && values.getFloat(id) < 1.5F);
+            && SigilUpgradePolicy.canApplySupremacy(values.getFloat(id)));
     }
 
     public static boolean canApplyMalice(ItemStack stack) {
         return SigilUpgradePolicy.canApplyMalice(snapshot(instances(stack)));
     }
 
-    public static boolean isExtremelyMalicious(ItemStack stack) {
-        return SigilUpgradePolicy.isExtremelyMalicious(snapshot(instances(stack)));
+    public static boolean isExtremelyMalicious(List<AffixInstance> instances) {
+        return SigilUpgradePolicy.isExtremelyMalicious(snapshot(instances));
     }
 
     public static boolean hasPendingMalice(ItemStack stack) {
+        if (CatOverride.isApotheosisBlocked(stack)) return false;
         CompoundTag data = stack.getTagElement(AffixHelper.AFFIX_DATA);
         return !stack.isEmpty() && data != null && data.getBoolean(MALICE_PENDING);
     }
@@ -97,7 +99,8 @@ public final class SigilAffixHelper {
     }
 
     public static Map<DynamicHolder<? extends Affix>, AffixInstance> getAllAffixes(ItemStack stack) {
-        if (!Apotheosis.enableAdventure || stack.isEmpty() || AffixRegistry.INSTANCE.getValues().isEmpty()) {
+        if (!Apotheosis.enableAdventure || stack.isEmpty() || CatOverride.isApotheosisBlocked(stack)
+            || AffixRegistry.INSTANCE.getValues().isEmpty()) {
             return Map.of();
         }
         CompoundTag data = stack.getTagElement(AffixHelper.AFFIX_DATA);
@@ -192,7 +195,7 @@ public final class SigilAffixHelper {
         CompoundTag values = data.getCompound(AffixHelper.AFFIXES);
         for (String id : values.getAllKeys()) {
             if (values.contains(id, Tag.TAG_ANY_NUMERIC) && Float.isFinite(values.getFloat(id))) {
-                values.putFloat(id, Math.max(values.getFloat(id), 1.5F));
+                values.putFloat(id, SigilUpgradePolicy.supremacy(values.getFloat(id)));
             }
         }
         clearUpgradeLimits(data);
@@ -228,6 +231,7 @@ public final class SigilAffixHelper {
     }
 
     public static ItemStack prepareMalice(ItemStack input) {
+        if (CatOverride.isApotheosisBlocked(input)) return ItemStack.EMPTY;
         ItemStack output = input.copy();
         output.getOrCreateTagElement(AffixHelper.AFFIX_DATA).putBoolean(MALICE_PENDING, true);
         return output;

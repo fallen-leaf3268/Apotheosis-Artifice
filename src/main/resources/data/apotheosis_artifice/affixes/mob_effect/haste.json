@@ -1,4 +1,9 @@
 {
+  "conditions": [
+    {
+      "type": "apotheosis_artifice:curios_module"
+    }
+  ],
   "type": "apotheosis:mob_effect",
   "mob_effect": "minecraft:haste",
   "target": "ATTACK_SELF",

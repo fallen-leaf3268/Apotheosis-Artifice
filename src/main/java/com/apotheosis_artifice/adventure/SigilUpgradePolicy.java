@@ -11,14 +11,26 @@ public final class SigilUpgradePolicy {
 
     public static final float MALICE_LEVEL = 2.0F;
     public static final float FINAL_MALICE_CHANCE = 0.033F;
+    public static final float SUPREMACY_LEVEL = 1.5F;
 
-    public static boolean canApplySupremacy(List<Affix> input, boolean alreadyUsed) {
-        return input.stream().anyMatch(affix -> affix.valid && Float.isFinite(affix.level) && affix.level < 1.5F);
+    public static boolean canApplySupremacy(float level) {
+        return Float.isFinite(level) && level < SUPREMACY_LEVEL;
+    }
+
+    public static float supremacy(float level) {
+        return canApplySupremacy(level) ? SUPREMACY_LEVEL : level;
+    }
+
+    public static boolean canApplySupremacy(List<Affix> input) {
+        return input.stream().anyMatch(affix -> affix.valid && canApplySupremacy(affix.level));
     }
 
     public static List<Affix> supremacy(List<Affix> input) {
-        return input.stream().map(affix -> affix.valid
-            ? affix.withPower(Math.max(affix.level, 1.5F), Math.max(affix.level, 1.5F), false) : affix).toList();
+        return input.stream().map(affix -> {
+            if (!affix.valid) return affix;
+            float level = supremacy(affix.level);
+            return affix.withPower(level, level, false);
+        }).toList();
     }
 
     public static boolean canUpgrade(float level, float maximum) {
@@ -124,10 +136,6 @@ public final class SigilUpgradePolicy {
 
         public Affix(String id, float level, boolean valid, boolean levelIndependent, boolean durability, float maximum) {
             this(id, level, valid, levelIndependent, durability, maximum, maximum >= MALICE_LEVEL);
-        }
-
-        private Affix withPower(float level, float maximum) {
-            return withPower(level, maximum, this.maliceUsed);
         }
 
         private Affix withPower(float level, float maximum, boolean maliceUsed) {

@@ -13,6 +13,7 @@ public class GemInstanceMixin {
 
     @Inject(method = "isValid", at = @At("RETURN"), cancellable = true)
     private void cf_fallbackCurio(CallbackInfoReturnable<Boolean> cir) {
+        if (!com.apotheosis_artifice.curios.CuriosApotheosisModule.isEnabled()) return;
         if (cir.getReturnValue()) return;
 
         GemInstance self = (GemInstance) (Object) this;

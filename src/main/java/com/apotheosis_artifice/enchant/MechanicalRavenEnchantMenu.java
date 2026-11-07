@@ -37,12 +37,7 @@ public class MechanicalRavenEnchantMenu extends RavenEnchantMenu {
         this.replaceEnchantSlot();
         addIOSlots(te.getIOInv());
         this.addDataSlot(this.outputPending);
-        ItemStack fromSave = te.getSavedEnchantSlot();
-        if (EasyMagicCompat.isLoaded() && !fromSave.isEmpty()) {
-            te.setSavedEnchantSlot(ItemStack.EMPTY);
-            if (this.enchantSlots.getItem(0).isEmpty()) this.enchantSlots.setItem(0, fromSave);
-            else inv.placeItemBackInInventory(fromSave);
-        }
+        if (EasyMagicCompat.isLoaded()) te.transferSavedEnchantInput(this.enchantSlots, inv::placeItemBackInInventory);
         this.enchantmentSeed.set((int) te.getEnchantmentSeed());
         te.refillEnchantSlot();
         this.slotsChanged(this.enchantSlots);

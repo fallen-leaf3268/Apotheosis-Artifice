@@ -1,4 +1,9 @@
 {
+  "conditions": [
+    {
+      "type": "apotheosis_artifice:curios_module"
+    }
+  ],
   "type": "apotheosis_artifice:damage_resistance",
   "damage_types": [
     "minecraft:magic",

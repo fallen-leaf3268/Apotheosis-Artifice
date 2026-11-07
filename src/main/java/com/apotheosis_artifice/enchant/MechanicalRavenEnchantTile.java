@@ -67,6 +67,21 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     public ItemStack getSavedEnchantSlot() { return this.enchantInventory.getItem(0); }
     public void setSavedEnchantSlot(ItemStack stack) { this.enchantInventory.setItem(0, stack.copy()); }
 
+    public void transferSavedEnchantInput(Container target, java.util.function.Consumer<ItemStack> returnStack) {
+        ItemStack saved = this.enchantInventory.getItem(0);
+        if (saved.isEmpty()) return;
+        boolean completed = saved == this.completedWorkStack;
+        this.enchantInventory.removeItemNoUpdate(0);
+        this.completedWorkStack = ItemStack.EMPTY;
+        if (target.getItem(0).isEmpty()) {
+            this.setCompletedEnchantInput(completed ? saved : ItemStack.EMPTY);
+            target.setItem(0, saved);
+        } else {
+            returnStack.accept(saved);
+        }
+        this.setChanged();
+    }
+
     private Container getActiveEnchantInventory() {
         if ((Object) this instanceof EasyMagicEnchantingStorage storage && EasyMagicCompat.isLoaded()) {
             return storage.getEasyMagicInventory();
@@ -171,12 +186,27 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
     }
 
     public boolean isOutputPending() {
-        ItemStack current = this.getActiveEnchantInventory().getItem(0);
+        if ((Object) this instanceof EasyMagicEnchantingStorage storage && EasyMagicCompat.isLoaded()) {
+            return storage.isEasyMagicOutputPending();
+        }
+        return this.isNativeOutputPending();
+    }
+
+    private boolean isNativeOutputPending() {
+        ItemStack current = this.enchantInventory.getItem(0);
         if (current.isEmpty() || current != this.completedWorkStack) {
             this.completedWorkStack = ItemStack.EMPTY;
             return false;
         }
         return true;
+    }
+
+    public void setCompletedEnchantInput(ItemStack stack) {
+        if ((Object) this instanceof EasyMagicEnchantingStorage storage && EasyMagicCompat.isLoaded()) {
+            storage.setEasyMagicCompletedInput(stack);
+        } else {
+            this.completedWorkStack = stack;
+        }
     }
 
     public boolean canAcceptManualOutput() { return !this.isOutputPending(); }
@@ -189,7 +219,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         if (!this.ioInv.isItemValid(INPUT, buffered)) return;
         this.movingInventory = true;
         try {
-            this.completedWorkStack = ItemStack.EMPTY;
+            this.setCompletedEnchantInput(ItemStack.EMPTY);
             input.setItem(0, this.ioInv.extractItem(INPUT, 1, false));
             this.setChanged();
         } finally {
@@ -202,7 +232,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         Container input = this.getActiveEnchantInventory();
         ItemStack result = input.getItem(0);
         if (result.isEmpty()) return false;
-        this.completedWorkStack = result;
+        this.setCompletedEnchantInput(result);
         this.setChanged();
         this.flushEnchantedInput();
         this.refillEnchantSlot();
@@ -217,7 +247,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         try {
             ItemStack remaining = this.storeOutput(stack.copy());
             if (remaining.getCount() != stack.getCount()) {
-                this.completedWorkStack = remaining;
+                this.setCompletedEnchantInput(remaining);
                 input.setItem(0, remaining);
                 this.setChanged();
             }
@@ -282,7 +312,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         this.movingInventory = true;
         try {
             if (lapisCost > 0) fuel.extractItem(0, lapisCost, false);
-            this.completedWorkStack = result;
+            this.setCompletedEnchantInput(result);
             input.setItem(0, result);
             this.setChanged();
         } finally {
@@ -348,7 +378,7 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         tag.put("io_inv", ioInv.serializeNBT()); tag.putLong("ench_seed", this.enchantmentSeed);
         ItemStack saved = this.getSavedEnchantSlot();
         if (!saved.isEmpty()) tag.put("ench_slot", saved.save(new CompoundTag()));
-        tag.putBoolean("ench_completed", this.isOutputPending());
+        tag.putBoolean("ench_completed", this.isNativeOutputPending());
         if (libBound && libDim != null) {
             tag.putString("lb_dim", libDim.toString()); tag.putInt("lb_x", libX); tag.putInt("lb_y", libY); tag.putInt("lb_z", libZ);
             tag.putString("lb_name", this.libName);
@@ -365,15 +395,17 @@ public class MechanicalRavenEnchantTile extends RavenEnchantTile {
         if (tag.contains("io_inv")) ioInv.deserializeNBT(tag.getCompound("io_inv"));
         if (tag.contains("ench_seed")) this.enchantmentSeed = tag.getLong("ench_seed");
         this.setSavedEnchantSlot(ItemStack.of(tag.getCompound("ench_slot")));
+        this.completedWorkStack = tag.getBoolean("ench_completed") ? this.getSavedEnchantSlot() : ItemStack.EMPTY;
         if (tag.contains("ench_slot")) {
             if ((Object) this instanceof EasyMagicEnchantingStorage storage
                 && EasyMagicCompat.isLoaded() && !this.getSavedEnchantSlot().isEmpty()
                 && storage.getEasyMagicInventory().getItem(0).isEmpty()) {
                 ItemStack saved = this.enchantInventory.removeItemNoUpdate(0);
+                if (saved == this.completedWorkStack) storage.setEasyMagicCompletedInput(saved);
+                this.completedWorkStack = ItemStack.EMPTY;
                 storage.getEasyMagicInventory().setItem(0, saved);
             }
         }
-        this.completedWorkStack = tag.getBoolean("ench_completed") ? this.getActiveEnchantInventory().getItem(0) : ItemStack.EMPTY;
         if (tag.contains("lb_dim")) {
             libBound = true; libDim = ResourceLocation.tryParse(tag.getString("lb_dim"));
             libX = tag.getInt("lb_x"); libY = tag.getInt("lb_y"); libZ = tag.getInt("lb_z");

@@ -126,12 +126,13 @@ public final class EasyMagicCompat {
             if (catalystCost > 0) {
                 ItemStack catalyst = catalystSlot.getItem();
                 catalyst.shrink(catalystCost);
-                if (catalyst.isEmpty()) catalystSlot.set(ItemStack.EMPTY);
             }
             if (experienceCost > 0) player.giveExperiencePoints(-experienceCost);
         }
         menu.enchantSlots.setChanged();
-        menu.slotsChanged(menu.enchantSlots);
+        if (!(menu.enchantSlots instanceof EasyMagicEnchantingStorage.Inventory inventory) || !inventory.notifiesMenu(menu, player)) {
+            menu.slotsChanged(menu.enchantSlots);
+        }
         return true;
     }
 

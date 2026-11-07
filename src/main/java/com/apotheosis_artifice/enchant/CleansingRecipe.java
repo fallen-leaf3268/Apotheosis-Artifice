@@ -38,6 +38,7 @@ public class CleansingRecipe extends ApothSmithingRecipe implements ReactiveSmit
         if (!pInv.getItem(0).isEmpty()) return false;
         ItemStack base = pInv.getItem(1);
         if (base.isEmpty()) return false;
+        if (com.apotheosis_artifice.CatOverride.isApotheosisBlocked(base)) return false;
         if (base.getTagElement(AffixHelper.AFFIX_DATA) == null) return false;
         ItemStack addition = pInv.getItem(2);
         return addition.getItem() == com.apotheosis_artifice.ApotheosisArtificeMod.SIGIL_OF_CLEANSING.get();

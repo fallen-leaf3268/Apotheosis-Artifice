@@ -130,7 +130,7 @@ public class ApotheosisNetwork {
             SyncGemCaseMaterialsPacket::encode, SyncGemCaseMaterialsPacket::decode,
             SyncGemCaseMaterialsPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         ApotheosisConfig.registerNetwork(CHANNEL, id++);
-        ApotheosisConfig.registerReforgingNetwork(CHANNEL, id++);
+        ApotheosisConfig.registerCuriosModuleNetwork(CHANNEL, id++);
     }
 
     public static void sendClues(ServerPlayer player, int slot, List<EnchantmentInstance> clues) {

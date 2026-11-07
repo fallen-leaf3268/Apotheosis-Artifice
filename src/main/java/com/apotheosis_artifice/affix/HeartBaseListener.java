@@ -10,13 +10,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.apotheosis_artifice.ApotheosisEvents;
+import com.apotheosis_artifice.curios.CurioApotheosisEvents;
+import com.apotheosis_artifice.curios.CurioLoadState;
+import com.apotheosis_artifice.curios.CuriosApotheosisModule;
+import com.apotheosis_artifice.curios.LegacyCurioContributions;
 import com.apotheosis_artifice.AttributeHelper;
+import com.mojang.logging.LogUtils;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixInstance;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootRarity;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -29,6 +34,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.slf4j.Logger;
 import top.theillusivec4.curios.api.CuriosCapability;
 import top.theillusivec4.curios.api.event.CurioChangeEvent;
 import top.theillusivec4.curios.api.event.SlotModifiersUpdatedEvent;
@@ -38,6 +44,7 @@ import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
 public class HeartBaseListener {
 
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String APPLIED = "apotheosis_artifice:attribute_base_bonuses";
     private static final String UNIQUE_SLOTS = "apotheosis_artifice:unique_slot_bonuses";
     private static final Set<LivingEntity> APPLYING = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -45,6 +52,34 @@ public class HeartBaseListener {
 
     public static void init() {
         MinecraftForge.EVENT_BUS.register(new HeartBaseListener());
+    }
+
+    public static boolean clearContributions(LivingEntity entity) {
+        if (CurioLoadState.isLoading(entity)) return false;
+        if (!APPLYING.add(entity)) {
+            PENDING.add(entity);
+            return false;
+        }
+        try {
+            boolean prepared = LegacyCurioContributions.prepare(entity, true);
+            do {
+                PENDING.remove(entity);
+                if (entity.getPersistentData().contains(APPLIED, Tag.TAG_COMPOUND)) applyBaseBonuses(entity, Map.of());
+                var handler = entity.getCapability(CuriosCapability.INVENTORY).orElse(null);
+                if (handler != null && entity.getPersistentData().contains(UNIQUE_SLOTS, Tag.TAG_COMPOUND)) {
+                    reconcileUniqueSlotBonuses(entity, handler, Map.of());
+                }
+            } while (PENDING.remove(entity));
+            return prepared;
+        } finally {
+            APPLYING.remove(entity);
+            PENDING.remove(entity);
+        }
+    }
+
+    public static boolean hasContributions(LivingEntity entity) {
+        CompoundTag data = entity.getPersistentData();
+        return !data.getCompound(APPLIED).isEmpty() || !data.getCompound(UNIQUE_SLOTS).isEmpty();
     }
 
     @SubscribeEvent
@@ -68,23 +103,33 @@ public class HeartBaseListener {
 
     @SubscribeEvent
     public void onJoin(net.minecraftforge.event.entity.EntityJoinLevelEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (player.level().isClientSide()) return;
-        if (!player.getPersistentData().contains(APPLIED)) {
-            CompoundTag legacyBonuses = new CompoundTag();
-            scanTotalBonus(player).forEach((attribute, bonus) -> {
-                AttributeInstance inst = player.getAttribute(attribute);
-                ResourceLocation key = ForgeRegistries.ATTRIBUTES.getKey(attribute);
-                if (inst != null && key != null && inst.getBaseValue() == attribute.getDefaultValue() + bonus) {
-                    legacyBonuses.putFloat(key.toString(), bonus);
-                }
-            });
-            player.getPersistentData().put(APPLIED, legacyBonuses);
+        if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
+        if (!CuriosApotheosisModule.isEnabled()) {
+            if (CuriosApotheosisModule.isDisabled() && !CurioApotheosisEvents.clearContributions(entity)) {
+                LOGGER.warn("Unresolved legacy Curio contributions for entity {}; known modifiers were cleaned", entity.getUUID());
+            }
+            return;
         }
+        if (!(entity instanceof ServerPlayer player)) return;
         apply(player);
+        if (!player.getPersistentData().contains(APPLIED, Tag.TAG_COMPOUND)) {
+            LOGGER.warn("Unresolved legacy Curio base contributions for player {}; base bonuses were not reapplied", player.getUUID());
+        }
+    }
+
+    @SubscribeEvent
+    public void onEquipmentChange(net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent event) {
+        if (!event.getEntity().level().isClientSide() && CuriosApotheosisModule.isDisabled()) {
+            CurioApotheosisEvents.clearContributions(event.getEntity());
+        }
     }
 
     private static void apply(LivingEntity entity) {
+        if (CurioLoadState.isLoading(entity)) return;
+        if (!CuriosApotheosisModule.isEnabled()) {
+            if (CuriosApotheosisModule.isDisabled()) CurioApotheosisEvents.clearContributions(entity);
+            return;
+        }
         if (!APPLYING.add(entity)) {
             PENDING.add(entity);
             return;
@@ -92,7 +137,7 @@ public class HeartBaseListener {
         try {
             do {
                 PENDING.remove(entity);
-                applyBaseBonuses(entity);
+                if (LegacyCurioContributions.prepare(entity, false)) applyBaseBonuses(entity);
                 applyUniqueSlotBonuses(entity);
             } while (PENDING.remove(entity));
         } finally {
@@ -102,7 +147,16 @@ public class HeartBaseListener {
     }
 
     private static void applyBaseBonuses(LivingEntity entity) {
-        Map<Attribute, Float> currentBonuses = scanTotalBonus(entity);
+        applyBaseBonuses(entity, scanTotalBonus(entity));
+    }
+
+    public static void reconcileAfterLoad(LivingEntity entity) {
+        if (CurioApotheosisEvents.hasContributions(entity) || entity.getCapability(CuriosCapability.INVENTORY).isPresent()) {
+            apply(entity);
+        }
+    }
+
+    private static void applyBaseBonuses(LivingEntity entity, Map<Attribute, Float> currentBonuses) {
         CompoundTag savedBonuses = entity.getPersistentData().getCompound(APPLIED);
         Map<Attribute, Float> prevBonuses = new HashMap<>();
         for (String key : savedBonuses.getAllKeys()) {
@@ -157,16 +211,19 @@ public class HeartBaseListener {
             IDynamicStackHandler stacks = entry.getValue().getStacks();
             for (int i = 0; i < stacks.getSlots(); i++) {
                 ItemStack stack = stacks.getStackInSlot(i);
-                if (stack.isEmpty() || !ApotheosisEvents.curiosforge_matchesSlot(stack, entry.getKey())) continue;
+                if (stack.isEmpty() || !CurioApotheosisEvents.curiosforge_matchesSlot(stack, entry.getKey())) continue;
                 for (AffixInstance inst : AffixHelper.getAffixes(stack).values()) {
                     if (!inst.isValid() || !(inst.affix().get() instanceof CurioSlotBonusAffix bonus)) continue;
-                    if (bonus.getFixedUuid().isEmpty()) continue;
-                    bonuses.add(new SlotBonus(bonus.getSlotId(), UUID.fromString(bonus.getFixedUuid()),
+                    if (bonus.getFixedUuidValue() == null) continue;
+                    bonuses.add(new SlotBonus(bonus.getSlotId(), bonus.getFixedUuidValue(),
                         bonus.getBonus(inst.rarity().get(), inst.level())));
                 }
             }
         }
-        Map<String, Map<UUID, Float>> current = aggregateUniqueBonuses(bonuses);
+        reconcileUniqueSlotBonuses(entity, handler, aggregateUniqueBonuses(bonuses));
+    }
+
+    private static void reconcileUniqueSlotBonuses(LivingEntity entity, ICuriosItemHandler handler, Map<String, Map<UUID, Float>> current) {
         CompoundTag previous = entity.getPersistentData().getCompound(UNIQUE_SLOTS);
         CompoundTag next = new CompoundTag();
         Set<String> slotIds = new HashSet<>(previous.getAllKeys());
@@ -175,7 +232,7 @@ public class HeartBaseListener {
             Map<UUID, Float> amounts = current.getOrDefault(slotId, Map.of());
             CompoundTag saved = previous.getCompound(slotId);
             Set<UUID> ids = new HashSet<>(amounts.keySet());
-            for (String uuid : saved.getAllKeys()) ids.add(UUID.fromString(uuid));
+            ids.addAll(savedSlotUuids(saved, slotId, entity.getUUID()));
             CompoundTag nextSlot = new CompoundTag();
             ICurioStacksHandler slots = handler.getCurios().get(slotId);
             for (UUID uuid : ids) {
@@ -197,6 +254,21 @@ public class HeartBaseListener {
         entity.getPersistentData().put(UNIQUE_SLOTS, next);
     }
 
+    private static Set<UUID> savedSlotUuids(CompoundTag saved, String slotId, UUID entityId) {
+        Set<UUID> ids = new HashSet<>();
+        int invalid = 0;
+        for (String key : Set.copyOf(saved.getAllKeys())) {
+            try {
+                ids.add(UUID.fromString(key));
+            } catch (IllegalArgumentException error) {
+                saved.remove(key);
+                invalid++;
+            }
+        }
+        if (invalid > 0) LOGGER.warn("Removed {} invalid saved curio slot UUIDs for slot {} of entity {}", invalid, slotId, entityId);
+        return ids;
+    }
+
     private static Map<Attribute, Float> scanTotalBonus(LivingEntity entity) {
         Map<Attribute, Float> result = new HashMap<>();
         LazyOptional<ICuriosItemHandler> cap = entity.getCapability(CuriosCapability.INVENTORY);
@@ -209,7 +281,7 @@ public class HeartBaseListener {
             for (int i = 0; i < dh.getSlots(); i++) {
                 ItemStack stack = dh.getStackInSlot(i);
                 if (stack.isEmpty()) continue;
-                if (!ApotheosisEvents.curiosforge_matchesSlot(stack, entry.getKey())) continue;
+                if (!CurioApotheosisEvents.curiosforge_matchesSlot(stack, entry.getKey())) continue;
                 for (AffixInstance inst : AffixHelper.getAffixes(stack).values()) {
                     if (!inst.isValid()) continue;
                     if (!(inst.affix().get() instanceof AttributeBaseAffix ab)) continue;

@@ -34,7 +34,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.EnchantmentMenu;
@@ -51,7 +50,7 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
     @Shadow(remap = false) protected ApothEnchantmentMenu.TableStats stats;
     @Unique private Player artifice$menuPlayer;
     @Unique private Inventory artifice$playerInventory;
-    @Unique private Container artifice$pendingEasyMagicInventory;
+    @Unique private EasyMagicEnchantingStorage artifice$pendingEasyMagicStorage;
     @Unique private EasyMagicEnchantingStorage artifice$legacyFuelStorage;
     @Unique private DataSlot artifice$lapisDiscount;
     @Unique private DataSlot artifice$experienceDiscount;
@@ -63,7 +62,12 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
     @Inject(method = "<init>(ILnet/minecraft/world/entity/player/Inventory;)V", at = @At("TAIL"))
     private void artifice$bindClientEasyMagicInventory(int id, Inventory inventory, CallbackInfo ci) {
         this.artifice$rememberPlayer(inventory);
-        if (EasyMagicCompat.isLoaded()) this.artifice$bindEasyMagicInventory(new SimpleContainer(3) {
+        if (EasyMagicCompat.isLoaded()) this.artifice$bindEasyMagicInventory(new EasyMagicEnchantingStorage.Inventory(3) {
+            @Override
+            public boolean notifiesMenu(ApothEnchantmentMenu menu, Player player) {
+                return (Object) menu == ApothEnchantmentMenuMixin.this;
+            }
+
             @Override
             public void setChanged() {
                 super.setChanged();
@@ -80,7 +84,7 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
             this.artifice$legacyFuelStorage = storage;
             this.artifice$bindEasyMagicInventory(storage.getEasyMagicInventory());
         } else {
-            this.artifice$queueEasyMagicInventoryMigration(storage.getEasyMagicInventory());
+            this.artifice$queueEasyMagicInventoryMigration(storage);
         }
     }
 
@@ -144,8 +148,8 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
     }
 
     @Unique
-    private void artifice$queueEasyMagicInventoryMigration(Container inventory) {
-        this.artifice$pendingEasyMagicInventory = inventory;
+    private void artifice$queueEasyMagicInventoryMigration(EasyMagicEnchantingStorage storage) {
+        this.artifice$pendingEasyMagicStorage = storage;
     }
 
     @Override
@@ -155,42 +159,31 @@ public abstract class ApothEnchantmentMenuMixin extends EnchantmentMenu implemen
             this.artifice$legacyFuelStorage = null;
             storage.migrateLegacyFuel(this.artifice$menuPlayer);
         }
-        Container source = this.artifice$pendingEasyMagicInventory;
-        if (source == null) return;
-        this.artifice$pendingEasyMagicInventory = null;
+        EasyMagicEnchantingStorage storage = this.artifice$pendingEasyMagicStorage;
+        if (storage == null) return;
+        this.artifice$pendingEasyMagicStorage = null;
+        Container source = storage.getEasyMagicInventory();
+        boolean completed = storage.isEasyMagicOutputPending();
         EasyMagicInventoryMigrator.migrate(new EasyMagicInventoryMigrator.Source<ItemStack>() {
             @Override public ItemStack get(int slot) { return source.getItem(slot); }
-            @Override public void clear(int slot) { source.setItem(slot, ItemStack.EMPTY); }
+            @Override public void clear(int slot) {
+                source.setItem(slot, ItemStack.EMPTY);
+                if (slot == 0) storage.setEasyMagicCompletedInput(ItemStack.EMPTY);
+            }
         }, new EasyMagicInventoryMigrator.Target<ItemStack>() {
             @Override public boolean hasItem() { return ApothEnchantmentMenuMixin.this.slots.get(0).hasItem(); }
             @Override public boolean mayPlace(ItemStack stack) { return ApothEnchantmentMenuMixin.this.slots.get(0).mayPlace(stack); }
-            @Override public void set(ItemStack stack) { ApothEnchantmentMenuMixin.this.slots.get(0).set(stack); }
+            @Override public void set(ItemStack stack) {
+                if (completed && (Object) ApothEnchantmentMenuMixin.this instanceof com.apotheosis_artifice.enchant.MechanicalRavenEnchantMenu menu) {
+                    menu.getTile().setCompletedEnchantInput(stack);
+                }
+                ApothEnchantmentMenuMixin.this.slots.get(0).set(stack);
+            }
         }, new EasyMagicInventoryMigrator.Target<ItemStack>() {
             @Override public boolean hasItem() { return ApothEnchantmentMenuMixin.this.slots.get(1).hasItem(); }
             @Override public boolean mayPlace(ItemStack stack) { return ApothEnchantmentMenuMixin.this.slots.get(1).mayPlace(stack); }
             @Override public void set(ItemStack stack) { ApothEnchantmentMenuMixin.this.slots.get(1).set(stack); }
         }, this.artifice$playerInventory::placeItemBackInInventory, ItemStack::copy, ItemStack::isEmpty);
-    }
-
-    @Unique
-    private void artifice$moveOrReturnEasyMagicStack(Container source, int sourceSlot, int targetSlot) {
-        ItemStack stack = source.getItem(sourceSlot).copy();
-        if (stack.isEmpty()) return;
-        Slot target = this.slots.get(targetSlot);
-        if (!target.hasItem() && target.mayPlace(stack)) {
-            target.set(stack);
-        } else {
-            this.artifice$playerInventory.placeItemBackInInventory(stack);
-        }
-        source.setItem(sourceSlot, ItemStack.EMPTY);
-    }
-
-    @Unique
-    private void artifice$returnEasyMagicStack(Container source, int sourceSlot) {
-        ItemStack stack = source.getItem(sourceSlot).copy();
-        if (stack.isEmpty()) return;
-        this.artifice$playerInventory.placeItemBackInInventory(stack);
-        source.setItem(sourceSlot, ItemStack.EMPTY);
     }
 
     private void artifice$bindEasyMagicInventory(Container inventory) {

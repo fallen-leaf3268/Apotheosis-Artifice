@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import com.apotheosis_artifice.ApotheosisEvents;
+import com.apotheosis_artifice.curios.CurioApotheosisEvents;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixInstance;
@@ -63,7 +63,7 @@ public class EnchantmentHelperMixin {
                 for (int i = 0; i < stackHandler.getSlots(); i++) {
                     ItemStack stack = stackHandler.getStackInSlot(i);
                     if (stack.isEmpty()) continue;
-                    if (!ApotheosisEvents.curiosforge_matchesSlot(stack, slotId)) continue;
+                    if (!CurioApotheosisEvents.curiosforge_matchesSlot(stack, slotId)) continue;
                     var affixes = AffixHelper.getAffixes(stack);
                     for (AffixInstance inst : affixes.values()) {
                         affixFn.accept(stack, inst);

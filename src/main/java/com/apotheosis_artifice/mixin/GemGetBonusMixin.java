@@ -22,6 +22,7 @@ public class GemGetBonusMixin {
 
     @Inject(method = "getBonus", at = @At("RETURN"), cancellable = true)
     private void cf_fallbackCurio(LootCategory cat, LootRarity rarity, CallbackInfoReturnable<Optional<GemBonus>> cir) {
+        if (!com.apotheosis_artifice.curios.CuriosApotheosisModule.isEnabled()) return;
         if (cir.getReturnValue().isPresent()) return;
 
         String catName = cat.getName();

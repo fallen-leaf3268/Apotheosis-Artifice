@@ -4,6 +4,7 @@ import java.util.function.BiConsumer;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.ApotheosisConfig;
+import com.apotheosis_artifice.CatOverride;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -52,6 +53,8 @@ public class AdventureEventsMixin {
 
     @Unique
     private static boolean cf_isCurioItem(ItemStack stack) {
+        if (com.apotheosis_artifice.curios.CuriosApotheosisModule.isDisabled()) return CatOverride.isApotheosisBlocked(stack);
+        if (CatOverride.isApotheosisBlocked(stack)) return true;
         var afxData = stack.getTagElement(AffixHelper.AFFIX_DATA);
         if (afxData == null) return false;
         String category = afxData.getString("curio_artifice");

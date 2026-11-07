@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
+import com.apotheosis_artifice.CatOverride;
 import com.apotheosis_artifice.mixin.AttributeAffixAccessor;
 
 import dev.shadowsoffire.apotheosis.Apotheosis;
@@ -32,18 +33,21 @@ public final class SigilUpgradeEvents {
             return;
         }
         ItemStack stack = event.getItemStack();
+        if (CatOverride.isApotheosisBlocked(stack)) return;
         var components = new ArrayList<Component>();
         if (SigilAffixHelper.hasPendingMalice(stack)) {
             components.add(Component.translatable("text.apotheosis_artifice.malice_pending")
                 .withStyle(ChatFormatting.RED, ChatFormatting.UNDERLINE));
         }
         int uses = SigilAffixHelper.getMaliceUses(stack);
+        boolean hasSigilState = SigilAffixHelper.hasSigilState(stack);
+        List<AffixInstance> affixes = uses > 0 || hasSigilState
+            ? SigilAffixHelper.getAllAffixes(stack).values().stream().filter(AffixInstance::isValid).toList() : List.of();
         if (uses > 0) {
-            components.add(Component.literal(SigilAffixHelper.isExtremelyMalicious(stack) ? "\uD83C\uDF1F " : "\u2022 ")
+            components.add(Component.literal(SigilAffixHelper.isExtremelyMalicious(affixes) ? "\uD83C\uDF1F " : "\u2022 ")
                 .append(Component.translatable("text.apotheosis_artifice.touched_by_malice", uses)).withStyle(ChatFormatting.RED));
         }
-        if (SigilAffixHelper.hasSigilState(stack)) {
-            List<AffixInstance> affixes = SigilAffixHelper.getAllAffixes(stack).values().stream().filter(AffixInstance::isValid).toList();
+        if (hasSigilState) {
             for (int index = 0; index < event.getToolTip().size(); index++) {
                 event.getToolTip().set(index, decorateTooltip(event.getToolTip().get(index), affixes));
             }

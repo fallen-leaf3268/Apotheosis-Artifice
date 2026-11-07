@@ -83,17 +83,6 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
         builder.addSlot(RecipeIngredientRole.INPUT, 2, 0)
             .addItemStacks(AffixCodexEntry.getCategoryItems(entry.category()));
 
-        Component gemNameComp = Component.literal(entry.gem().getId().getPath());
-        try {
-            var epicHolder = dev.shadowsoffire.apotheosis.adventure.loot.RarityRegistry.INSTANCE.holder(new ResourceLocation("apotheosis:epic"));
-            if (epicHolder.isBound()) {
-                var color = epicHolder.get().getColor();
-                String rawName = Component.translatable("item.apotheosis.gem." + entry.gem().getId()).getString();
-                gemNameComp = Component.literal(rawName).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(color));
-            }
-        } catch (Exception ignored) {}
-        final Component finalGemName = gemNameComp;
-
         List<AffixGemEntry.RarityEntry> rarities = entry.rarities();
         for (int j = 0; j < rarities.size(); j++) {
             AffixGemEntry.RarityEntry re = rarities.get(j);
@@ -142,7 +131,6 @@ public class AffixGemCategory implements IRecipeCategory<AffixGemEntry> {
 
         String name;
         try {
-            var topRarity = entry.rarities().get(entry.rarities().size() - 1).rarity();
             name = Component.translatable("item.apotheosis.gem." + entry.gem().getId()).getString();
         } catch (Exception e) {
             name = entry.gem().getId().getPath();

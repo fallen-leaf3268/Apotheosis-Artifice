@@ -21,7 +21,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.core.Direction;
@@ -39,7 +38,15 @@ public abstract class ApothEnchantTileEasyMagicMixin implements EasyMagicEnchant
 
     @Shadow(remap = false) protected ItemStackHandler inv;
     @Unique private static final String ARTIFICE_EASY_MAGIC_INVENTORY = "artifice_easy_magic_inventory";
-    @Unique private final SimpleContainer artifice$easyMagicInventory = new SimpleContainer(3) {
+    @Unique private ItemStack artifice$completedEasyMagicInput = ItemStack.EMPTY;
+    @Unique private final EasyMagicEnchantingStorage.Inventory artifice$easyMagicInventory = new EasyMagicEnchantingStorage.Inventory(3) {
+        @Override
+        public boolean notifiesMenu(ApothEnchantmentMenu menu, Player player) {
+            ApothEnchantTile tile = (ApothEnchantTile) (Object) ApothEnchantTileEasyMagicMixin.this;
+            return tile.getLevel() != null && !tile.getLevel().isClientSide && tile.getLevel().players().contains(player)
+                && menu.enchantSlots == this && player.containerMenu == menu;
+        }
+
         @Override
         public boolean canPlaceItem(int slot, ItemStack stack) {
             if (slot == 1) return stack.is(Tags.Items.ENCHANTING_FUELS) || EasyMagicCompat.isEnchantingCatalyst(stack);
@@ -72,6 +79,21 @@ public abstract class ApothEnchantTileEasyMagicMixin implements EasyMagicEnchant
     @Override
     public IItemHandler getEasyMagicFuelInventory() {
         return this.artifice$fuelInventory;
+    }
+
+    @Override
+    public boolean isEasyMagicOutputPending() {
+        ItemStack input = this.artifice$easyMagicInventory.getItem(0);
+        if (input.isEmpty() || input != this.artifice$completedEasyMagicInput) {
+            this.artifice$completedEasyMagicInput = ItemStack.EMPTY;
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public void setEasyMagicCompletedInput(ItemStack stack) {
+        this.artifice$completedEasyMagicInput = stack;
     }
 
     @Override
@@ -110,11 +132,13 @@ public abstract class ApothEnchantTileEasyMagicMixin implements EasyMagicEnchant
         if (!input.isEmpty()) inventory.put("input", input.save(new CompoundTag()));
         if (!fuel.isEmpty()) inventory.put("fuel", fuel.save(new CompoundTag()));
         if (!catalyst.isEmpty()) inventory.put("catalyst", catalyst.save(new CompoundTag()));
+        inventory.putBoolean("completed", this.isEasyMagicOutputPending());
         tag.put(ARTIFICE_EASY_MAGIC_INVENTORY, inventory);
     }
 
     @Inject(method = "load", at = @At("TAIL"))
     private void artifice$loadEasyMagicInventory(CompoundTag tag, CallbackInfo ci) {
+        this.artifice$completedEasyMagicInput = ItemStack.EMPTY;
         this.artifice$easyMagicInventory.setItem(0, ItemStack.EMPTY);
         this.artifice$easyMagicInventory.setItem(1, ItemStack.EMPTY);
         this.artifice$easyMagicInventory.setItem(2, ItemStack.EMPTY);
@@ -123,6 +147,9 @@ public abstract class ApothEnchantTileEasyMagicMixin implements EasyMagicEnchant
         if (inventory.contains("input")) this.artifice$easyMagicInventory.setItem(0, ItemStack.of(inventory.getCompound("input")));
         if (inventory.contains("fuel")) this.artifice$easyMagicInventory.setItem(1, ItemStack.of(inventory.getCompound("fuel")));
         if (inventory.contains("catalyst")) this.artifice$easyMagicInventory.setItem(2, ItemStack.of(inventory.getCompound("catalyst")));
+        boolean completed = inventory.contains("completed") ? inventory.getBoolean("completed")
+            : tag.getBoolean("ench_completed") && !tag.contains("ench_slot");
+        if (completed) this.setEasyMagicCompletedInput(this.artifice$easyMagicInventory.getItem(0));
     }
 }
 

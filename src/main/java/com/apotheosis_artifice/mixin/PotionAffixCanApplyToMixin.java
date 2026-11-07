@@ -28,6 +28,7 @@ public abstract class PotionAffixCanApplyToMixin implements AffixTypes {
 
     @Inject(method = "canApplyTo", at = @At("RETURN"), cancellable = true, remap = false)
     private void cf_prefixMatch(ItemStack stack, LootCategory cat, LootRarity rarity, CallbackInfoReturnable<Boolean> cir) {
+        if (!com.apotheosis_artifice.curios.CuriosApotheosisModule.isEnabled()) return;
         if (!cir.getReturnValueZ()) {
             Set<LootCategory> types = this.curiosforge_getTypes();
             if (types.isEmpty()) return;

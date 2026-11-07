@@ -7,7 +7,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,6 +19,7 @@ import com.apotheosis_artifice.ApotheosisArtificeMod;
 import com.apotheosis_artifice.ApotheosisConfig;
 import com.apotheosis_artifice.CatOverride;
 import com.apotheosis_artifice.ISlotSelectMenu;
+import com.apotheosis_artifice.compat.AffixCompatibilityDiagnostics;
 import com.apotheosis_artifice.enchant.ApotheosisArtificeReforgingTableBlock;
 
 import dev.shadowsoffire.apotheosis.adventure.affix.AffixRegistry;
@@ -41,8 +41,6 @@ import top.theillusivec4.curios.api.CuriosCapability;
 @Mixin(value = ReforgingMenu.class, remap = false)
 public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
 
-    @Shadow
-    private int[] costs;
     @Unique
     private int curiosforge_selectedSlotIdx = 0;
 
@@ -70,12 +68,13 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
     @Unique
     private void curiosforge_detectSlots(ItemStack input) {
         List<String> cats = new ArrayList<>();
+        boolean curiosEnabled = ApotheosisConfig.isCuriosReforgingEnabled();
 
         LootCategory trueNative = CatOverride.forNativeItem(input);
         if (curiosforge_isNativeReforgingCategory(trueNative)) {
             cats.add(trueNative.getName());
         }
-        if (!ApotheosisConfig.isCuriosReforgingEnabled()) {
+        if (!curiosEnabled) {
             this.curiosforge_availableSlots = List.copyOf(cats);
             if (this.curiosforge_selectedSlotIdx >= cats.size()) this.curiosforge_selectedSlotIdx = 0;
             return;
@@ -145,8 +144,8 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
         if (ApotheosisConfig.isCuriosReforgingEnabled()) return;
         ItemStack input = ((ReforgingMenu)(Object)this).getSlot(0).getItem();
         String selected = curiosforge_selectedCategoryName();
-        if (!curiosforge_isNativeReforgingCategory(CatOverride.forNativeItem(input))
-            || selected != null && (selected.equals("curio") || selected.startsWith("curios:"))) {
+        if (CatOverride.isApotheosisBlocked(input) || !curiosforge_isNativeReforgingCategory(CatOverride.forNativeItem(input))
+            || selected == null || selected.equals("curio") || selected.startsWith("curios:")) {
             cir.setReturnValue(null);
         }
     }
@@ -162,7 +161,7 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             if (!original.test(s)) return false;
             if (ApotheosisConfig.isCuriosReforgingEnabled()) return hasAffixFor(s);
             LootCategory nativeCategory = CatOverride.forNativeItem(s);
-            return curiosforge_isNativeReforgingCategory(nativeCategory) && hasAffixFor(s, nativeCategory);
+            return !CatOverride.isApotheosisBlocked(s) && curiosforge_isNativeReforgingCategory(nativeCategory) && hasAffixFor(s, nativeCategory);
         };
     }
 
@@ -177,7 +176,7 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             String categoryName = null;
             String cat = curiosforge_selectedCategoryName();
             if (!ApotheosisConfig.isCuriosReforgingEnabled()
-                && (cat == null || !curiosforge_isNativeReforgingCategory(CatOverride.forNativeItem(stack))
+                && (CatOverride.isApotheosisBlocked(stack) || cat == null || !curiosforge_isNativeReforgingCategory(CatOverride.forNativeItem(stack))
                     || cat.equals("curio") || cat.startsWith("curios:"))) return ItemStack.EMPTY;
             if (cat != null) {
                 LootCategory category = cat.startsWith("curios:") ? getOrCreateCurioCategory(cat) : LootCategory.byId(cat);
@@ -217,7 +216,6 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
 
     @Inject(method = "slotsChanged", at = @At("HEAD"), remap = true)
     private void curiosforge_updateSlots(net.minecraft.world.Container container, CallbackInfo ci) {
-        java.util.Arrays.fill(this.costs, 0);
         ItemStack input = ((ReforgingMenu)(Object)this).getSlot(0).getItem();
         if (input.isEmpty()) { this.curiosforge_availableSlots = List.of(); return; }
         curiosforge_detectSlots(input);
@@ -242,7 +240,9 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             if (!holder.isBound()) continue;
             try {
                 if (a.canApplyTo(stack, cat, holder.get())) return true;
-            } catch (Exception ignored) {}
+            } catch (Exception exception) {
+                AffixCompatibilityDiagnostics.warnOnce(a.getId(), cat.getName(), "reforge eligibility", exception);
+            }
         }
         return false;
     }
@@ -257,7 +257,9 @@ public abstract class ReforgingMenuMixin implements ISlotSelectMenu {
             } else {
                 try {
                     if (((dev.shadowsoffire.apotheosis.adventure.affix.Affix) a).canApplyTo(stack, cat, rarity)) return true;
-                } catch (Exception ignored) {}
+                } catch (Exception exception) {
+                    AffixCompatibilityDiagnostics.warnOnce(a.getId(), cat.getName(), "reforge rarity eligibility", exception);
+                }
             }
         }
         return false;

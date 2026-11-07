@@ -8,10 +8,11 @@ import java.util.Optional;
 import org.jetbrains.annotations.Nullable;
 
 import com.apotheosis_artifice.ApotheosisArtificeMod;
-import com.apotheosis_artifice.ApotheosisConfig;
 import com.apotheosis_artifice.ApotheosisNetwork;
+import com.apotheosis_artifice.CatOverride;
 import com.apotheosis_artifice.adventure.SigilUpgradeRecipe;
 import com.apotheosis_artifice.compat.AffixCompatibilityDiagnostics;
+import com.apotheosis_artifice.curios.CuriosApotheosisModule;
 import com.apotheosis_artifice.jei.AffixCodexCategory;
 import com.apotheosis_artifice.jei.AffixCodexEntry;
 import com.apotheosis_artifice.jei.AffixDetailCategory;
@@ -81,12 +82,9 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     private volatile boolean recipesDirty;
     private List<AffixDetailEntry> suffixEntries = List.of();
     private List<AffixDetailEntry> prefixEntries = List.of();
-    private List<AffixDetailEntry> curioSuffixEntries = List.of();
-    private List<AffixDetailEntry> curioPrefixEntries = List.of();
     private List<AffixGemEntry> curioGemEntries = List.of();
     private AffixCodexEntry fullCodex;
-    private AffixCodexEntry nativeCodex;
-    private boolean nativeCodexAdded;
+    private Boolean entriesCuriosEnabled;
     private Boolean displayedCuriosEnabled;
 
     public ApotheosisArtificeJEIPlugin() {
@@ -163,6 +161,7 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
     }
 
     private void rebuildReforgingEntries() {
+        boolean enabled = CuriosApotheosisModule.isEnabled();
         List<AffixDetailEntry> suffixEntries = new ArrayList<>();
         List<AffixDetailEntry> prefixEntries = new ArrayList<>();
         List<LootCategory> categories = AffixCodexEntry.getCategories();
@@ -174,9 +173,15 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         } catch (Exception ignored) {}
         for (LootCategory cat : categories) {
             if (cat.isNone()) continue;
+            if (!enabled && isCurioCategory(cat)) continue;
             String cn = cat.getName();
             if (cn.startsWith("curios:") && !availableCurioSlots.contains(cn)) continue;
             for (AffixDetailEntry entry : AffixDetailEntry.createAll(cat)) {
+                if (!enabled) {
+                    List<ItemStack> inputs = entry.items().stream().filter(stack -> !CatOverride.isApotheosisBlocked(stack)).toList();
+                    if (inputs.isEmpty()) continue;
+                    entry = new AffixDetailEntry(entry.category(), entry.affix(), entry.rarities(), inputs);
+                }
                 AffixType type;
                 try { type = entry.affix().getType(); }
                 catch (Exception exception) {
@@ -191,11 +196,9 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         List<AffixDetailEntry> details = new ArrayList<>(suffixEntries);
         details.addAll(prefixEntries);
         fullCodex = AffixCodexEntry.create(details);
-        nativeCodex = fullCodex == null ? null : fullCodex.withoutCurios();
         this.suffixEntries = List.copyOf(suffixEntries);
         this.prefixEntries = List.copyOf(prefixEntries);
-        curioSuffixEntries = suffixEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
-        curioPrefixEntries = prefixEntries.stream().filter(e -> isCurioCategory(e.category())).toList();
+        entriesCuriosEnabled = enabled;
     }
 
     private void bindIngredientListener(IIngredientManager manager) {
@@ -245,20 +248,17 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         manager.hideRecipes(SUFFIX_TYPE, suffixEntries);
         manager.hideRecipes(PREFIX_TYPE, prefixEntries);
         if (fullCodex != null) manager.hideRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
-        if (nativeCodexAdded && nativeCodex != null) manager.hideRecipes(AffixCodexCategory.TYPE, List.of(nativeCodex));
         AffixCodexEntry.invalidate();
         rebuildReforgingEntries();
         manager.addRecipes(SUFFIX_TYPE, suffixEntries);
         manager.addRecipes(PREFIX_TYPE, prefixEntries);
         if (fullCodex != null) manager.addRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
-        nativeCodexAdded = false;
         displayedCuriosEnabled = null;
         updateReforgingViews();
     }
 
     @Override public void onRuntimeAvailable(IJeiRuntime runtime) {
         this.runtime = runtime;
-        this.nativeCodexAdded = false;
         this.displayedCuriosEnabled = null;
         activePlugin = this;
         refreshReforgingViews();
@@ -272,11 +272,9 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
         recipesDirty = false;
         suffixEntries = List.of();
         prefixEntries = List.of();
-        curioSuffixEntries = List.of();
-        curioPrefixEntries = List.of();
         curioGemEntries = List.of();
         fullCodex = null;
-        nativeCodex = null;
+        entriesCuriosEnabled = null;
         if (activePlugin == this) {
             activePlugin = null;
             AffixCodexEntry.unbindIngredientManager();
@@ -292,31 +290,17 @@ public class ApotheosisArtificeJEIPlugin implements IModPlugin {
 
     private void updateReforgingViews() {
         if (runtime == null) return;
-        boolean enabled = ApotheosisConfig.isCuriosReforgingEnabled();
+        boolean enabled = CuriosApotheosisModule.isEnabled();
+        if (entriesCuriosEnabled != null && entriesCuriosEnabled != enabled) {
+            reloadReforgingRecipes();
+            return;
+        }
         if (displayedCuriosEnabled != null && displayedCuriosEnabled == enabled) return;
         var manager = runtime.getRecipeManager();
         if (enabled) {
-            manager.unhideRecipes(SUFFIX_TYPE, curioSuffixEntries);
-            manager.unhideRecipes(PREFIX_TYPE, curioPrefixEntries);
             manager.unhideRecipes(AffixGemCategory.TYPE, curioGemEntries);
         } else {
-            manager.hideRecipes(SUFFIX_TYPE, curioSuffixEntries);
-            manager.hideRecipes(PREFIX_TYPE, curioPrefixEntries);
             manager.hideRecipes(AffixGemCategory.TYPE, curioGemEntries);
-        }
-        if (fullCodex != null && !fullCodex.equals(nativeCodex)) {
-            if (enabled) {
-                if (nativeCodexAdded) manager.hideRecipes(AffixCodexCategory.TYPE, List.of(nativeCodex));
-                manager.unhideRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
-            } else {
-                manager.hideRecipes(AffixCodexCategory.TYPE, List.of(fullCodex));
-                if (nativeCodex != null) {
-                    if (!nativeCodexAdded) {
-                        manager.addRecipes(AffixCodexCategory.TYPE, List.of(nativeCodex));
-                        nativeCodexAdded = true;
-                    } else manager.unhideRecipes(AffixCodexCategory.TYPE, List.of(nativeCodex));
-                }
-            }
         }
         displayedCuriosEnabled = enabled;
     }
