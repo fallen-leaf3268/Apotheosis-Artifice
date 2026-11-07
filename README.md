@@ -4,7 +4,7 @@ Apotheosis Artifice 是 fallen-leaf3268 开发的非官方 Apotheosis 附属模�
 
 ## 版本与依赖
 
-当前版本为 1.1.0，目标环境为 Minecraft 1.20.1 / Forge 47.x。
+当前版本为 1.1.1，目标环境为 Minecraft 1.20.1 / Forge 47.x。
 
 构建使用 Apotheosis 7.4.8、Placebo 8.6.2、Apothic Attributes 1.3.5 和 Curios 5.14.1+1.20.1。运行时还需要这些前置模组各自要求的依赖。前置模组通过各自的官方渠道安装。
 
@@ -27,7 +27,7 @@ Apotheosis Artifice 是 fallen-leaf3268 开发的非官方 Apotheosis 附属模�
 - 末影拴绳：捕获和释放生物，秘法末影拴绳可绑定刷怪笼生物种类。
 - JEI 联动：提供 JEI 信息查询与配方填充。
 
-## 更新内容-相较于v1.1.0
+## 1.1.1 更新内容（相对 1.1.0）
 
 - 饰品神化支持整体停用，已有数据保留，重新开启后恢复。
 - 修复 JEI 词条显示与重铸材料结算，改善 Easy Magic 兼容。
