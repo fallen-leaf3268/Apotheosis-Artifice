@@ -30,12 +30,4 @@ Apotheosis Artifice 是 fallen-leaf3268 开发的非官方 Apotheosis 附属模�
 ## 更新内容-相较于v1.1.0
 
 - 饰品神化支持整体停用，已有数据保留，重新开启后恢复。
-- 双类别物品保留原生装备重铸和效果，饰品栏单独停用神化效果。
 - 修复 JEI 词条显示与重铸材料结算，改善 Easy Magic 兼容。
-- 重铸相关配置统一分类，旧设置自动迁移。
-
-## 配置
-
-配置文件为 `config/apotheosis_artifice-common.toml`。饰品神化开关 `enable_curios_apotheosis`（默认开启）和 Better Combat 联动开关 `use_bettercombat_heavy_override`（默认关闭）均位于 `[Reforging]`。
-
-关闭饰品神化时，将 `enable_curios_apotheosis` 设为 `false`，重新进入世界或重启服务器后生效。缺少历史属性记录的旧存档，可能保留部分基础属性加成。
