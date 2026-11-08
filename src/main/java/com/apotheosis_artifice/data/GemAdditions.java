@@ -25,7 +25,7 @@ public final class GemAdditions {
     private GemAdditions() {}
 
     public static void apply(Map<ResourceLocation, JsonElement> gems, ResourceManager resources, IContext context,
-            Logger logger, BiConsumer<ResourceLocation, JsonObject> validator) {
+            boolean curiosEnabled, Logger logger, BiConsumer<ResourceLocation, JsonObject> validator) {
         Map<String, Integer> priorities = new HashMap<>();
         resources.listPacks().forEachOrdered(pack -> priorities.put(pack.packId(), priorities.size()));
         var additions = resources.listResources(DIRECTORY, id -> id.getPath().endsWith(".json")).entrySet().stream()
@@ -46,7 +46,8 @@ public final class GemAdditions {
                 }
                 if (!JsonUtil.checkAndLogEmpty(original, target, "gems", logger)
                     || !JsonUtil.checkConditions(original, target, "gems", logger, context)) continue;
-                JsonObject candidate = GemAddition.merge(original.getAsJsonObject(), addition);
+                JsonObject candidate = GemAddition.merge(original.getAsJsonObject(), addition, curiosEnabled);
+                if (candidate.equals(original)) continue;
                 validator.accept(target, candidate);
                 gems.put(target, candidate);
             } catch (Exception exception) {

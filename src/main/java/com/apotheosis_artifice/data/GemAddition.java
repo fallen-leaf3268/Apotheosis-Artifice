@@ -15,7 +15,7 @@ import net.minecraft.util.GsonHelper;
 public final class GemAddition {
     private GemAddition() {}
 
-    public static JsonObject merge(JsonObject original, JsonObject addition) {
+    public static JsonObject merge(JsonObject original, JsonObject addition, boolean curiosEnabled) {
         checkFields(addition, Set.of("target", "extend_bonuses", "add_bonuses", "conditions", "forge:conditions"));
         JsonArray extensions = addition.has("extend_bonuses") ? GsonHelper.getAsJsonArray(addition, "extend_bonuses") : new JsonArray();
         JsonArray additions = addition.has("add_bonuses") ? GsonHelper.getAsJsonArray(addition, "add_bonuses") : new JsonArray();
@@ -34,11 +34,12 @@ public final class GemAddition {
         for (JsonElement element : extensions) {
             JsonObject extension = element.getAsJsonObject();
             checkFields(extension, Set.of("match_category", "add_types"));
-            LootCategory match = category(GsonHelper.getAsString(extension, "match_category"));
+            String matchName = GsonHelper.getAsString(extension, "match_category");
+            JsonArray addedTypes = activeTypes(GsonHelper.getAsJsonArray(extension, "add_types"), curiosEnabled);
+            if (addedTypes.isEmpty()) continue;
+            LootCategory match = category(matchName);
             JsonObject bonus = owners.get(match);
             if (bonus == null) throw new IllegalArgumentException("No bonus directly declares category " + match.getName());
-            JsonArray addedTypes = GsonHelper.getAsJsonArray(extension, "add_types");
-            if (addedTypes.isEmpty()) throw new IllegalArgumentException("add_types must not be empty");
             JsonArray existingTypes = bonus.getAsJsonObject("gem_class").getAsJsonArray("types");
             for (JsonElement added : addedTypes) {
                 LootCategory type = category(GsonHelper.convertToString(added, "add_types entry"));
@@ -49,18 +50,31 @@ public final class GemAddition {
         }
 
         for (JsonElement element : additions) {
-            JsonObject bonus = element.getAsJsonObject();
+            JsonObject bonus = element.getAsJsonObject().deepCopy();
+            JsonObject gemClass = GsonHelper.getAsJsonObject(bonus, "gem_class");
+            JsonArray active = activeTypes(GsonHelper.getAsJsonArray(gemClass, "types"), curiosEnabled);
+            if (active.isEmpty()) continue;
+            gemClass.add("types", active);
             Set<LootCategory> types = types(bonus);
             JsonObject existing = owners.get(types.iterator().next());
             if (existing != null && sameBonus(existing, bonus)) continue;
             for (LootCategory type : types) {
                 if (owners.containsKey(type)) throw conflict(type);
             }
-            JsonObject copy = bonus.deepCopy();
-            bonuses.add(copy);
-            types.forEach(type -> owners.put(type, copy));
+            bonuses.add(bonus);
+            types.forEach(type -> owners.put(type, bonus));
         }
         return merged;
+    }
+
+    private static JsonArray activeTypes(JsonArray types, boolean curiosEnabled) {
+        if (types.isEmpty()) throw new IllegalArgumentException("Equipment types must not be empty");
+        JsonArray active = new JsonArray();
+        for (JsonElement type : types) {
+            String name = GsonHelper.convertToString(type, "equipment type");
+            if (curiosEnabled || !name.equals("curio") && !name.startsWith("curios:")) active.add(name);
+        }
+        return active;
     }
 
     private static boolean sameBonus(JsonObject first, JsonObject second) {

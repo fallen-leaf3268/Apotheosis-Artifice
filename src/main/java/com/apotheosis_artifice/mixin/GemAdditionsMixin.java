@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.apotheosis_artifice.data.GemAdditions;
+import com.apotheosis_artifice.curios.CuriosApotheosisModule;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
@@ -36,7 +37,8 @@ public abstract class GemAdditionsMixin<R extends CodecProvider<? super R>> {
     private void apotheosis_artifice_applyGemAdditions(Map<ResourceLocation, JsonElement> objects, ResourceManager resources,
             ProfilerFiller profiler, CallbackInfo ci) {
         if (!((Object) this instanceof GemRegistry)) return;
-        GemAdditions.apply(objects, resources, this.getContext(), this.logger, (id, candidate) -> {
+        IContext context = this.getContext();
+        GemAdditions.apply(objects, resources, context, CuriosApotheosisModule.resourceState(context).enabled(), this.logger, (id, candidate) -> {
             R gem = this.codecs.parse(JsonOps.INSTANCE, candidate).getOrThrow(false, this.logger::error);
             Preconditions.checkNotNull(gem.getCodec(), "Gem %s is not declaring a codec", id);
             Preconditions.checkNotNull(this.codecs.getKey(gem.getCodec()), "Gem %s is declaring an unregistered codec", id);
