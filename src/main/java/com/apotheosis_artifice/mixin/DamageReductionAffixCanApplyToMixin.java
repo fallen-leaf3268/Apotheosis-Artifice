@@ -29,17 +29,13 @@ public abstract class DamageReductionAffixCanApplyToMixin implements AffixTypes 
     @Inject(method = "canApplyTo", at = @At("RETURN"), cancellable = true, remap = false)
     private void cf_prefixMatch(ItemStack stack, LootCategory cat, LootRarity rarity, CallbackInfoReturnable<Boolean> cir) {
         if (!com.apotheosis_artifice.curios.CuriosApotheosisModule.isEnabled()) return;
+        if (cat.isNone()) return;
         if (!cir.getReturnValueZ()) {
             Set<LootCategory> types = this.curiosforge_getTypes();
             if (types.isEmpty()) return;
             boolean catMatch = AffixTypes.curiosforge_typeMatches(types, cat) || AffixTypes.tagMatches(types, stack);
-            if (catMatch) {
-                for (LootRarity key : ((DamageReductionAffixAccessor) (Object) this).curiosforge_getValues().keySet()) {
-                    if (key.ordinal() == rarity.ordinal()) {
-                        cir.setReturnValue(true);
-                        break;
-                    }
-                }
+            if (catMatch && ((DamageReductionAffixAccessor) (Object) this).curiosforge_getValues().containsKey(rarity)) {
+                cir.setReturnValue(true);
             }
         }
     }

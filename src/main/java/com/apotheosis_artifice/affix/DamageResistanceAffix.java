@@ -47,16 +47,9 @@ public class DamageResistanceAffix extends Affix implements AffixTypes {
 
     @Override
     public boolean canApplyTo(ItemStack stack, LootCategory cat, LootRarity rarity) {
-        if (!rarityInValues(rarity)) return false;
+        if (!values.containsKey(rarity)) return false;
         if (types.isEmpty()) return true;
         return AffixTypes.curiosforge_typeMatches(types, cat) || AffixTypes.tagMatches(types, stack);
-    }
-
-    private boolean rarityInValues(LootRarity rarity) {
-        for (LootRarity key : values.keySet()) {
-            if (key.ordinal() == rarity.ordinal()) return true;
-        }
-        return false;
     }
 
     @Override

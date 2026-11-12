@@ -33,13 +33,8 @@ public abstract class PotionAffixCanApplyToMixin implements AffixTypes {
             Set<LootCategory> types = this.curiosforge_getTypes();
             if (types.isEmpty()) return;
             boolean catMatch = AffixTypes.curiosforge_typeMatches(types, cat) || AffixTypes.tagMatches(types, stack);
-            if (catMatch) {
-                for (LootRarity key : ((PotionAffixAccessor) (Object) this).curiosforge_getValues().keySet()) {
-                    if (key.ordinal() == rarity.ordinal()) {
-                        cir.setReturnValue(true);
-                        break;
-                    }
-                }
+            if (catMatch && ((PotionAffixAccessor) (Object) this).curiosforge_getValues().containsKey(rarity)) {
+                cir.setReturnValue(true);
             }
         }
     }
